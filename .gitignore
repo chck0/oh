@@ -1,0 +1,39 @@
+# Environment
+.env
+.env.local
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs / transient
+*.log
+logs/
+tmp/
+
+# Mock demo artifacts (generated each run)
+meetings/*MOCK*.md
+
+# Stage 2: session checkpoints — transient, per-machine
+meetings/.sessions/
+
+# Node (Stage 7)
+node_modules/
+dist/
+build/
+
+# Phase A: user investment profiles — private, except sample
+profiles/*.json
+!profiles/example.json
