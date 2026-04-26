@@ -80,6 +80,8 @@ def _check_api_key() -> bool:
 def _print_turns(turns: list[dict]) -> None:
     for turn in turns:
         print(f"{turn['emoji']} {turn['name']}({turn['label']}): {turn['text']}")
+        for w in turn.get("warnings", []):
+            print(f"   ⚠️  [출처 누락] {w}")
         print()
 
 

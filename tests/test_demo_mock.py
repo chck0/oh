@@ -73,3 +73,40 @@ class TestMockDemoCLI:
         assert "수익률" in captured.out
         assert "시나리오" in captured.out or "민감도" in captured.out
         assert "회의록" in captured.out
+
+
+class TestProfileAwareness:
+    """Phase A.4 — Gold Standard mentor 응답이 사용자 프로필 어휘를 자연스럽게 인용하는지 검증."""
+
+    def test_mentor_uses_risk_profile_vocab(self):
+        """전체 turn 중 적어도 한 곳에는 리스크 프로파일 어휘가 등장해야 한다."""
+        risk_keywords = ["보수적", "공격적", "성향", "프로파일", "프로필"]
+        found = [
+            i for i, t in enumerate(MOCK_TURNS)
+            if any(kw in t["mentor"] for kw in risk_keywords)
+        ]
+        assert found, "Mentor 응답에 리스크 프로파일 어휘가 한 군데도 없습니다"
+
+    def test_mentor_references_investment_goal_types(self):
+        """월세형 vs 시세차익형 같은 투자 목적 어휘가 등장해야 한다."""
+        goal_keywords = ["월세", "시세차익", "시세 차익", "수익형"]
+        joined = " ".join(t["mentor"] for t in MOCK_TURNS)
+        assert any(kw in joined for kw in goal_keywords), \
+            "Mentor 응답에 투자 목적 어휘가 없습니다"
+
+    def test_mentor_anchors_to_client_situation(self):
+        """최소 2개 turn에서 클라이언트 컨텍스트 어휘를 명시 인용해야 한다."""
+        anchor_keywords = ["대표님", "상황", "성향", "목적", "기준"]
+        matching = [
+            i for i, t in enumerate(MOCK_TURNS)
+            if sum(1 for kw in anchor_keywords if kw in t["mentor"]) >= 2
+        ]
+        assert len(matching) >= 2, \
+            f"Mentor가 '대표님 상황' 류 자문을 거의 안 합니다 (matching={matching})"
+
+    def test_mentor_does_not_compute_numbers(self):
+        """프로필 활용해도 mentor가 계산을 하면 안 된다 (영역 경계)."""
+        # 출처 표기 패턴([출처: ...])이 mentor 응답에 등장하면 CFO 영역 침범 의심
+        for i, t in enumerate(MOCK_TURNS):
+            assert "[출처:" not in t["mentor"], \
+                f"Turn {i} mentor 응답에 [출처: ...] 인용이 들어감 — CFO 영역 침범"

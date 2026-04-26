@@ -37,6 +37,39 @@ class TestPrintTurns:
         assert "재무총괄" in out
         assert "테스트 응답" in out
 
+    def test_no_warning_lines_when_empty(self, capsys):
+        from main import _print_turns
+        _print_turns([{
+            "emoji": "📊", "name": "CFO", "label": "재무총괄",
+            "text": "응답", "warnings": [],
+        }])
+        out = capsys.readouterr().out
+        assert "출처 누락" not in out
+        assert "⚠️" not in out
+
+    def test_warning_lines_displayed(self, capsys):
+        from main import _print_turns
+        _print_turns([{
+            "emoji": "📊", "name": "CFO", "label": "재무총괄",
+            "text": "수익률 5%입니다.",
+            "warnings": ["수치 ['5%']에 출처가 없습니다"],
+        }])
+        out = capsys.readouterr().out
+        assert "⚠️" in out
+        assert "출처 누락" in out
+        assert "5%" in out
+
+    def test_missing_warnings_field_does_not_crash(self, capsys):
+        """구버전 turn 객체에 'warnings' 키가 없어도 안전해야 함."""
+        from main import _print_turns
+        _print_turns([{
+            "emoji": "📊", "name": "CFO", "label": "재무총괄",
+            "text": "응답",
+        }])
+        out = capsys.readouterr().out
+        assert "CFO" in out
+        assert "출처 누락" not in out
+
 
 class TestLoadFiles:
     def test_loads_xlsx(self, tmp_path, capsys):

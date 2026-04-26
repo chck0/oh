@@ -484,6 +484,91 @@ class TestProfileIntegration:
 
 
 # ------------------------------------------------------------------
+# Source validator integration (Phase B.2)
+# ------------------------------------------------------------------
+
+class TestSourceValidatorIntegration:
+    """CFO turn에 [출처:] 누락된 수치가 있으면 turn['warnings']에 부착되는지."""
+
+    def _drive(self, meeting, cfo_text: str, cso_text: str = "CSO ok",
+               mentor_text: str = "Mentor ok"):
+        meeting.client.messages.create = AsyncMock(
+            side_effect=[
+                _mock_response(cfo_text),
+                _mock_response(cso_text),
+                _mock_response(mentor_text),
+            ]
+        )
+        return asyncio.get_event_loop().run_until_complete(
+            meeting.user_says("질문")
+        )
+
+    def test_warnings_field_present_on_all_turns(self, meeting_no_api):
+        turns = self._drive(meeting_no_api, "ok", "ok", "ok")
+        for turn in turns:
+            assert "warnings" in turn
+            assert isinstance(turn["warnings"], list)
+
+    def test_cfo_with_source_has_no_warnings(self, meeting_no_api):
+        turns = self._drive(
+            meeting_no_api,
+            "수익률 4.2%입니다 [출처: 한국부동산원].",
+        )
+        cfo = next(t for t in turns if t["agent_key"] == "practitioner")
+        assert cfo["warnings"] == []
+
+    def test_cfo_without_source_has_warning(self, meeting_no_api):
+        turns = self._drive(
+            meeting_no_api,
+            "수익률 4.2%입니다.",  # 출처 누락
+        )
+        cfo = next(t for t in turns if t["agent_key"] == "practitioner")
+        assert len(cfo["warnings"]) == 1
+        assert "4.2%" in cfo["warnings"][0]
+
+    def test_cso_skipped_even_with_bare_numbers(self, meeting_no_api):
+        # CSO는 1차 가드 적용 대상이 아니므로 출처 없는 수치도 warning 안 붙음
+        turns = self._drive(
+            meeting_no_api,
+            "CFO 수치 5% [출처: x].",
+            cso_text="CSO 5% 출처 없음.",
+        )
+        cso = next(t for t in turns if t["agent_key"] == "redteam")
+        assert cso["warnings"] == []
+
+    def test_mentor_skipped(self, meeting_no_api):
+        turns = self._drive(
+            meeting_no_api,
+            "CFO ok [출처: x].",
+            mentor_text="Mentor 5% 출처 없음.",
+        )
+        mentor = next(t for t in turns if t["agent_key"] == "mentor")
+        assert mentor["warnings"] == []
+
+    def test_failed_cfo_response_has_no_warnings(self, meeting_no_api):
+        meeting_no_api.client.messages.create = AsyncMock(
+            side_effect=[
+                RuntimeError("API 장애"),
+                _mock_response("CSO ok"),
+                _mock_response("Mentor ok"),
+            ]
+        )
+        turns = asyncio.get_event_loop().run_until_complete(
+            meeting_no_api.user_says("질문")
+        )
+        cfo = next(t for t in turns if t["agent_key"] == "practitioner")
+        assert cfo["warnings"] == []
+
+    def test_multiple_missing_numbers_yield_multiple_warnings(self, meeting_no_api):
+        turns = self._drive(
+            meeting_no_api,
+            "수익률 4.2%입니다. 취득세 4.6%입니다.",
+        )
+        cfo = next(t for t in turns if t["agent_key"] == "practitioner")
+        assert len(cfo["warnings"]) == 2
+
+
+# ------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------
 

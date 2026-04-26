@@ -520,6 +520,14 @@ for msg in messages:
                 unsafe_allow_html=True,
             )
             st.markdown(msg["content"])
+            warnings = msg.get("warnings", [])
+            if warnings:
+                with st.expander(
+                    f"⚠️ 출처 누락 {len(warnings)}건 (Phase B 가드)",
+                    expanded=False,
+                ):
+                    for w in warnings:
+                        st.caption(f"• {w}")
     elif msg["role"] == "minutes":
         st.divider()
         st.markdown("### 📝 회의록")
@@ -660,10 +668,12 @@ if not st.session_state.get("finalized"):
             key = turn["agent_key"]
             cfg = AGENT_CONFIG[key]
             color = AGENT_COLORS.get(key, "#666")
+            warnings = turn.get("warnings", [])
             msg_data = {
                 "role": "agent",
                 "agent_key": key,
                 "content": turn["text"],
+                "warnings": warnings,
             }
             messages.append(msg_data)
 
@@ -674,5 +684,12 @@ if not st.session_state.get("finalized"):
                     unsafe_allow_html=True,
                 )
                 st.markdown(turn["text"])
+                if warnings:
+                    with st.expander(
+                        f"⚠️ 출처 누락 {len(warnings)}건 (Phase B 가드)",
+                        expanded=False,
+                    ):
+                        for w in warnings:
+                            st.caption(f"• {w}")
 
         st.session_state["messages"] = messages
