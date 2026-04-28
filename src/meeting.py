@@ -39,6 +39,7 @@ from personas import (
 )
 from profiles import Profile, format_for_agents as format_profile_for_agents
 from real_estate import format_for_agents, get_multi_region_data
+from source_validator import validate_text
 from file_parser import (
     format_for_agents as format_files_for_agents,
     parse_file,
@@ -324,10 +325,16 @@ class Meeting:
         new_turns: list[dict[str, Any]] = []
         for key, result in zip(SPEAKERS, results):
             agent = self.speakers[key]
-            if isinstance(result, Exception):
+            failed = isinstance(result, Exception)
+            if failed:
                 text_out = f"(응답 생성 실패: {type(result).__name__}: {result})"
             else:
                 text_out = result
+            # Phase B.2: source-citation guard for CFO only.
+            # MANIFESTO 가치 1 — 페르소나가 출처를 깜빡해도 코드가 잡아낸다.
+            warnings: list[str] = []
+            if key == "practitioner" and not failed:
+                warnings = [w.message for w in validate_text(text_out)]
             turn = {
                 "role": "agent",
                 "agent_key": key,
@@ -335,6 +342,7 @@ class Meeting:
                 "label": agent.label,
                 "emoji": agent.emoji,
                 "text": text_out,
+                "warnings": warnings,
             }
             self.transcript.append(turn)
             new_turns.append(turn)
