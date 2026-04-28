@@ -23,7 +23,9 @@ except ImportError:
 
 from meeting import Meeting
 from personas import AGENT_CONFIG
-from archive import list_meetings
+from archive import list_meetings, build_followup_context
+from comparison import format_comparison_table_md, build_comparison_first_message
+from report import generate_pdf_report
 from profiles import (
     INVESTMENT_GOALS,
     LIFE_STAGES,
@@ -272,6 +274,10 @@ with st.sidebar:
                 st.markdown(f"**{m.topic}**  \n{date_str}")
                 if m.summary:
                     st.caption(m.summary[:100] + ("..." if len(m.summary) > 100 else ""))
+                if st.button("팔로우업 시작", key=f"followup_{m.path.name}",
+                             use_container_width=True):
+                    st.session_state["followup_source"] = m
+                    st.rerun()
                 st.divider()
 
 
@@ -327,6 +333,12 @@ if start_btn:
         if file_texts:
             file_data = format_files_for_agents(file_texts)
 
+    # ── 팔로우업: 원본 회의록을 past_context로 주입 ──────────────────
+    followup_extra_context = ""
+    followup_source = st.session_state.pop("followup_source", None)
+    if followup_source is not None:
+        followup_extra_context = build_followup_context(followup_source)
+
     all_data = "\n".join(filter(None, [
         market_data, yield_data, scenario_data, cashflow_data, mc_data,
         tax_data, score_data, port_data,
@@ -334,6 +346,7 @@ if start_btn:
     meeting = Meeting(
         topic,
         profile=selected_profile,
+        past_context=followup_extra_context,
         market_data=market_data,
         yield_data=yield_data,
         scenario_data=all_data,
@@ -352,6 +365,8 @@ if start_btn:
     st.session_state["tax_summaries"] = p.tax_summaries
     st.session_state["scorecards"] = p.scorecards
     st.session_state["portfolios"] = p.portfolios
+    # ── 지역 비교: 2개 이상 선택 시 비교 모드 표시 플래그 ────────────
+    st.session_state["comparison_mode"] = len(selected_regions) >= 2
 
     briefing_text = generate_ceo_briefing(p, topic)
     st.session_state["briefing"] = briefing_text
@@ -377,6 +392,15 @@ if start_btn:
         init_msgs.append({"role": "system", "content": port_data, "type": "portfolio"})
     if file_data:
         init_msgs.append({"role": "system", "content": file_data, "type": "file"})
+
+    # ── 팔로우업 배지 ────────────────────────────────────────────────
+    if followup_extra_context:
+        init_msgs.append({
+            "role": "system",
+            "content": followup_extra_context,
+            "type": "followup",
+        })
+
     st.session_state["messages"] = init_msgs
     st.rerun()
 
@@ -488,6 +512,9 @@ for msg in messages:
         if msg_type == "briefing":
             with st.expander("📋 CEO 사전 브리핑 보고서", expanded=True):
                 st.markdown(msg["content"])
+            continue
+        if msg_type == "followup":
+            st.info("팔로우업 모드: 원본 회의록을 기반으로 현재 시점 분석을 진행합니다.", icon="🔄")
             continue
         type_labels = {
             "market": "📈 실거래 데이터",
@@ -615,6 +642,26 @@ if analyses_data:
                 st.info("포트폴리오 비교를 위해 2개 이상 지역을 선택해 주세요.")
 
 # ------------------------------------------------------------------
+# 지역 비교 테이블 (2개 이상 스코어카드 존재 시)
+# ------------------------------------------------------------------
+
+if st.session_state.get("comparison_mode"):
+    score_data_cached = st.session_state.get("scorecards", [])
+    if len(score_data_cached) >= 2:
+        with st.expander("📊 지역 비교 분석", expanded=True):
+            cmp_table = format_comparison_table_md(score_data_cached)
+            if cmp_table:
+                st.markdown(cmp_table)
+            first_q = build_comparison_first_message(
+                [c.region for c in score_data_cached]
+            )
+            st.caption(f"💬 추천 질문: {first_q}")
+            if st.button("이 질문으로 비교 토론 시작"):
+                st.session_state.setdefault("messages", [])
+                st.session_state["_pending_comparison_q"] = first_q
+                st.rerun()
+
+# ------------------------------------------------------------------
 # 회의 종료 → 회의록 생성
 # ------------------------------------------------------------------
 
@@ -636,10 +683,62 @@ if end_btn and meeting and not st.session_state.get("finalized"):
                 st.error(f"❌ 회의록 생성 실패: {e}")
 
 # ------------------------------------------------------------------
+# PDF 다운로드 (회의 종료 후)
+# ------------------------------------------------------------------
+
+if st.session_state.get("finalized") and meeting:
+    minutes_saved = st.session_state.get("minutes", "")
+    scorecards_saved = st.session_state.get("scorecards", [])
+    agent_msgs = [m for m in messages if m["role"] == "agent"]
+    highlights = [
+        {
+            "label": f"{AGENT_CONFIG.get(m.get('agent_key',''), {}).get('name','Agent')} ({AGENT_CONFIG.get(m.get('agent_key',''), {}).get('label','')})",
+            "text": m.get("content", ""),
+        }
+        for m in agent_msgs[:6]
+    ]
+    if st.button("📄 PDF 리포트 다운로드", use_container_width=True):
+        with st.spinner("PDF 생성 중..."):
+            try:
+                pdf_bytes = generate_pdf_report(
+                    topic=meeting.topic,
+                    started_at=meeting.started_at,
+                    scorecards=scorecards_saved,
+                    minutes_text=minutes_saved,
+                    agent_highlights=highlights,
+                )
+                filename = f"report_{meeting.started_at.strftime('%Y%m%d_%H%M')}.pdf"
+                st.download_button(
+                    label="⬇️ PDF 저장",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"❌ PDF 생성 실패: {e}")
+
+# ------------------------------------------------------------------
 # 채팅 입력
 # ------------------------------------------------------------------
 
 if not st.session_state.get("finalized"):
+    # 비교 토론 자동 질문 처리
+    pending_q = st.session_state.pop("_pending_comparison_q", None)
+    if pending_q and meeting:
+        messages.append({"role": "user", "content": pending_q})
+        with st.spinner("에이전트 비교 분석 중..."):
+            try:
+                turns = _run_async(meeting.user_says(pending_q))
+            except Exception as e:
+                st.error(f"❌ 비교 토론 실패: {e}")
+                turns = []
+        for turn in turns:
+            key = turn["agent_key"]
+            messages.append({"role": "agent", "agent_key": key, "content": turn["text"]})
+        st.session_state["messages"] = messages
+        st.rerun()
+
     if user_input := st.chat_input("대표님, 말씀하세요..."):
         messages.append({"role": "user", "content": user_input})
 
