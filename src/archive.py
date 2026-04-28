@@ -214,6 +214,33 @@ def build_context_block(meetings: list[MeetingRecord]) -> str:
     return "\n".join(lines)
 
 
+def load_meeting_content(record: MeetingRecord) -> str:
+    """과거 회의록의 전문(frontmatter 제외 본문)을 반환한다."""
+    try:
+        content = record.path.read_text(encoding="utf-8")
+        _, body = parse_frontmatter(content)
+        return body.strip()
+    except OSError:
+        return ""
+
+
+def build_followup_context(record: MeetingRecord) -> str:
+    """팔로우업 회의를 위해 원본 회의록 전문을 context block으로 포장한다."""
+    body = load_meeting_content(record)
+    if not body:
+        return ""
+    lines = [
+        f"=== 📋 팔로우업 원본 회의록: {record.topic} ({record.date}) ===",
+        "",
+        body,
+        "",
+        "=== 원본 회의록 끝 ===",
+        "",
+        "위 회의록을 참고하여, 현재 시점에서 상황이 어떻게 변했는지 업데이트된 관점으로 분석해 주세요.",
+    ]
+    return "\n".join(lines)
+
+
 # ----------------------------------------------------------------------
 # Session checkpointing
 # ----------------------------------------------------------------------
