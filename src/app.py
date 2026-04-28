@@ -68,6 +68,82 @@ AGENT_COLORS = {
 }
 
 
+def _verdict_label(gross_yield: float, risk_count: int) -> tuple[str, str]:
+    """설계 문서 기준: 🟢 매력적 / 🟡 보통 / 🔴 위험."""
+    if gross_yield >= 4.0 and risk_count <= 1:
+        return "🟢 매력적", "#2E7D32"
+    elif gross_yield < 2.0 or risk_count >= 3:
+        return "🔴 위험", "#C62828"
+    else:
+        return "🟡 보통", "#E65100"
+
+
+def render_verdict_view(analyses: list, scorecards: list) -> None:
+    """1페이지 판정 뷰 — Approach A MVP."""
+    if not analyses:
+        return
+
+    st.markdown("### 📋 투자 판정 요약")
+
+    for a in analyses:
+        sc = next((s for s in scorecards if s.region == a.region), None)
+        risk_items = (sc.key_risks[:3] if sc and sc.key_risks else [])
+        label, color = _verdict_label(a.gross_yield, len(risk_items))
+
+        with st.container(border=True):
+            hdr_col, verdict_col = st.columns([3, 1])
+            hdr_col.markdown(
+                f"**{a.region}**  \n"
+                f"평균가 {a.avg_price:,}만원 · {a.avg_area:.0f}㎡"
+            )
+            verdict_col.markdown(
+                f"<p style='text-align:center;font-size:1.3em;"
+                f"color:{color};font-weight:bold;margin:4px 0'>{label}</p>",
+                unsafe_allow_html=True,
+            )
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric(
+                "표면 수익률", f"{a.gross_yield:.1f}%",
+                help="연 임대수익 / 매매가 (관리비·공실 미차감)",
+            )
+            c2.metric(
+                "실질 수익률", f"{a.net_yield:.1f}%",
+                help="관리비·공실 차감 후 세전 수익",
+            )
+            c3.metric(
+                "월 순수익", f"{a.monthly_net_income:+,}만원",
+                help="대출이자·관리비·공실 모두 차감한 월 실수령액",
+            )
+
+            if risk_items:
+                st.markdown("**주요 위험 요인**")
+                for r in risk_items:
+                    st.markdown(f"- {r}")
+
+            share_text = (
+                f"[AI 부동산 투자 판정] {a.region}\n"
+                f"종합: {label}\n"
+                f"표면 수익률 {a.gross_yield:.1f}% / 실질 {a.net_yield:.1f}%\n"
+                f"월 순수익 {a.monthly_net_income:+,}만원\n"
+                + (f"위험: {'; '.join(risk_items)}\n" if risk_items else "")
+                + "※ 참고용 분석. 투자 결정은 본인 책임."
+            )
+            with st.expander("💬 카카오톡 공유 텍스트", expanded=False):
+                st.text_area(
+                    "복사해서 카카오톡에 붙여넣기",
+                    value=share_text,
+                    height=130,
+                    label_visibility="collapsed",
+                )
+
+    st.caption(
+        "⚠️ 본 분석은 실거래가 기반 통계입니다. "
+        "개별 물건의 실제 가치와 다를 수 있으며 투자 결정은 본인 책임입니다."
+    )
+    st.divider()
+
+
 def _run_async(coro):
     loop = asyncio.new_event_loop()
     try:
@@ -503,6 +579,11 @@ if meeting is None:
 
 mock_label = "  |  🎭 Mock 데모" if st.session_state.get("mock_mode") else ""
 st.caption(f"📌 안건: {meeting.topic}  |  🗂 세션: {meeting.session_id}{mock_label}")
+
+render_verdict_view(
+    st.session_state.get("analyses", []),
+    st.session_state.get("scorecards", []),
+)
 
 messages = st.session_state.get("messages", [])
 

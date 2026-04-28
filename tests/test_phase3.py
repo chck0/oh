@@ -1,4 +1,5 @@
 """Tests for Phase 3 — CLI integration, demo_mock enhancements, property type support."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -121,36 +122,39 @@ class TestFormattingIntegration:
 
 # ── Demo mock with full data ──
 
+_UTF8_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+
+
 class TestDemoMockIntegration:
     def test_demo_mock_runs(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert result.returncode == 0
 
     def test_demo_mock_shows_cashflow(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "현금흐름" in result.stdout
 
     def test_demo_mock_shows_monte_carlo(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "Monte Carlo" in result.stdout
 
     def test_demo_mock_shows_irr(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "IRR" in result.stdout
 
