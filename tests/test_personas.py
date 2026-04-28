@@ -196,3 +196,64 @@ class TestProfileGuidance:
         """build_system_prompt가 페르소나 명세에서 프로필 섹션을 그대로 포함하는지."""
         prompt = build_system_prompt("mentor")
         assert "프로필" in prompt
+
+
+class TestPropertyAuditGuidance:
+    """Phase 1 (property_audit) — clerk·practitioner 명세에 호가 적정성 평가 가이드가 동기화되는지 검증."""
+
+    def test_clerk_spec_defines_simple_summary(self):
+        spec = load_persona_spec("clerk")
+        assert "simple_summary" in spec, "clerk.md에 simple_summary 출력 명세 누락"
+
+    def test_clerk_spec_defines_pro_summary(self):
+        spec = load_persona_spec("clerk")
+        assert "pro_summary" in spec, "clerk.md에 pro_summary 출력 명세 누락"
+
+    def test_clerk_spec_mentions_property_audit_mode(self):
+        spec = load_persona_spec("clerk")
+        assert "property_audit" in spec or "호가 적정성" in spec, \
+            "clerk.md에 property_audit 모드 섹션 누락"
+
+    def test_clerk_spec_simple_mode_forbids_jargon(self):
+        spec = load_persona_spec("clerk")
+        assert "통계 용어" in spec or "P50" in spec, \
+            "clerk.md simple_summary에 통계 용어 사용 금지 가이드 누락"
+
+    def test_clerk_spec_labels_for_simple(self):
+        spec = load_persona_spec("clerk")
+        for label in ["적정", "고평가", "저평가"]:
+            assert label in spec, f"clerk.md simple_summary 라벨 '{label}' 누락"
+
+    def test_practitioner_spec_has_property_audit_section(self):
+        spec = load_persona_spec("practitioner")
+        assert "호가 적정성" in spec or "property_audit" in spec, \
+            "practitioner.md에 호가 적정성 평가 가이드 섹션 누락"
+
+    def test_practitioner_spec_defines_p50_baseline(self):
+        spec = load_persona_spec("practitioner")
+        assert "P50" in spec, "practitioner.md에 P50 적정가 정의 누락"
+
+    def test_practitioner_spec_mentions_sample_size_guard(self):
+        spec = load_persona_spec("practitioner")
+        assert "표본" in spec, "practitioner.md에 표본 크기 가드 가이드 누락"
+
+    def test_practitioner_spec_admits_hedonic_limitation(self):
+        """1차 단계에서 헤도닉 보정 미적용임을 명시 — 강희준 시뮬 통찰 반영."""
+        spec = load_persona_spec("practitioner")
+        assert "헤도닉" in spec, "practitioner.md에 헤도닉 보정 한계 명시 누락"
+
+    def test_practitioner_property_audit_preserves_boundary(self):
+        """호가 적정성 가이드 추가 후에도 영역 경계가 살아있어야 함."""
+        spec = load_persona_spec("practitioner")
+        assert "투자컨설턴트" in spec, "CFO ↔ 투자컨설턴트 영역 경계 누락"
+        assert "CSO" in spec, "CFO ↔ CSO 영역 경계 누락"
+
+    def test_diversity_angles_include_property_audit_for_practitioner(self):
+        from personas import DIVERSITY_ANGLES
+        assert "호가적정성" in DIVERSITY_ANGLES["practitioner"], \
+            "practitioner의 다양성 각도에 '호가적정성' 추가 누락"
+
+    def test_system_prompt_for_practitioner_contains_property_audit(self):
+        """build_system_prompt가 페르소나 명세에서 호가 적정성 섹션을 그대로 포함하는지."""
+        prompt = build_system_prompt("practitioner")
+        assert "호가 적정성" in prompt or "property_audit" in prompt
