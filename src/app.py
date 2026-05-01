@@ -52,6 +52,14 @@ from charts import (
     tax_comparison_chart, scorecard_chart, portfolio_scatter,
 )
 from demo_mock import MOCK_TURNS, MOCK_MINUTES, DEMO_TOPIC, DEMO_REGIONS
+from onboarding import (
+    ONBOARDING_STEPS,
+    OnboardingAnswers,
+    build_profile,
+    build_topic,
+    build_checklist,
+    build_questions_for_agent,
+)
 
 
 st.set_page_config(
@@ -95,7 +103,14 @@ with st.sidebar:
 
     st.divider()
 
-    selected_profile: Profile | None = None
+    # 온보딩에서 생성된 프로필이 있으면 기본값으로 사용 (수동 선택으로 덮어쓸 수 있음)
+    selected_profile: Profile | None = st.session_state.get("onboarding_profile")
+    if selected_profile is not None:
+        st.success(
+            f"🧭 온보딩 프로필 적용 중: **{selected_profile.nickname}** "
+            f"({selected_profile.risk_label} · {selected_profile.goal_label})"
+        )
+
     with st.expander("👤 사용자 프로필", expanded=False):
         available_profiles = list_profiles()
         sel_options = ["(사용 안 함)"] + available_profiles
@@ -186,6 +201,7 @@ with st.sidebar:
 
     topic = st.text_input(
         "📌 회의 안건",
+        value=st.session_state.get("onboarding_topic", ""),
         placeholder="예: 강남 오피스텔 투자 검토",
     )
 
@@ -492,13 +508,112 @@ if meeting is None:
     hero_cols[2].metric("AI 에이전트", "3명 + 비서실장")
     st.divider()
     st.markdown("#### 시작하기")
-    start_cols = st.columns(2)
+    start_cols = st.columns(3)
     start_cols[0].markdown(
-        "**API 모드** — 사이드바에서 안건 입력 후 `회의 시작`"
+        "**🧭 처음이세요?** — 아래 3단계 질문에 답하면 자동으로 프로필이 만들어집니다."
     )
     start_cols[1].markdown(
+        "**API 모드** — 사이드바에서 안건 입력 후 `회의 시작`"
+    )
+    start_cols[2].markdown(
         "**데모 모드** — API 키 없이 즉시 체험 → 사이드바 `Mock 데모`"
     )
+
+    # ----------------------------------------------------------------
+    # 온보딩 위저드: 첫 부동산 구매자용 3단계 프로파일링
+    # ----------------------------------------------------------------
+    st.divider()
+    st.markdown("### 🧭 처음 부동산을 알아보시나요? 3가지만 답해주세요.")
+    st.caption(
+        "복잡한 프로필 양식 대신, 3개 질문으로 시작합니다. "
+        "답이 끝나면 맞춤 체크리스트와 공인중개사에게 물어볼 질문이 자동 생성됩니다."
+    )
+
+    if "onboarding" not in st.session_state:
+        st.session_state["onboarding"] = {"step": 0, "answers": {}}
+
+    ob = st.session_state["onboarding"]
+    step_idx = ob["step"]
+
+    if step_idx < len(ONBOARDING_STEPS):
+        spec = ONBOARDING_STEPS[step_idx]
+        st.markdown(f"**Q{step_idx + 1}/{len(ONBOARDING_STEPS)}.** {spec['question']}")
+
+        choice = st.radio(
+            "보기 중 하나를 선택하세요.",
+            options=list(spec["options"].keys()),
+            key=f"ob_radio_{spec['id']}",
+            label_visibility="collapsed",
+        )
+
+        cols = st.columns([1, 1, 4])
+        if step_idx > 0 and cols[0].button("◀ 이전", key=f"ob_prev_{step_idx}"):
+            ob["step"] -= 1
+            st.rerun()
+
+        next_label = "다음 ▶" if step_idx < len(ONBOARDING_STEPS) - 1 else "결과 보기 ▶"
+        if cols[1].button(next_label, key=f"ob_next_{step_idx}", type="primary"):
+            ob["answers"][spec["id"]] = spec["options"][choice]
+            ob["step"] += 1
+            st.rerun()
+    else:
+        # 모든 답변 완료 — 결과 화면
+        answers = OnboardingAnswers(
+            purpose=ob["answers"].get("purpose", ""),
+            budget_manwon=int(ob["answers"].get("budget", 0)),
+            loan_ratio=ob["answers"].get("loan_ratio", ""),
+        )
+
+        if not answers.is_complete():
+            st.warning("일부 답변이 비어 있습니다. 처음부터 다시 시작해주세요.")
+            if st.button("🔄 처음부터", key="ob_restart_warn"):
+                st.session_state["onboarding"] = {"step": 0, "answers": {}}
+                st.rerun()
+        else:
+            ob_profile = build_profile(answers)
+            ob_topic = build_topic(answers)
+            checklist = build_checklist(answers)
+            questions = build_questions_for_agent(answers)
+
+            st.success("✅ 답변 분석 완료. 아래 정보를 회의 시작 시 자동으로 사용합니다.")
+
+            with st.expander("👤 자동 생성된 프로필", expanded=True):
+                st.markdown(
+                    f"- **닉네임**: {ob_profile.nickname}\n"
+                    f"- **리스크 프로파일**: {ob_profile.risk_label}\n"
+                    f"- **투자 목적**: {ob_profile.goal_label}\n"
+                    f"- **예산**: {ob_profile.budget_manwon:,}만원\n"
+                    f"- **투자 시계**: {ob_profile.holding_years}년\n"
+                    f"- **메모**: {ob_profile.notes}"
+                )
+
+            with st.expander("📋 매물 검토 시 확인할 체크리스트", expanded=True):
+                for item in checklist:
+                    st.markdown(f"- {item}")
+
+            with st.expander("💬 공인중개사에게 물어볼 질문", expanded=True):
+                for i, q in enumerate(questions, 1):
+                    st.markdown(f"{i}. {q}")
+
+            st.markdown("#### 다음 단계")
+            st.markdown(
+                f"**제안 안건**: _{ob_topic}_\n\n"
+                "사이드바에서 분석 권역을 선택한 뒤 `회의 시작`을 누르세요. "
+                "위 프로필이 자동 적용됩니다."
+            )
+
+            # 회의 시작 시 사용할 컨텍스트를 세션에 저장
+            st.session_state["onboarding_profile"] = ob_profile
+            st.session_state["onboarding_topic"] = ob_topic
+            st.session_state["onboarding_checklist"] = checklist
+            st.session_state["onboarding_questions"] = questions
+
+            if st.button("🔄 처음부터 다시 답변", key="ob_restart_done"):
+                for k in ["onboarding", "onboarding_profile", "onboarding_topic",
+                          "onboarding_checklist", "onboarding_questions"]:
+                    st.session_state.pop(k, None)
+                st.rerun()
+
     st.stop()
 
 mock_label = "  |  🎭 Mock 데모" if st.session_state.get("mock_mode") else ""
