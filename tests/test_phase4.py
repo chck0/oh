@@ -1,4 +1,5 @@
 """Tests for Phase 4 — tax simulation, scorecard, portfolio analysis."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -214,12 +215,15 @@ class TestPortfolio:
 
 # ── Demo mock updated ──
 
+_UTF8_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+
+
 class TestDemoMockPhase4:
     def test_demo_shows_tax(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert result.returncode == 0
         assert "세금" in result.stdout
@@ -227,16 +231,16 @@ class TestDemoMockPhase4:
     def test_demo_shows_scorecard(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "스코어카드" in result.stdout
 
     def test_demo_shows_portfolio(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "포트폴리오" in result.stdout
 
