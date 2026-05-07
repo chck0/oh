@@ -37,3 +37,8 @@ build/
 # Phase A: user investment profiles — private, except sample
 profiles/*.json
 !profiles/example.json
+.gstack/
+
+# Office lock files
+~$*
+
