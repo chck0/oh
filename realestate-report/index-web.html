@@ -384,6 +384,44 @@
     letter-spacing: 0.04em; vertical-align: middle;
   }
 
+  /* ── Verdict Brief ("솔직히 말하면") ── */
+  .verdict-brief {
+    background: #FAF6EE;
+    border-radius: var(--radius-lg);
+    border: 1px solid #E5D9C4;
+    padding: 28px 36px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .verdict-brief-label {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.15em;
+    color: var(--navy); text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .verdict-brief-text {
+    font-size: 16px; line-height: 1.9; color: #1F1B16;
+    word-break: keep-all;
+  }
+  .verdict-brief-text p { margin-bottom: 10px; }
+  .verdict-brief-text p:last-child { margin-bottom: 0; }
+  .verdict-brief-text strong { color: var(--navy); font-weight: 700; }
+  .verdict-brief-text .warn { color: #C97A3F; font-weight: 700; }
+  .verdict-brief-text .ok   { color: #4A7C4E; font-weight: 700; }
+  .verdict-brief-divider {
+    border: none; border-top: 1px dashed #C9B79C;
+    margin: 20px 0 16px;
+  }
+  .verdict-brief-rating {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .verdict-brief-rating-label {
+    font-size: 13px; color: #6B6157;
+  }
+  .verdict-brief-stars { display: flex; align-items: center; gap: 8px; }
+  .vstar { font-size: 22px; color: #D4A24C; letter-spacing: 2px; }
+  .vstar .empty { color: #D9C9B0; }
+  .vstar-num { font-size: 18px; font-weight: 800; color: #1F1B16; }
+
   /* ── Responsive ── */
   @media (max-width: 900px) {
     .page { padding: 20px 16px 40px; }
@@ -464,6 +502,25 @@
       <div class="hero-vote-pills">
         <div class="vote-pill warn"><div class="vote-dot warn"></div>신중 검토 3명</div>
         <div class="vote-pill ok"><div class="vote-dot ok"></div>긍정적 2명</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verdict Brief -->
+  <div class="verdict-brief">
+    <div class="verdict-brief-label">💬 솔직히 말하면</div>
+    <div class="verdict-brief-text">
+      <p>이 동네 인프라는 진짜 좋아. 학군이고 편의시설이고 스벅·올영·다이소 다 도보 10분 안 — <strong>신혼·1인 살기엔 딱</strong>이야.</p>
+      <p>근데 가격이 인근 비슷한 단지보다 <span class="warn">4% 비싸</span>. 그게 입지값이긴 한데, 싸게 산다는 느낌은 아니야. 호가 7.5억에서 <strong>7.2억 선까지는 협상 가능</strong>하니까 그 가격엔 들어갈 수 있어.</p>
+      <p>문제는 통근이야. 광화문까지 <span class="warn">47분</span>이면 직장인 견딜 만은 한데, 매일 왕복 1시간 34분씩 깔리는 거니까 잘 생각해. 지금 9년째 하고 있는 월세 80만 원이랑, 앞으로 매달 나갈 <strong>상환금 145만 원</strong> — 그 차이가 진짜 내가 감당 가능한 금액인지도 따져봐.</p>
+      <p><span class="ok">결혼해서 가족이랑 살 거면 추천.</span> 혼자 당장 자취 목적이라면 좀 비싸고 넓어.</p>
+    </div>
+    <hr class="verdict-brief-divider">
+    <div class="verdict-brief-rating">
+      <div class="verdict-brief-rating-label">종합 평점</div>
+      <div class="verdict-brief-stars">
+        <div class="vstar">★★★★<span class="empty">★</span></div>
+        <div class="vstar-num">4.0 / 5</div>
       </div>
     </div>
   </div>
