@@ -286,8 +286,8 @@
   .vote-label-text.ok   { color: var(--green); }
   .vote-bar-bg { flex: 1; height: 9px; background: var(--border); border-radius: 100px; overflow: hidden; }
   .vote-bar-fill { height: 100%; border-radius: 100px; }
-  .vote-bar-fill.warn { background: linear-gradient(90deg, var(--orange), #FF8C00); width: 60%; }
-  .vote-bar-fill.ok   { background: linear-gradient(90deg, var(--green), #00D46A); width: 40%; }
+  .vote-bar-fill.warn { background: linear-gradient(90deg, var(--orange), #FF8C00); width: 40%; }
+  .vote-bar-fill.ok   { background: linear-gradient(90deg, var(--green), #00D46A); width: 60%; }
   .vote-count { width: 28px; font-size: 13px; font-weight: 700; text-align: right; }
   .vote-count.warn { color: var(--orange); }
   .vote-count.ok   { color: var(--green); }
@@ -462,7 +462,7 @@
         <div class="hero-pill">📍 경기도 광명시</div>
         <div class="hero-pill">🏠 전용 59㎡ · 24평형</div>
         <div class="hero-pill">📅 분석일 2026.05.05</div>
-        <div class="hero-pill status-warn">⚠️ 신중 검토 권고</div>
+        <div class="hero-pill status-warn">⚖️ 의견 갈림 · 일부 검토 필요</div>
       </div>
       <div class="hero-name">OO아파트 105동 1203호</div>
       <div class="hero-sub">경기도 광명시 · 매매가 5.3억 · 준공 2008년 (18년차)</div>
@@ -472,16 +472,16 @@
           <div class="hero-meta-val">5억 3,000만</div>
         </div>
         <div class="hero-meta-item">
-          <div class="hero-meta-label">보유 자산</div>
-          <div class="hero-meta-val">약 2억</div>
+          <div class="hero-meta-label">단지 규모</div>
+          <div class="hero-meta-val">884세대</div>
         </div>
         <div class="hero-meta-item">
-          <div class="hero-meta-label">필요 대출</div>
-          <div class="hero-meta-val">약 3.3억</div>
+          <div class="hero-meta-label">인접 지하철</div>
+          <div class="hero-meta-val">광명역 도보 12분</div>
         </div>
         <div class="hero-meta-item">
-          <div class="hero-meta-label">월 상환 예상</div>
-          <div class="hero-meta-val">약 145만 원</div>
+          <div class="hero-meta-label">5년 시세 변화</div>
+          <div class="hero-meta-val">+18%</div>
         </div>
         <div class="hero-meta-item">
           <div class="hero-meta-label">분석 에이전트</div>
@@ -491,17 +491,17 @@
     </div>
     <div class="hero-right">
       <div class="hero-score-block">
-        <div class="hero-score-num">3.2<span>/5</span></div>
+        <div class="hero-score-num">3.6<span>/5</span></div>
         <div class="hero-stars">
           <span class="star full">★</span><span class="star full">★</span>
           <span class="star full">★</span><span class="star half">★</span>
           <span class="star empty">★</span>
         </div>
       </div>
-      <div class="hero-verdict">입지·예산 적합도는 양호하나,<br>미래가치는 신중 검토 필요</div>
+      <div class="hero-verdict">입지·생활편의 적합도는 양호하나,<br>리스크·미래가치는 신중 검토 필요</div>
       <div class="hero-vote-pills">
-        <div class="vote-pill warn"><div class="vote-dot warn"></div>신중 검토 3명</div>
-        <div class="vote-pill ok"><div class="vote-dot ok"></div>긍정적 2명</div>
+        <div class="vote-pill warn"><div class="vote-dot warn"></div>신중 검토 2명</div>
+        <div class="vote-pill ok"><div class="vote-dot ok"></div>긍정적 3명</div>
       </div>
     </div>
   </div>
@@ -557,12 +557,12 @@
     </div>
 
     <div class="score-card orange">
-      <div class="sc-icon orange">💳</div>
-      <div class="sc-name">재무 분석</div>
-      <div><span class="sc-score orange">2.0</span><span class="sc-denom"> /5</span></div>
-      <div class="sc-bar"><div class="sc-bar-fill orange" style="width:40%"></div></div>
-      <span class="sc-badge warn">빠듯함</span>
-      <div class="sc-summary">DSR 상한 근접, 월 상환 145만. 비상금 여유 부족.</div>
+      <div class="sc-icon orange">🏪</div>
+      <div class="sc-name">생활 편의</div>
+      <div><span class="sc-score orange">3.8</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill orange" style="width:76%"></div></div>
+      <span class="sc-badge up">양호</span>
+      <div class="sc-summary">이마트 도보 5분, 광명공원 인접. 학원·병원 도보권.</div>
     </div>
 
     <div class="score-card blue">
@@ -646,19 +646,19 @@
           <div class="vote-row">
             <div class="vote-label-text warn">신중 검토</div>
             <div class="vote-bar-bg"><div class="vote-bar-fill warn"></div></div>
-            <div class="vote-count warn">3명</div>
+            <div class="vote-count warn">2명</div>
           </div>
           <div class="vote-row">
             <div class="vote-label-text ok">긍정적</div>
             <div class="vote-bar-bg"><div class="vote-bar-fill ok"></div></div>
-            <div class="vote-count ok">2명</div>
+            <div class="vote-count ok">3명</div>
           </div>
           <div class="vote-chips">
             <div class="agent-chip warn"><div class="agent-dot warn"></div>리스크 분석가</div>
-            <div class="agent-chip warn"><div class="agent-dot warn"></div>재무 분석가</div>
             <div class="agent-chip warn"><div class="agent-dot warn"></div>미래가치 분석가</div>
             <div class="agent-chip ok"><div class="agent-dot ok"></div>시세 분석가</div>
             <div class="agent-chip ok"><div class="agent-dot ok"></div>입지 분석가</div>
+            <div class="agent-chip ok"><div class="agent-dot ok"></div>생활편의 분석가</div>
           </div>
         </div>
       </div>
@@ -695,8 +695,8 @@
             <circle cx="65" cy="23" r="4" fill="#F5A623"/>
             <circle cx="104" cy="43.2" r="4" fill="#00B85E"/>
             <circle cx="104" cy="86.8" r="4" fill="#E53935"/>
-            <circle cx="65" cy="103" r="4" fill="#E53935"/>
-            <circle cx="33.8" cy="84.2" r="4" fill="#F5A623"/>
+            <circle cx="65" cy="103" r="4" fill="#FF6B35"/>
+            <circle cx="33.8" cy="84.2" r="4" fill="#1E5EFF"/>
           </svg>
           <div class="radar-legend">
             <div class="radar-legend-item">
@@ -715,14 +715,14 @@
               <div class="radar-legend-val" style="color:var(--red)">2.0</div>
             </div>
             <div class="radar-legend-item">
-              <div class="radar-legend-dot" style="background:var(--red)"></div>
-              <div class="radar-legend-name">💳 재무</div>
-              <div class="radar-legend-val" style="color:var(--red)">2.0</div>
+              <div class="radar-legend-dot" style="background:var(--orange)"></div>
+              <div class="radar-legend-name">🏪 생활편의</div>
+              <div class="radar-legend-val" style="color:var(--orange)">3.8</div>
             </div>
             <div class="radar-legend-item">
-              <div class="radar-legend-dot" style="background:var(--orange)"></div>
+              <div class="radar-legend-dot" style="background:var(--blue)"></div>
               <div class="radar-legend-name">🎯 미래가치</div>
-              <div class="radar-legend-val" style="color:var(--orange)">3.0</div>
+              <div class="radar-legend-val" style="color:var(--blue)">3.0</div>
             </div>
           </div>
         </div>
@@ -745,7 +745,7 @@
           </div>
           <div class="insight-item">
             <div class="insight-dot-wrap pro"><div class="insight-dot pro"></div></div>
-            <div class="insight-text">생애최초 특례대출 적용 시 이자 부담 완화 가능</div>
+            <div class="insight-text">근거리 종합병원·학원·공원 — 자녀 양육·노부모 동거 모두 적합</div>
           </div>
         </div>
         <div class="insight-items">
