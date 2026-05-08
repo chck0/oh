@@ -299,6 +299,38 @@
   .insight-dot.con { background: #FF6B6B; }
   .insight-text { font-size: 13px; color: rgba(255,255,255,0.80); line-height: 1.5; }
 
+  /* ── CTA Card (다음 단계 — 개인화 분석) ── */
+  .cta-card-mobile {
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 18px 16px;
+    border: 1.5px solid var(--blue);
+    box-shadow: 0 4px 16px rgba(30,94,255,0.10);
+  }
+  .cta-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .cta-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--blue-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .cta-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+  .cta-sub { font-size: 12px; color: var(--text-muted); }
+  .cta-sub strong { color: var(--text-secondary); font-weight: 600; }
+  .cta-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+  .cta-text strong { color: var(--text-primary); font-weight: 700; }
+  .cta-button {
+    width: 100%;
+    background: var(--blue); color: #fff; border: none;
+    border-radius: var(--radius-sm); padding: 13px 16px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .cta-button:active { background: #1A4FE0; transform: scale(0.98); }
+
   /* ── Action Buttons ── */
   .actions { padding: 20px 20px 0; display: flex; flex-direction: column; gap: 10px; }
   .action-primary {
@@ -647,38 +679,6 @@
     </div>
   </div>
 
-  <!-- Agent Voting -->
-  <div class="section">
-    <div class="section-label">에이전트 투표 결과</div>
-    <div class="vote-card">
-      <div class="vote-title">이 매물, 어떻게 판단했나요?</div>
-
-      <div class="vote-bar-wrap">
-        <div style="width:52px;font-size:12px;color:var(--orange);font-weight:600;">신중 검토</div>
-        <div class="vote-bar">
-          <div class="vote-bar-fill cautious"></div>
-        </div>
-        <div class="vote-label cautious">2명</div>
-      </div>
-
-      <div class="vote-bar-wrap" style="margin-bottom:14px">
-        <div style="width:52px;font-size:12px;color:var(--green);font-weight:600;">긍정적</div>
-        <div class="vote-bar">
-          <div class="vote-bar-fill positive"></div>
-        </div>
-        <div class="vote-label positive">3명</div>
-      </div>
-
-      <div class="vote-agents">
-        <div class="agent-chip cautious"><div class="agent-dot cautious"></div>리스크 분석가</div>
-        <div class="agent-chip cautious"><div class="agent-dot cautious"></div>미래가치 분석가</div>
-        <div class="agent-chip positive"><div class="agent-dot positive"></div>시세 분석가</div>
-        <div class="agent-chip positive"><div class="agent-dot positive"></div>입지 분석가</div>
-        <div class="agent-chip positive"><div class="agent-dot positive"></div>생활편의 분석가</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Radar Chart -->
   <div class="section" style="padding-bottom:0">
     <div class="section-label">5개 영역 종합<span class="badge-new">NEW</span></div>
@@ -865,6 +865,24 @@
           <div class="insight-text">10년 후 재건축·재개발 가능성 낮아 자산 증식 제한</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- CTA: 다음 단계 — 개인화 분석 -->
+  <div class="section">
+    <div class="cta-card-mobile">
+      <div class="cta-header">
+        <div class="cta-icon">📋</div>
+        <div>
+          <div class="cta-title">다음 단계 — 개인화 분석</div>
+          <div class="cta-sub">본 매물이 <strong>당신에게</strong> 어떤 의미인지</div>
+        </div>
+      </div>
+      <p class="cta-text">
+        위 5개 영역 점수는 <strong>모두에게 동일</strong>한 시장 평가입니다.
+        본인 가족 구성·생활 패턴·투자 관점에 맞춰 <strong>개인화된 점수</strong>를 받아보세요.
+      </p>
+      <button class="cta-button">개인화 분석 시작 →</button>
     </div>
   </div>
 
