@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부동산 검증 AI 에이전트 — 개인화 결과 (Web)</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F0F2F8;
+    --surface: #FFFFFF;
+    --navy: #0F1B35;
+    --navy2: #1A2E52;
+    --blue: #1E5EFF;
+    --blue-light: #EEF3FF;
+    --green: #00B85E;
+    --green-light: #E6F9F0;
+    --orange: #FF6B35;
+    --orange-light: #FFF0EB;
+    --red: #E53935;
+    --red-light: #FDEAEA;
+    --yellow: #F5A623;
+    --yellow-light: #FEF6E4;
+    --text-primary: #0F1B35;
+    --text-secondary: #5A6476;
+    --text-muted: #9AA2B4;
+    --border: #E4E8F2;
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --shadow-sm: 0 1px 4px rgba(15,27,53,0.06);
+    --shadow-md: 0 4px 20px rgba(15,27,53,0.09);
+    --shadow-lg: 0 8px 40px rgba(15,27,53,0.13);
+  }
+
+  html { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text-primary); font-size: 15px; }
+  body { min-height: 100vh; }
+
+  /* ── Top Nav ── */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--navy);
+    padding: 0 40px;
+    display: flex; align-items: center;
+    height: 60px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+  .topnav-logo {
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; font-size: 16px; font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-right: 40px;
+  }
+  .topnav-logo-dot { width: 8px; height: 8px; background: var(--blue); border-radius: 50%; }
+  .topnav-breadcrumb { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .topnav-breadcrumb span { font-size: 13px; color: rgba(255,255,255,0.45); }
+  .topnav-breadcrumb strong { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 600; }
+  .topnav-breadcrumb .sep { color: rgba(255,255,255,0.25); }
+  .topnav-actions { display: flex; gap: 8px; }
+  .topnav-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .topnav-btn.ghost { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85); }
+  .topnav-btn.ghost:hover { background: rgba(255,255,255,0.18); }
+  .topnav-btn.primary { background: var(--blue); color: #fff; }
+  .topnav-btn.primary:hover { background: #1a54e8; }
+
+  /* ── Page Layout ── */
+  .page { max-width: 1180px; margin: 0 auto; padding: 32px 32px 60px; }
+
+  /* ── Hero Strip ── */
+  .hero-strip {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #1A3A6F 100%);
+    border-radius: var(--radius-lg);
+    padding: 36px 40px;
+    display: flex; align-items: flex-start; gap: 40px;
+    margin-bottom: 24px;
+    position: relative; overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero-strip::before {
+    content: '';
+    position: absolute; right: -60px; top: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(30,94,255,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-strip::after {
+    content: '';
+    position: absolute; right: 80px; bottom: -80px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(0,184,94,0.10) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-left { flex: 1.05; }
+  .hero-pills { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .hero-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px; padding: 4px 12px;
+    font-size: 12px; color: rgba(255,255,255,0.80);
+  }
+  .hero-pill.accent { background: rgba(30,94,255,0.20); border-color: rgba(30,94,255,0.40); color: #B0CCFF; }
+  .hero-name { font-size: 28px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 14px; color: rgba(255,255,255,0.65); margin-bottom: 18px; line-height: 1.55; }
+  .hero-meta { display: flex; gap: 22px; flex-wrap: wrap; }
+  .hero-meta-item { }
+  .hero-meta-label { font-size: 11px; color: rgba(255,255,255,0.40); margin-bottom: 3px; font-weight: 500; }
+  .hero-meta-val { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.92); }
+
+  .hero-right { flex: 1; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; min-width: 360px; }
+
+  /* 점수 비교 (객관 vs 개인화) */
+  .hero-score-compare {
+    display: flex; align-items: center; gap: 18px;
+    justify-content: flex-end;
+  }
+  .hero-score-objective {
+    text-align: right;
+  }
+  .hero-score-objective-label { font-size: 11px; color: rgba(255,255,255,0.50); margin-bottom: 4px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .hero-score-objective-num { font-size: 26px; font-weight: 700; color: rgba(255,255,255,0.55); line-height: 1; }
+  .hero-score-objective-num span { font-size: 13px; font-weight: 400; }
+  .hero-score-arrow { color: rgba(255,255,255,0.55); font-size: 22px; flex-shrink: 0; }
+  .hero-score-personal {
+    text-align: right;
+  }
+  .hero-score-personal-label { font-size: 11px; color: #B0CCFF; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .hero-score-personal-num { font-size: 64px; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -2.5px; }
+  .hero-score-personal-num span { font-size: 22px; font-weight: 400; color: rgba(255,255,255,0.45); letter-spacing: 0; }
+  .hero-stars { display: flex; gap: 4px; justify-content: flex-end; margin-top: 6px; }
+  .star { font-size: 18px; }
+  .star.full { color: #F5A623; }
+  .star.half { color: #F5A623; opacity: 0.45; }
+  .star.empty { color: rgba(255,255,255,0.22); }
+
+  .hero-delta {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(0,184,94,0.20); border: 1px solid rgba(0,184,94,0.35);
+    border-radius: 100px; padding: 3px 10px;
+    font-size: 12px; font-weight: 700; color: #6DEBB8;
+    margin-top: 8px;
+  }
+
+  /* 점수 범위 바 (반대 ─ 중립 ─ 옹호) */
+  .hero-range {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+  }
+  .hero-range-title {
+    font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .hero-range-bar-wrap {
+    position: relative;
+    height: 6px;
+    background: linear-gradient(90deg, rgba(255,107,53,0.50) 0%, rgba(30,94,255,0.50) 50%, rgba(0,184,94,0.50) 100%);
+    border-radius: 100px;
+    margin: 24px 8px 30px;
+  }
+  .hero-range-marker {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .hero-range-marker.con { background: var(--orange); left: 0%; }
+  .hero-range-marker.mid { background: var(--blue); left: 50%; }
+  .hero-range-marker.pro { background: var(--green); left: 100%; }
+  .hero-range-tag {
+    position: absolute; top: -28px; transform: translateX(-50%);
+    font-size: 11px; font-weight: 700;
+    white-space: nowrap;
+  }
+  .hero-range-tag.con { left: 0%; color: #FFB899; }
+  .hero-range-tag.mid { left: 50%; color: #B0CCFF; }
+  .hero-range-tag.pro { left: 100%; color: #6DEBB8; }
+  .hero-range-score {
+    position: absolute; bottom: -26px; transform: translateX(-50%);
+    font-size: 14px; font-weight: 800; color: #fff;
+  }
+  .hero-range-score.con { left: 0%; }
+  .hero-range-score.mid { left: 50%; }
+  .hero-range-score.pro { left: 100%; }
+
+  /* ── Section label (작은) ── */
+  .section-label {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  /* ── Section heading (제목 톤) ── */
+  .section-heading {
+    font-size: 20px; font-weight: 800; color: var(--navy);
+    letter-spacing: -0.3px; line-height: 1.35;
+    margin: 8px 0 16px;
+  }
+
+  /* ── Verdict Brief (흰색-네이비, 베이지 X) ── */
+  .verdict-brief {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 28px 36px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .verdict-brief-label {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.15em;
+    color: var(--navy); text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .verdict-brief-text {
+    font-size: 15.5px; line-height: 1.85; color: var(--text-primary);
+    word-break: keep-all;
+  }
+  .verdict-brief-text p { margin-bottom: 10px; }
+  .verdict-brief-text p:last-child { margin-bottom: 0; }
+  .verdict-brief-text strong { color: var(--navy); font-weight: 700; }
+  .verdict-brief-text .warn { color: var(--orange); font-weight: 700; }
+  .verdict-brief-text .ok   { color: var(--green); font-weight: 700; }
+  .verdict-brief-divider {
+    border: none; border-top: 1px dashed var(--border);
+    margin: 20px 0 16px;
+  }
+  .verdict-brief-rating {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .verdict-brief-rating-label {
+    font-size: 13px; color: var(--text-secondary);
+  }
+  .verdict-brief-stars { display: flex; align-items: center; gap: 8px; }
+  .vstar { font-size: 22px; color: var(--yellow); letter-spacing: 2px; }
+  .vstar .empty { color: var(--border); }
+  .vstar-num { font-size: 18px; font-weight: 800; color: var(--navy); }
+
+  /* ── 3-Agent Cards ── */
+  .agents-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .agent-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .agent-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; right: 0; height: 4px;
+  }
+  .agent-card.pro::before { background: var(--green); }
+  .agent-card.mid::before { background: var(--blue); }
+  .agent-card.con::before { background: var(--orange); }
+
+  .agent-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .agent-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 100px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+  .agent-tag.pro { background: var(--green-light); color: #007A3E; }
+  .agent-tag.mid { background: var(--blue-light); color: var(--blue); }
+  .agent-tag.con { background: var(--orange-light); color: #B34A1E; }
+  .agent-tag-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .agent-tag.pro .agent-tag-dot { background: var(--green); }
+  .agent-tag.mid .agent-tag-dot { background: var(--blue); }
+  .agent-tag.con .agent-tag-dot { background: var(--orange); }
+  .agent-name {
+    font-size: 16px; font-weight: 800; color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .agent-stance {
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .agent-score-row {
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .agent-score-num {
+    font-size: 32px; font-weight: 900; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .agent-score-num.pro { color: var(--green); }
+  .agent-score-num.mid { color: var(--blue); }
+  .agent-score-num.con { color: var(--orange); }
+  .agent-score-denom { font-size: 14px; color: var(--text-muted); }
+  .agent-score-stars { display: flex; gap: 2px; margin-left: auto; }
+  .agent-score-stars .star { font-size: 13px; }
+
+  .agent-body {
+    padding: 18px 22px 20px;
+    flex: 1;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .agent-quote {
+    position: relative;
+    padding: 12px 14px 12px 30px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    font-size: 13.5px; line-height: 1.65;
+    color: var(--text-primary);
+    border-left: 3px solid var(--border);
+  }
+  .agent-card.pro .agent-quote { border-left-color: var(--green); }
+  .agent-card.mid .agent-quote { border-left-color: var(--blue); }
+  .agent-card.con .agent-quote { border-left-color: var(--orange); }
+  .agent-quote::before {
+    content: '“';
+    position: absolute; left: 8px; top: 4px;
+    font-size: 30px; font-weight: 900; line-height: 1;
+    font-family: Georgia, serif;
+    color: var(--text-muted);
+    opacity: 0.55;
+  }
+  .agent-card.pro .agent-quote::before { color: var(--green); opacity: 0.5; }
+  .agent-card.mid .agent-quote::before { color: var(--blue); opacity: 0.5; }
+  .agent-card.con .agent-quote::before { color: var(--orange); opacity: 0.5; }
+  .agent-quote em {
+    font-style: normal; font-weight: 700; color: var(--navy);
+  }
+  .agent-quote .warn { color: var(--orange); font-weight: 700; }
+  .agent-quote .ok { color: var(--green); font-weight: 700; }
+
+  .agent-emphasis {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 11.5px; color: var(--text-muted);
+    line-height: 1.55;
+  }
+  .agent-emphasis strong { color: var(--text-secondary); font-weight: 700; }
+
+  /* ── 5 Score Cards (개인화) ── */
+  .grid-scores { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+  .score-card {
+    background: var(--surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    padding: 18px 16px 16px;
+    position: relative; overflow: hidden;
+  }
+  .score-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+  .score-card.green::before { background: var(--green); }
+  .score-card.blue::before  { background: var(--blue); }
+  .score-card.orange::before{ background: var(--orange); }
+  .score-card.red::before   { background: var(--red); }
+  .score-card.yellow::before{ background: var(--yellow); }
+  .sc-icon {
+    width: 38px; height: 38px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; margin-bottom: 12px;
+  }
+  .sc-icon.green  { background: var(--green-light); }
+  .sc-icon.blue   { background: var(--blue-light); }
+  .sc-icon.orange { background: var(--orange-light); }
+  .sc-icon.red    { background: var(--red-light); }
+  .sc-icon.yellow { background: var(--yellow-light); }
+  .sc-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .sc-score { font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .sc-score.green  { color: var(--green); }
+  .sc-score.blue   { color: var(--blue); }
+  .sc-score.orange { color: var(--orange); }
+  .sc-score.red    { color: var(--red); }
+  .sc-score.yellow { color: var(--yellow); }
+  .sc-denom { font-size: 13px; color: var(--text-muted); font-weight: 400; }
+  .sc-bar { height: 5px; background: var(--border); border-radius: 100px; overflow: hidden; margin: 10px 0 10px; }
+  .sc-bar-fill { height: 100%; border-radius: 100px; transition: width 1.4s cubic-bezier(0.16,1,0.3,1); }
+  .sc-bar-fill.green  { background: linear-gradient(90deg, var(--green), #00D46A); }
+  .sc-bar-fill.blue   { background: linear-gradient(90deg, var(--blue), #5B8FFF); }
+  .sc-bar-fill.orange { background: linear-gradient(90deg, var(--orange), #FF8C00); }
+  .sc-bar-fill.red    { background: linear-gradient(90deg, var(--red), #FF6B6B); }
+  .sc-bar-fill.yellow { background: linear-gradient(90deg, var(--yellow), #F7C45E); }
+
+  .sc-delta {
+    display: inline-flex; align-items: center;
+    padding: 3px 8px; border-radius: 100px;
+    font-size: 11px; font-weight: 700;
+  }
+  .sc-delta.up   { background: var(--green-light); color: #007A3E; }
+  .sc-delta.down { background: var(--red-light); color: #C62828; }
+  .sc-delta.flat { background: var(--bg); color: var(--text-muted); }
+
+  .sc-objective-line {
+    font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.45;
+  }
+  .sc-range-line {
+    font-size: 11px; color: var(--text-muted); margin-top: 4px;
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  }
+  .sc-range-line .range-pro { color: #007A3E; font-weight: 700; }
+  .sc-range-line .range-con { color: #B34A1E; font-weight: 700; }
+
+  /* ── Insight Card (영향받은 세부 항목) ── */
+  .insight-card {
+    background: var(--navy); border-radius: var(--radius-lg);
+    padding: 24px 28px; position: relative; overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .insight-card::after {
+    content: '🎯'; position: absolute; right: -4px; top: -4px;
+    font-size: 80px; opacity: 0.06; transform: rotate(15deg);
+    pointer-events: none;
+  }
+  .insight-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.40); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+  .insight-title { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.4; margin-bottom: 18px; }
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
+  .insight-item { display: flex; align-items: flex-start; gap: 10px; }
+  .insight-dot-wrap { width: 19px; height: 19px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .insight-dot-wrap.up { background: rgba(0,184,94,0.22); }
+  .insight-dot-wrap.down { background: rgba(255,107,53,0.22); }
+  .insight-dot-wrap.flat { background: rgba(255,255,255,0.10); }
+  .insight-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .insight-dot.up { background: var(--green); }
+  .insight-dot.down { background: var(--orange); }
+  .insight-dot.flat { background: rgba(255,255,255,0.45); }
+  .insight-text { font-size: 13px; color: rgba(255,255,255,0.78); line-height: 1.55; }
+  .insight-text strong { color: #fff; font-weight: 700; }
+
+  /* ── Insight Link (가중치 자세히 보기) ── */
+  .insight-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 18px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px;
+    color: #B0CCFF; font-size: 12.5px; font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .insight-link:hover { background: rgba(30,94,255,0.22); border-color: rgba(30,94,255,0.40); color: #fff; }
+  .insight-link-arrow { font-size: 14px; }
+
+  /* ── Action Buttons ── */
+  .actions-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .action-primary {
+    background: var(--blue); border-radius: var(--radius-md);
+    padding: 18px 22px; display: flex; align-items: center; gap: 14px;
+    cursor: pointer; box-shadow: 0 4px 24px rgba(30,94,255,0.32);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .action-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(30,94,255,0.38); }
+  .action-icon-wrap {
+    width: 46px; height: 46px; background: rgba(255,255,255,0.18);
+    border-radius: 13px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .action-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .action-sub { font-size: 12px; color: rgba(255,255,255,0.65); }
+  .action-arrow { color: rgba(255,255,255,0.55); font-size: 22px; margin-left: auto; }
+
+  .action-secondary {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-md); padding: 18px 18px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .action-secondary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .action-secondary .action-icon-wrap { background: var(--blue-light); width: 42px; height: 42px; border-radius: 12px; font-size: 20px; }
+  .action-secondary .action-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .action-secondary .action-sub { font-size: 12px; color: var(--text-muted); }
+
+  /* ── Disclaimer ── */
+  .disclaimer {
+    display: flex; align-items: flex-start; gap: 9px;
+    padding: 14px 18px; background: rgba(90,100,118,0.06);
+    border-radius: var(--radius-sm);
+  }
+  .disclaimer-text { font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+  .disclaimer-text strong { color: var(--blue); font-weight: 700; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .agents-grid { grid-template-columns: 1fr; }
+    .grid-scores { grid-template-columns: repeat(2, 1fr); }
+    .hero-strip { flex-direction: column; gap: 28px; }
+    .hero-right { min-width: 0; }
+    .actions-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<nav class="topnav">
+  <div class="topnav-logo">
+    <div class="topnav-logo-dot"></div>
+    PropCheck AI
+  </div>
+  <div class="topnav-breadcrumb">
+    <span>매물 검증</span>
+    <span class="sep">›</span>
+    <strong>OO아파트 105동 1203호</strong>
+    <span class="sep">›</span>
+    <strong style="color:#B0CCFF;">본인 가치관 결과</strong>
+  </div>
+  <div class="topnav-actions">
+    <button class="topnav-btn ghost">← 답변 다시 하기</button>
+    <button class="topnav-btn ghost">📤 공유</button>
+    <button class="topnav-btn ghost">📄 PDF 저장</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ── Hero Strip ── -->
+  <div class="hero-strip">
+    <div class="hero-left">
+      <div class="hero-pills">
+        <div class="hero-pill">📍 경기도 광명시</div>
+        <div class="hero-pill">🏠 전용 59㎡ · 24평형</div>
+        <div class="hero-pill accent">🎯 Step 3 / 3 · 개인화 결과</div>
+      </div>
+      <div class="hero-name">민준님께 맞춤 평가</div>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">매물</div>
+          <div class="hero-meta-val">OO아파트 105동 1203호</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">매매가</div>
+          <div class="hero-meta-val">5억 3,000만</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">광화문 통근</div>
+          <div class="hero-meta-val">47분 (지하철)</div>
+        </div>
+        <div class="hero-meta-item">
+          <div class="hero-meta-label">반영 항목</div>
+          <div class="hero-meta-val">39개 중 27개</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <!-- 객관 → 개인화 비교 -->
+      <div class="hero-score-compare">
+        <div class="hero-score-objective">
+          <div class="hero-score-objective-label">객관 점수</div>
+          <div class="hero-score-objective-num">3.6<span>/5</span></div>
+        </div>
+        <div class="hero-score-arrow">→</div>
+        <div class="hero-score-personal">
+          <div class="hero-score-personal-label">민준님 점수</div>
+          <div class="hero-score-personal-num">3.7<span>/5</span></div>
+          <div class="hero-stars">
+            <span class="star full">★</span><span class="star full">★</span>
+            <span class="star full">★</span><span class="star half">★</span>
+            <span class="star empty">★</span>
+          </div>
+          <div class="hero-delta">↑ +0.1 가치관 반영</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Verdict Brief (흰색-네이비) ── -->
+  <div class="verdict-brief">
+    <div class="verdict-brief-label">💬 민준님께 솔직히 말하면</div>
+    <div class="verdict-brief-text">
+      <p>광화문까지 <strong>지하철 47분</strong>은 당장 견딜 만한 수준입니다. 입지 ★5.0은 객관 점수에서도 흔들리지 않은 이 매물의 핵심 강점이에요. 부부 2인 가구에 학교 가중치가 빠지면서 입지·생활편의가 더 또렷해졌습니다.</p>
+      <p>맛집·카페·공원이 모두 도보권에 있어 <span class="ok">생활편의가 +0.1</span> 더 올라갔습니다. 다만 단지 노후 18년 + 미세먼지 국지 초과는 무시할 수 없어 <span class="warn">미래가치 -0.2</span> · 리스크는 통근 강점 덕에 <span class="ok">+0.2 회복</span>했습니다.</p>
+      <p>5~10년 보유 가정에서는 <strong>광명역 KTX 호재 의존도</strong>가 결정적이에요. 호재가 실현되면 <span class="ok">★4.1</span>, 미실현 시 <span class="warn">★3.2</span>까지 갈라집니다. 매수 결정 전에 정비사업·교통 호재의 *행정 단계*를 한 번 더 점검해보시길.</p>
+      <p><span class="ok">현재 부부 거주 + 중기 보유 시나리오에는 추천</span>. 단, 자녀 계획이 생기면 학군·환경 가중치가 크게 바뀌어 점수가 재조정됩니다.</p>
+    </div>
+  </div>
+
+  <!-- ── 부동산 전문 에이전트들 토론 카드 ── -->
+  <div class="section-heading">🗣️ 부동산 전문 에이전트들의 토론 결과</div>
+  <div class="agents-grid">
+
+    <!-- 옹호 -->
+    <div class="agent-card pro">
+      <div class="agent-header">
+        <div class="agent-tag pro"><span class="agent-tag-dot"></span>옹호 · 강점 최대화</div>
+        <div class="agent-name">긍정 에이전트</div>
+        <div class="agent-stance">민준님 가치관 + 매물 강점에 가중치 ↑</div>
+        <div class="agent-score-row">
+          <div class="agent-score-num pro">4.1</div>
+          <div class="agent-score-denom">/ 5</div>
+          <div class="agent-score-stars">
+            <span class="star full">★</span><span class="star full">★</span>
+            <span class="star full">★</span><span class="star full">★</span>
+            <span class="star half">★</span>
+          </div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-quote">
+          광화문 47분 통근은 지하철 위주 답변에서 <em>충분히 양호</em>합니다. 도보 12분의 광명역, 학군 상위 15%, 도보권 마트·CGV — 입지 <em>★5.0</em>은 어느 시나리오에서도 흔들리지 않습니다.
+        </div>
+        <div class="agent-quote">
+          맛집·카페·공원 모두 도보권에 있어 생활편의 <em>★4.5</em>. 5~10년 보유한다면 <span class="ok">광명역 KTX 호재</span>가 자산가치로 돌아옵니다.
+        </div>
+        <div class="agent-emphasis">
+          <strong>가중치 강조</strong> · 입지 25% → 30% · 생활편의 15% → 20% · 광명역 호재 +
+        </div>
+      </div>
+    </div>
+
+    <!-- 중립 -->
+    <div class="agent-card mid">
+      <div class="agent-header">
+        <div class="agent-tag mid"><span class="agent-tag-dot"></span>중립 · 답변 그대로</div>
+        <div class="agent-name">기준 에이전트</div>
+        <div class="agent-stance">룰 매트릭스 기본값 — 조정 없음</div>
+        <div class="agent-score-row">
+          <div class="agent-score-num mid">3.7</div>
+          <div class="agent-score-denom">/ 5</div>
+          <div class="agent-score-stars">
+            <span class="star full">★</span><span class="star full">★</span>
+            <span class="star full">★</span><span class="star half">★</span>
+            <span class="star empty">★</span>
+          </div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-quote">
+          민준님 답변(<em>부부 · 광화문 · 지하철 · 중기</em>)을 룰 매트릭스 그대로 적용했습니다. 입지·생활편의는 강점, 미래가치·리스크는 보완 필요로 분석됩니다.
+        </div>
+        <div class="agent-quote">
+          객관 ★3.6 대비 <em>+0.1 (★3.7)</em> — 큰 차이는 아니지만 통근 강점과 생활편의 패턴이 반영된 결과입니다.
+        </div>
+        <div class="agent-emphasis">
+          <strong>가중치 강조</strong> · 시세 25% · 입지 20% · 생활편의 20% · 미래가치 20% · 리스크 15% (Q4=중기)
+        </div>
+      </div>
+    </div>
+
+    <!-- 반대 -->
+    <div class="agent-card con">
+      <div class="agent-header">
+        <div class="agent-tag con"><span class="agent-tag-dot"></span>반대 · 약점 최대화</div>
+        <div class="agent-name">신중 에이전트</div>
+        <div class="agent-stance">매물 약점·리스크에 가중치 ↑</div>
+        <div class="agent-score-row">
+          <div class="agent-score-num con">3.2</div>
+          <div class="agent-score-denom">/ 5</div>
+          <div class="agent-score-stars">
+            <span class="star full">★</span><span class="star full">★</span>
+            <span class="star full">★</span><span class="star empty">★</span>
+            <span class="star empty">★</span>
+          </div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-quote">
+          단지 노후 <em>18년</em> + 미세먼지 국지 초과 + 간선도로 인접 — 장기 거주 시 <span class="warn">환경 리스크가 누적</span>됩니다. 리스크 ★2.1까지 내려갑니다.
+        </div>
+        <div class="agent-quote">
+          광명역 KTX 호재 의존도가 미래가치 점수의 약 70%. <span class="warn">호재 미실현 시 ★2.4</span>까지 하락 가능. 평당가도 인근 대비 +4% 비싸 협상 여지 확보가 필요합니다.
+        </div>
+        <div class="agent-emphasis">
+          <strong>가중치 강조</strong> · 리스크 15% → 25% · 호재 의존도 10% → 20% · 평당가 적정성 가산
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 5 카드 영역별 점수 (개인화) ── -->
+  <div class="section-heading">📊 영역별 평가 점수 — 객관 → 민준님 점수</div>
+  <div class="grid-scores">
+
+    <!-- 시세 -->
+    <div class="score-card yellow">
+      <div class="sc-icon yellow">💰</div>
+      <div class="sc-name">시세 분석</div>
+      <div><span class="sc-score yellow">3.9</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill yellow" style="width:78%"></div></div>
+      <span class="sc-delta down">↓ -0.1</span>
+      <div class="sc-objective-line">객관 ★4.0 → 민준님 ★3.9</div>
+      <div class="sc-range-line">범위: <span class="range-con">반대 ★3.5</span> ~ <span class="range-pro">옹호 ★4.2</span></div>
+    </div>
+
+    <!-- 입지 -->
+    <div class="score-card green">
+      <div class="sc-icon green">🏙️</div>
+      <div class="sc-name">입지 분석</div>
+      <div><span class="sc-score green">5.0</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill green" style="width:100%"></div></div>
+      <span class="sc-delta flat">— 변동 없음</span>
+      <div class="sc-objective-line">객관 ★5.0 → 민준님 ★5.0</div>
+      <div class="sc-range-line">범위: <span class="range-con">반대 ★4.6</span> ~ <span class="range-pro">옹호 ★5.0</span></div>
+    </div>
+
+    <!-- 생활편의 -->
+    <div class="score-card blue">
+      <div class="sc-icon blue">🛒</div>
+      <div class="sc-name">생활 편의</div>
+      <div><span class="sc-score blue">4.1</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill blue" style="width:82%"></div></div>
+      <span class="sc-delta up">↑ +0.1</span>
+      <div class="sc-objective-line">객관 ★4.0 → 민준님 ★4.1</div>
+      <div class="sc-range-line">범위: <span class="range-con">반대 ★3.6</span> ~ <span class="range-pro">옹호 ★4.5</span></div>
+    </div>
+
+    <!-- 미래가치 -->
+    <div class="score-card orange">
+      <div class="sc-icon orange">📈</div>
+      <div class="sc-name">미래 가치</div>
+      <div><span class="sc-score orange">2.8</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill orange" style="width:56%"></div></div>
+      <span class="sc-delta down">↓ -0.2</span>
+      <div class="sc-objective-line">객관 ★3.0 → 민준님 ★2.8</div>
+      <div class="sc-range-line">범위: <span class="range-con">반대 ★2.4</span> ~ <span class="range-pro">옹호 ★3.4</span></div>
+    </div>
+
+    <!-- 리스크 -->
+    <div class="score-card red">
+      <div class="sc-icon red">⚠️</div>
+      <div class="sc-name">리스크</div>
+      <div><span class="sc-score red">2.7</span><span class="sc-denom"> /5</span></div>
+      <div class="sc-bar"><div class="sc-bar-fill red" style="width:54%"></div></div>
+      <span class="sc-delta up">↑ +0.2</span>
+      <div class="sc-objective-line">객관 ★2.5 → 민준님 ★2.7</div>
+      <div class="sc-range-line">범위: <span class="range-con">반대 ★2.1</span> ~ <span class="range-pro">옹호 ★3.2</span></div>
+    </div>
+
+  </div>
+
+  <!-- ── Insight Card (영향받은 세부 항목) ── -->
+  <div class="insight-card">
+    <div class="insight-label">🎯 민준님 답변이 점수에 끼친 영향 — 핵심 4개</div>
+    <div class="insight-title">39개 세부 항목 중 <strong style="color:#B0CCFF;">27개</strong>가 답변으로 가중치 조정됐습니다</div>
+    <div class="insight-grid">
+      <div class="insight-item">
+        <div class="insight-dot-wrap down"><div class="insight-dot down"></div></div>
+        <div class="insight-text">
+          <strong>초등학교·학원 가중치 → 0.0</strong><br>
+          부부 2인 가구·자녀 미계획 답변. 학군 항목이 점수에 거의 영향 없음.
+        </div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-dot-wrap up"><div class="insight-dot up"></div></div>
+        <div class="insight-text">
+          <strong>지하철 거리·환승 가능성 → 1.0</strong><br>
+          광화문 + 지하철 위주 통근. 광명역 도보 12분이 입지 ★5.0의 핵심 근거.
+        </div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-dot-wrap up"><div class="insight-dot up"></div></div>
+        <div class="insight-text">
+          <strong>음식점·카페·공원 가중치 → 1.0</strong><br>
+          Q3에서 맛집·카페·공원 체크. 도보권 인프라가 생활편의 +0.1 견인.
+        </div>
+      </div>
+      <div class="insight-item">
+        <div class="insight-dot-wrap flat"><div class="insight-dot flat"></div></div>
+        <div class="insight-text">
+          <strong>L3 카드 가중치 — 중기 보유</strong><br>
+          시세 25% · 미래가치 20% (단기 30%/15%, 장기 15%/30% 대비 균형형).
+        </div>
+      </div>
+    </div>
+    <a href="#" class="insight-link">가중치 조정 자세히 보기 <span class="insight-link-arrow">→</span></a>
+  </div>
+
+  <!-- ── CTA Action Row ── -->
+  <div class="actions-row">
+    <div class="action-primary">
+      <div class="action-icon-wrap">💬</div>
+      <div>
+        <div class="action-title">전문가에게 질문하기</div>
+        <div class="action-sub">호재 행정 단계·정비사업 진행률을 사람 전문가에게 검증받기</div>
+      </div>
+      <div class="action-arrow">→</div>
+    </div>
+    <div class="action-secondary">
+      <div class="action-icon-wrap">📄</div>
+      <div>
+        <div class="action-title">리포트 PDF 저장</div>
+        <div class="action-sub">부동산 전문 에이전트들의 토론 포함</div>
+      </div>
+    </div>
+    <div class="action-secondary">
+      <div class="action-icon-wrap">🔄</div>
+      <div>
+        <div class="action-title">답변 다시 하기</div>
+        <div class="action-sub">가족 구성·통근·보유 기간</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Disclaimer ── -->
+  <div class="disclaimer">
+    <div class="disclaimer-text">
+      <strong>※ 시연용 시안</strong> — 점수와 가중치는 페르소나 *민준* 답변 기준 고정값입니다. 실제 서비스에서는 KTL 공공포털·RAG 데이터 기반으로 답변 시점에 동적 산출됩니다 (LLM 0% · 룰 매트릭스).
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
