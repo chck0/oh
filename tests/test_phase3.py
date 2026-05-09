@@ -1,4 +1,5 @@
 """Tests for Phase 3 — CLI integration, demo_mock enhancements, property type support."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -121,12 +122,15 @@ class TestFormattingIntegration:
 
 # ── Demo mock with full data ──
 
+_UTF8_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+
+
 class TestDemoMockIntegration:
     def test_demo_mock_runs(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert result.returncode == 0
 
@@ -134,8 +138,8 @@ class TestDemoMockIntegration:
         """Phase 1 피보팅 후 상담록 → 종합 리포트로 변경."""
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "서기" in result.stdout or "리포트" in result.stdout
 
@@ -143,16 +147,16 @@ class TestDemoMockIntegration:
         """체크리스트 → 후속 액션 3가지(드릴다운/대화/PDF)로 변경."""
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "후속 액션" in result.stdout or "드릴다운" in result.stdout
 
     def test_demo_mock_shows_ltv(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "LTV" in result.stdout
 

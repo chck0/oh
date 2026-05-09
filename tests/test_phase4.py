@@ -1,4 +1,5 @@
 """Tests for Phase 4 — tax simulation, scorecard, portfolio analysis."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -214,12 +215,15 @@ class TestPortfolio:
 
 # ── Demo mock updated ──
 
+_UTF8_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+
+
 class TestDemoMockPhase4:
     def test_demo_shows_acquisition_tax(self):
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert result.returncode == 0
         assert "취득세" in result.stdout
@@ -228,8 +232,8 @@ class TestDemoMockPhase4:
         """Phase 1 피보팅 후 상담록 → 종합 리포트로 변경."""
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "리포트" in result.stdout or "종합 평점" in result.stdout
 
@@ -237,8 +241,8 @@ class TestDemoMockPhase4:
         """Next Action → 후속 액션(드릴다운/대화/PDF)으로 변경."""
         result = subprocess.run(
             [sys.executable, "src/demo_mock.py"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=_UTF8_ENV, cwd=str(Path(__file__).resolve().parent.parent),
         )
         assert "후속 액션" in result.stdout or "드릴다운" in result.stdout
 
