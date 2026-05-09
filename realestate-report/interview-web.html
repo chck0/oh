@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부동산 검증 AI 에이전트 — 본인 가치관 인터뷰 (Web)</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F0F2F8;
+    --surface: #FFFFFF;
+    --navy: #0F1B35;
+    --navy2: #1A2E52;
+    --blue: #1E5EFF;
+    --blue-light: #EEF3FF;
+    --green: #00B85E;
+    --green-light: #E6F9F0;
+    --orange: #FF6B35;
+    --orange-light: #FFF0EB;
+    --red: #E53935;
+    --yellow: #F5A623;
+    --text-primary: #0F1B35;
+    --text-secondary: #5A6476;
+    --text-muted: #9AA2B4;
+    --border: #E4E8F2;
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --shadow-sm: 0 1px 4px rgba(15,27,53,0.06);
+    --shadow-md: 0 4px 20px rgba(15,27,53,0.09);
+    --shadow-lg: 0 8px 40px rgba(15,27,53,0.13);
+  }
+
+  html { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text-primary); font-size: 15px; }
+  body { min-height: 100vh; }
+
+  /* ── Top Nav ── */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--navy);
+    padding: 0 40px;
+    display: flex; align-items: center;
+    height: 60px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+  .topnav-logo {
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; font-size: 16px; font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-right: 40px;
+  }
+  .topnav-logo-dot { width: 8px; height: 8px; background: var(--blue); border-radius: 50%; }
+  .topnav-breadcrumb { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .topnav-breadcrumb span { font-size: 13px; color: rgba(255,255,255,0.45); }
+  .topnav-breadcrumb strong { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 600; }
+  .topnav-breadcrumb .sep { color: rgba(255,255,255,0.25); }
+  .topnav-actions { display: flex; gap: 8px; }
+  .topnav-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .topnav-btn.ghost { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85); }
+  .topnav-btn.ghost:hover { background: rgba(255,255,255,0.18); }
+
+  /* ── Page Layout ── */
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 32px 60px; }
+
+  /* ── Hero Strip (인터뷰용 — 컴팩트) ── */
+  .hero-strip {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #1A3A6F 100%);
+    border-radius: var(--radius-lg);
+    padding: 32px 36px;
+    margin-bottom: 28px;
+    position: relative; overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero-strip::before {
+    content: '';
+    position: absolute; right: -60px; top: -60px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(30,94,255,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-pills { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .hero-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px; padding: 4px 12px;
+    font-size: 12px; color: rgba(255,255,255,0.80);
+  }
+  .hero-pill.accent { background: rgba(30,94,255,0.20); border-color: rgba(30,94,255,0.40); color: #B0CCFF; }
+  .hero-name { font-size: 26px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 14px; color: rgba(255,255,255,0.70); margin-bottom: 16px; line-height: 1.5; }
+  .hero-meta-line { font-size: 13px; color: rgba(255,255,255,0.55); }
+  .hero-meta-line strong { color: rgba(255,255,255,0.85); font-weight: 700; }
+
+  /* ── Section Label ── */
+  .section-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── Question Card ── */
+  .q-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .q-header {
+    padding: 22px 28px 16px;
+    display: flex; align-items: flex-start; gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .q-num {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--blue-light); color: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .q-title-wrap { flex: 1; }
+  .q-title { font-size: 17px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 4px; }
+  .q-sub { font-size: 13px; color: var(--text-muted); }
+
+  .q-body { padding: 22px 28px 24px; }
+
+  /* ── Radio (단일 선택) ── */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+  }
+  .radio-item:hover { border-color: rgba(30,94,255,0.30); background: var(--blue-light); }
+  .radio-item.selected {
+    border-color: var(--blue);
+    background: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(30,94,255,0.10);
+  }
+  .radio-circle {
+    width: 20px; height: 20px;
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .radio-item.selected .radio-circle {
+    border-color: var(--blue);
+  }
+  .radio-item.selected .radio-circle::after {
+    content: '';
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--blue);
+  }
+  .radio-label { font-size: 14px; font-weight: 500; color: var(--text-primary); flex: 1; }
+  .radio-label-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── Checkbox (다중 선택) ── */
+  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .checkbox-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+  }
+  .checkbox-item:hover { border-color: rgba(30,94,255,0.30); background: var(--blue-light); }
+  .checkbox-item.checked {
+    border-color: var(--blue);
+    background: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(30,94,255,0.10);
+  }
+  .checkbox-square {
+    width: 20px; height: 20px;
+    border: 2px solid var(--text-muted);
+    border-radius: 5px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .checkbox-item.checked .checkbox-square {
+    border-color: var(--blue);
+    background: var(--blue);
+  }
+  .checkbox-item.checked .checkbox-square::after {
+    content: '';
+    position: absolute; left: 6px; top: 2px;
+    width: 5px; height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .checkbox-label { font-size: 14px; font-weight: 500; color: var(--text-primary); flex: 1; }
+
+  /* ── Text Input ── */
+  .text-input-wrap {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-bottom: 16px;
+  }
+  .text-input-label {
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  }
+  .text-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+    transition: all 0.15s;
+    background: var(--surface);
+  }
+  .text-input:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(30,94,255,0.10);
+  }
+  .text-input-hint {
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  /* ── Sub-section (Q1 반려동물 추가, Q2 통근 수단) ── */
+  .q-sub-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+  }
+  .q-sub-label {
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+
+  /* ── Submit CTA ── */
+  .submit-section {
+    margin-top: 32px;
+    padding: 28px 32px;
+    background: linear-gradient(135deg, var(--blue) 0%, #4A7FFF 100%);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(30,94,255,0.25);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+  }
+  .submit-text { flex: 1; }
+  .submit-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .submit-sub { font-size: 13px; color: rgba(255,255,255,0.80); line-height: 1.5; }
+  .submit-button {
+    background: #fff; color: var(--blue);
+    border: none; border-radius: var(--radius-sm);
+    padding: 16px 28px;
+    font-size: 15px; font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .submit-button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+  .submit-button:active { transform: translateY(0); }
+
+  /* ── Pre-filled note (시연용) ── */
+  .demo-note {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--blue-light);
+    border: 1px dashed rgba(30,94,255,0.30);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .demo-note strong { color: var(--blue); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<nav class="topnav">
+  <div class="topnav-logo">
+    <div class="topnav-logo-dot"></div>
+    PropCheck AI
+  </div>
+  <div class="topnav-breadcrumb">
+    <span>매물 검증</span>
+    <span class="sep">›</span>
+    <strong>OO아파트 105동 1203호</strong>
+    <span class="sep">›</span>
+    <strong style="color:#B0CCFF;">본인 가치관 인터뷰</strong>
+  </div>
+  <div class="topnav-actions">
+    <button class="topnav-btn ghost">← 객관 분석으로</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <div class="hero-strip">
+    <div class="hero-pills">
+      <div class="hero-pill">📍 경기도 광명시</div>
+      <div class="hero-pill">🏠 전용 59㎡ · 24평형</div>
+      <div class="hero-pill accent">🎯 Step 2 / 3</div>
+    </div>
+    <div class="hero-name">본인 가치관 인터뷰</div>
+    <div class="hero-sub">
+      방금 보신 <strong style="color:#fff">★3.6</strong> 점수는 <strong style="color:#fff">모든 사용자에게 동일</strong>한 시장 평가입니다.<br>
+      이제 질문을 통해 <strong style="color:#fff">본인 가치관에 맞춘 점수</strong>를 받아보세요.
+    </div>
+    <div class="hero-meta-line">
+      매물 · <strong>OO아파트 105동 1203호</strong>  ·  매매가 <strong>5.3억</strong>  ·  준공 <strong>2008년</strong>
+    </div>
+  </div>
+
+  <!-- ── Q1. 동거 가족 구성 ── -->
+  <div class="section-label">질문 1 / 4</div>
+  <div class="q-card">
+    <div class="q-header">
+      <div class="q-num">1</div>
+      <div class="q-title-wrap">
+        <div class="q-title">동거 가족 구성을 알려주세요</div>
+        <div class="q-sub">현재 또는 매수 후 함께 살 가족 기준</div>
+      </div>
+    </div>
+    <div class="q-body">
+      <div class="radio-group">
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div class="radio-label">단신 (1인 가구)</div>
+        </label>
+        <label class="radio-item selected">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">부부 (자녀 없음·계획 없음)</div>
+            <div class="radio-label-sub">2인 가구, 자녀 미계획</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">부부 + 영유아 (~6세 또는 출산 예정)</div>
+            <div class="radio-label-sub">어린이집·유치원 입학 전</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">부부 + 학령기 자녀 (초·중·고)</div>
+            <div class="radio-label-sub">학교·학원 동선 중요</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">노부모·조부모 동거</div>
+            <div class="radio-label-sub">의료·보행 환경 중요</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="q-sub-section">
+        <div class="q-sub-label">반려동물과 함께 사시나요? (선택)</div>
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <div class="checkbox-square"></div>
+            <div class="checkbox-label">🐕 반려견 동거</div>
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox-square"></div>
+            <div class="checkbox-label">🐈 반려묘 동거</div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q2. 회사 주소 + 통근 수단 ── -->
+  <div class="section-label">질문 2 / 4</div>
+  <div class="q-card">
+    <div class="q-header">
+      <div class="q-num">2</div>
+      <div class="q-title-wrap">
+        <div class="q-title">회사 (또는 주 활동지) 주소와 통근 수단은?</div>
+        <div class="q-sub">본 매물에서 회사까지의 통상 출퇴근 시간을 계산합니다 (ODsay)</div>
+      </div>
+    </div>
+    <div class="q-body">
+      <div class="text-input-wrap">
+        <label class="text-input-label">회사 또는 주 활동지 주소</label>
+        <input type="text" class="text-input" value="서울특별시 종로구 세종대로 1 (광화문)" placeholder="예: 서울 강남구 테헤란로 152">
+        <div class="text-input-hint">정확한 주소를 입력하면 통상 출퇴근 시간이 자동 계산됩니다.</div>
+      </div>
+
+      <div class="q-sub-section">
+        <div class="q-sub-label">주 통근 수단</div>
+        <div class="radio-group">
+          <label class="radio-item selected">
+            <div class="radio-circle"></div>
+            <div class="radio-label">🚇 지하철 위주</div>
+          </label>
+          <label class="radio-item">
+            <div class="radio-circle"></div>
+            <div class="radio-label">🚌 버스 위주</div>
+          </label>
+          <label class="radio-item">
+            <div class="radio-circle"></div>
+            <div class="radio-label">🚗 자가용 위주</div>
+          </label>
+          <label class="radio-item">
+            <div class="radio-circle"></div>
+            <div class="radio-label">🚶 도보 가능 거리</div>
+          </label>
+          <label class="radio-item">
+            <div class="radio-circle"></div>
+            <div class="radio-label">🏠 재택 위주·출근 안 함</div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q3. 생활·여가 패턴 ── -->
+  <div class="section-label">질문 3 / 4</div>
+  <div class="q-card">
+    <div class="q-header">
+      <div class="q-num">3</div>
+      <div class="q-title-wrap">
+        <div class="q-title">평소 자주 가는 인프라를 모두 골라주세요</div>
+        <div class="q-sub">1~4개 선택 (다중 선택 가능)</div>
+      </div>
+    </div>
+    <div class="q-body">
+      <div class="checkbox-grid">
+        <label class="checkbox-item">
+          <div class="checkbox-square"></div>
+          <div class="checkbox-label">🛒 대형 마트·백화점</div>
+        </label>
+        <label class="checkbox-item checked">
+          <div class="checkbox-square"></div>
+          <div class="checkbox-label">🍴 맛집·카페</div>
+        </label>
+        <label class="checkbox-item checked">
+          <div class="checkbox-square"></div>
+          <div class="checkbox-label">🌳 공원·산책</div>
+        </label>
+        <label class="checkbox-item">
+          <div class="checkbox-square"></div>
+          <div class="checkbox-label">🎬 엔터테인먼트 (영화관·문화시설)</div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q4. 보유 기간 ── -->
+  <div class="section-label">질문 4 / 4</div>
+  <div class="q-card">
+    <div class="q-header">
+      <div class="q-num">4</div>
+      <div class="q-title-wrap">
+        <div class="q-title">매수 후 얼마나 오래 살 계획이세요?</div>
+        <div class="q-sub">보유 기간에 따라 시세·미래가치 비중이 달라집니다</div>
+      </div>
+    </div>
+    <div class="q-body">
+      <div class="radio-group">
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">단기 (~3년)</div>
+            <div class="radio-label-sub">시세 추이·환금성 중요</div>
+          </div>
+        </label>
+        <label class="radio-item selected">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">중기 (5~10년)</div>
+            <div class="radio-label-sub">생활편의·인구 추세 균형</div>
+          </div>
+        </label>
+        <label class="radio-item">
+          <div class="radio-circle"></div>
+          <div>
+            <div class="radio-label">장기 (10년+)</div>
+            <div class="radio-label-sub">미래가치·정비사업 호재 중요</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Submit ── -->
+  <div class="submit-section">
+    <div class="submit-text">
+      <div class="submit-title">개인화 분석 받기</div>
+      <div class="submit-sub">본인 가치관에 맞춘 점수와 3 에이전트의 토론 의견을 확인하세요.</div>
+    </div>
+    <button class="submit-button">분석 시작 →</button>
+  </div>
+
+  <!-- 시연용 안내 -->
+  <div class="demo-note">
+    <strong>※ 시연용 시안</strong> — 페르소나 *민준* 기준 가상 답변이 미리 입력되어 있습니다 (부부 / 광화문·지하철 / 맛집·공원 / 중기 보유). 실제 서비스에서는 사용자가 직접 입력합니다.
+  </div>
+
+</div>
+
+<script>
+  // 라디오 단일 선택
+  document.querySelectorAll('.radio-group').forEach(group => {
+    group.addEventListener('click', e => {
+      const item = e.target.closest('.radio-item');
+      if (!item) return;
+      group.querySelectorAll('.radio-item').forEach(r => r.classList.remove('selected'));
+      item.classList.add('selected');
+    });
+  });
+
+  // 체크박스 다중 선택
+  document.querySelectorAll('.checkbox-item').forEach(item => {
+    item.addEventListener('click', e => {
+      e.preventDefault();
+      item.classList.toggle('checked');
+    });
+  });
+</script>
+
+</body>
+</html>
