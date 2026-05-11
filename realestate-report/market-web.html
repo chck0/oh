@@ -134,6 +134,16 @@
   }
   .chart-title { font-size: 15px; font-weight: 700; color: var(--navy); }
   .chart-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .pct-badge {
+    display: inline-block;
+    margin-top: 7px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1px;
+  }
+  .pct-badge.cheap  { background: #E6F9F0; color: #007A3D; }
+  .pct-badge.mid    { background: #F3F4F8; color: var(--text-secondary); }
+  .pct-badge.pricey { background: #FFF0EE; color: #C0392B; }
   .chart-legend {
     display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
     font-size: 12px; color: var(--text-secondary);
@@ -438,6 +448,11 @@
           <div class="stat-val up" id="statVsDong">—</div>
           <div class="stat-label">동 대비 초과</div>
         </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-val" id="statPeak">—</div>
+          <div class="stat-label">고점 대비</div>
+        </div>
       </div>
     </div>
 
@@ -447,6 +462,7 @@
         <div>
           <div class="chart-title">30평형대 평단가 추이</div>
           <div class="chart-subtitle">단위: 만원/평 · 실거래 기준</div>
+          <div class="pct-badge mid" id="percentileBadge">계산 중…</div>
         </div>
         <div class="chart-legend" id="chartLegend">
           <span><span class="legend-dot" style="background:#1E5EFF"></span>래미안아파트 (단지)</span>
@@ -546,20 +562,31 @@ function initPage() {
 const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG } = initPage();
 
 // ── Mock Data (fallback) ──
-const MOCK_MONTHS = ['11월','12월','1월','2월','3월','4월'];
-const MOCK_COMPLEX = [4200,4500,5000,5300,5600,5800];
-const MOCK_DONG    = [4100,4300,4700,5000,5200,5500];
+const MOCK_MONTHS = (function() {
+  const months = [];
+  const now = new Date();
+  for (let i = 35; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    months.push(`${y}.${m}`);
+  }
+  return months;
+})();
+const MOCK_COMPLEX = [3800,3850,3900,3950,4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4850,4950,5050,5100,5150,5200,5250,5300,5350,5400,5500,5550,5600,5650,5700,5800];
+const MOCK_DONG    = [3700,3750,3800,3850,3900,3950,4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4750,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5450,5480,5500];
+const MOCK_VOLUME  = [18,12,25,30,35,22,15,10,28,32,20,14,22,18,38,42,30,16,12,8,24,28,35,40,22,14,18,32,38,20,10,15,28,34,22,16];
 
 const DONG_COLORS = ['#FF6B35','#9B59B6','#F39C12','#E74C3C','#1ABC9C','#95A5A6'];
 
 // 동별 mock 비교 데이터 (API 실패 시 fallback)
 const DATA = {
-  '논현동':   { data: [3800,3900,4200,4500,4700,4900], color: '#FF6B35' },
-  '삼성동':   { data: [4500,4700,5100,5400,5700,6000], color: '#9B59B6' },
-  '대치동':   { data: [5000,5200,5500,5800,6100,6400], color: '#F39C12' },
-  '청담동':   { data: [6000,6200,6500,6800,7100,7300], color: '#E74C3C' },
-  '압구정동': { data: [7000,7200,7600,8000,8400,8700], color: '#1ABC9C' },
-  '개포동':   { data: [4300,4500,4800,5000,5200,5400], color: '#95A5A6' },
+  '논현동':   { data: [3500,3520,3550,3580,3600,3650,3700,3750,3800,3820,3850,3900,3950,4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4730,4750,4800,4820,4850,4880,4900,4920], color: '#FF6B35' },
+  '삼성동':   { data: [4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5500,5550,5600,5650,5700,5750,5800,5850,5900,5950,6000], color: '#9B59B6' },
+  '대치동':   { data: [4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5450,5500,5550,5600,5650,5700,5750,5800,5900,5950,6000,6050,6100,6150,6200,6250,6300,6330,6350,6380,6400], color: '#F39C12' },
+  '청담동':   { data: [5700,5750,5800,5850,5900,5950,6000,6050,6100,6150,6200,6250,6300,6350,6400,6450,6500,6550,6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7230,7250,7270,7290,7300], color: '#E74C3C' },
+  '압구정동': { data: [6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7250,7300,7350,7400,7450,7500,7600,7700,7800,7900,8000,8050,8100,8150,8200,8250,8300,8400,8500,8550,8600,8650,8700], color: '#1ABC9C' },
+  '개포동':   { data: [4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4820,4850,4880,4900,4920,4950,4980,5000,5020,5050,5100,5150,5200,5230,5260,5290,5320,5360,5400], color: '#95A5A6' },
 };
 
 // 실API 로드 후 채워지는 값
@@ -614,6 +641,64 @@ function renderDongChips(lawd_cd, excludeDong) {
     .join('');
 }
 
+// ── Chart helpers ──
+function updateChartStats(complexData) {
+  const valid = (complexData || []).filter(v => v != null && !isNaN(v));
+  if (!valid.length) return;
+
+  const current = valid[valid.length - 1];
+  const max = Math.max(...valid);
+  const sorted = [...valid].sort((a, b) => a - b);
+
+  // ① 퍼센타일
+  const rank = sorted.filter(v => v <= current).length;
+  const pct = Math.round((rank / sorted.length) * 100);
+  const badge = document.getElementById('percentileBadge');
+  if (pct <= 25) {
+    badge.className = 'pct-badge cheap';
+    badge.textContent = `하위 ${pct}% — 저렴 구간`;
+  } else if (pct >= 75) {
+    badge.className = 'pct-badge pricey';
+    badge.textContent = `상위 ${100 - pct + 1}% — 고점 근처`;
+  } else {
+    badge.className = 'pct-badge mid';
+    badge.textContent = `중간 구간 (${pct} 퍼센타일)`;
+  }
+
+  // ③ 고점 대비
+  const peakDiff = ((current - max) / max) * 100;
+  const peakEl = document.getElementById('statPeak');
+  peakEl.textContent = (peakDiff >= 0 ? '+' : '') + peakDiff.toFixed(1) + '%';
+  peakEl.className = 'stat-val' + (peakDiff >= -2 ? ' up' : '');
+}
+
+// ② 구간 배경색 플러그인 (하위 25% 녹색, 상위 25% 적색)
+const zoneBgPlugin = {
+  id: 'zoneBg',
+  beforeDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea) return;
+    const data = chart.data.datasets[0]?.data.filter(v => v != null && !isNaN(v));
+    if (!data || data.length < 4) return;
+    const sorted = [...data].sort((a, b) => a - b);
+    const p25 = sorted[Math.floor(sorted.length * 0.25)];
+    const p75 = sorted[Math.floor(sorted.length * 0.75)];
+    const y25 = scales.y.getPixelForValue(p25);
+    const y75 = scales.y.getPixelForValue(p75);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+    ctx.clip();
+    // 저렴 구간 (p25 아래) — 녹색
+    ctx.fillStyle = 'rgba(0,184,94,0.07)';
+    ctx.fillRect(chartArea.left, y25, chartArea.width, chartArea.bottom - y25);
+    // 고점 구간 (p75 위) — 적색
+    ctx.fillStyle = 'rgba(231,76,60,0.07)';
+    ctx.fillRect(chartArea.left, chartArea.top, chartArea.width, y75 - chartArea.top);
+    ctx.restore();
+  }
+};
+
 // ── Chart ──
 const ctx = document.getElementById('mainChart').getContext('2d');
 const chart = new Chart(ctx, {
@@ -623,8 +708,10 @@ const chart = new Chart(ctx, {
     datasets: [
       makeDataset(PAGE_ADDRESS, { data: MOCK_COMPLEX, color: '#1E5EFF' }, true),
       makeDataset('동 평균', { data: MOCK_DONG, color: '#00B85E' }, false),
+      makeVolumeDataset(MOCK_VOLUME),
     ]
   },
+  plugins: [zoneBgPlugin],
   options: {
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
@@ -640,25 +727,60 @@ const chart = new Chart(ctx, {
       }
     },
     scales: {
-      x: { grid: { color: '#E4E8F2' }, ticks: { font: { family: 'Pretendard', size: 12 } } },
+      x: {
+        grid: { color: '#E4E8F2' },
+        ticks: {
+          font: { family: 'Pretendard', size: 11 },
+          maxRotation: 0,
+          callback: function(val, index) {
+            const label = this.getLabelForValue(val);
+            if (label && label.endsWith('.01')) return label.split('.')[0] + '년';
+            return '';
+          }
+        }
+      },
       y: {
         grid: { color: '#E4E8F2' },
         ticks: { font: { family: 'Pretendard', size: 12 }, callback: v => v.toLocaleString() },
         title: { display: true, text: '만원/평', font: { family: 'Pretendard', size: 11 }, color: '#9AA2B4' }
+      },
+      y1: {
+        position: 'right',
+        grid: { drawOnChartArea: false },
+        ticks: {
+          font: { family: 'Pretendard', size: 10 },
+          color: '#9AA2B4',
+          callback: v => v + '건',
+        },
+        title: { display: false },
       }
     }
   }
 });
 
+updateChartStats(MOCK_COMPLEX);
+
 function makeDataset(label, d, isBold) {
   return {
     label, data: d.data,
+    yAxisID: 'y', order: 0,
     borderColor: d.color,
     backgroundColor: d.color + '18',
     borderWidth: isBold ? 3 : 2,
     pointRadius: isBold ? 5 : 3,
     pointBackgroundColor: d.color,
     tension: 0.3, fill: false,
+  };
+}
+
+function makeVolumeDataset(data) {
+  return {
+    type: 'bar', label: '거래량',
+    data, yAxisID: 'y1', order: 1,
+    backgroundColor: 'rgba(30,94,255,0.10)',
+    borderColor: 'transparent',
+    borderRadius: 3,
+    pointRadius: 0,
   };
 }
 
@@ -848,8 +970,10 @@ async function loadRealData() {
     chart.data.datasets[0].label = d.apt_name;
     chart.data.datasets[0].data = d.complex;
     chart.data.datasets[1].data = d.dong_avg;
+    if (d.volume) chart.data.datasets[2].data = d.volume;
     chart.update();
     updateLegend();
+    updateChartStats(d.complex);
 
     // 스탯 업데이트
     if (d.stats) {
@@ -863,10 +987,10 @@ async function loadRealData() {
     addBotMessage(`실거래 데이터 로드 완료 — <strong>${d.apt_name}</strong> 최근 6개월 데이터입니다.`, 'system');
   } catch {
     // mock 데이터 그대로 사용
-    const mockFmt = v => (v >= 0 ? '+' : '') + v + '%';
     document.getElementById('statComplex').textContent = '+38%';
     document.getElementById('statDong').textContent = '+34%';
     document.getElementById('statVsDong').textContent = '+5.5%';
+    updateChartStats(MOCK_COMPLEX);
   }
 }
 
