@@ -35,13 +35,11 @@ DATA_GO_KR_API_KEY = os.environ.get("DATA_GO_KR_API_KEY")
 JUSO_CONFIRM_KEY = os.environ.get("JUSO_CONFIRM_KEY")
 JUSO_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 
-# 생활편의 API 엔드포인트 (DATA_GO_KR_API_KEY 공용)
-_SUBWAY_URL = "https://api.data.go.kr/openapi/tn_pubr_public_subway_sta_info_api"
-_SCHOOL_URL = "https://api.data.go.kr/openapi/tn_pubr_public_elementary_school_info_api"
-_PARK_URL   = "https://api.data.go.kr/openapi/tn_pubr_public_pblcfct_park_info_api"
-
-# 서울 지하철역 좌표 — 정적 JSON 파일에서 로드 (API 호출 불필요)
-_SUBWAY_JSON = os.path.join(os.path.dirname(__file__), "subway_stations.json")
+# 정적 JSON 파일 경로 (API 호출 불필요 — 하드코딩)
+_SRC = os.path.dirname(__file__)
+_SUBWAY_JSON  = os.path.join(_SRC, "subway_stations.json")
+_SCHOOL_JSON  = os.path.join(_SRC, "elementary_schools.json")
+_PARK_JSON    = os.path.join(_SRC, "parks.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -409,45 +407,6 @@ def _count_within(coords: list[tuple[float, float]], lat: float, lon: float, rad
     return sum(1 for plat, plon in coords if _haversine_m(lat, lon, plat, plon) <= radius_m)
 
 
-async def _fetch_amenity_page(url: str, extra_params: dict) -> list[dict]:
-    """data.go.kr JSON API 단일 페이지 fetch → item 리스트."""
-    if not DATA_GO_KR_API_KEY:
-        return []
-    params = {
-        "serviceKey": DATA_GO_KR_API_KEY,
-        "resultType": "json",
-        "numOfRows": "3000",
-        "pageNo": "1",
-        **extra_params,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=15) as hc:
-            res = await hc.get(url, params=params)
-        body = res.json().get("response", {}).get("body", {})
-        items = body.get("items") or {}
-        if isinstance(items, dict):
-            items = items.get("item", [])
-        if isinstance(items, dict):   # 단건 응답
-            items = [items]
-        return items if isinstance(items, list) else []
-    except Exception:
-        return []
-
-
-def _extract_latlon(item: dict) -> tuple[float, float] | None:
-    """item dict에서 위도·경도 추출. 한국 영역 유효성 검사 포함."""
-    for lat_key in ("latitude", "lat", "위도", "LATITUDE", "LAT"):
-        for lon_key in ("longitude", "lon", "경도", "LONGITUDE", "LON"):
-            try:
-                lat = float(item.get(lat_key) or 0)
-                lon = float(item.get(lon_key) or 0)
-                if 33.0 <= lat <= 39.0 and 124.0 <= lon <= 132.0:
-                    return lat, lon
-            except (TypeError, ValueError):
-                continue
-    return None
-
-
 def _get_subway_coords() -> list[tuple[float, float]]:
     """서울 지하철역 좌표 — 정적 JSON 파일에서 로드 (API 불필요)."""
     global _subway_coords_cache
@@ -463,16 +422,14 @@ def _get_subway_coords() -> list[tuple[float, float]]:
     return _subway_coords_cache
 
 
-async def _get_school_coords(ctpv_nm: str = "서울특별시") -> list[tuple[float, float]]:
-    """초등학교 좌표 (시도 필터)."""
-    items = await _fetch_amenity_page(_SCHOOL_URL, {"ctpvNm": ctpv_nm})
-    return [c for i in items if (c := _extract_latlon(i))]
-
-
-async def _get_park_coords(ctpv_nm: str = "서울특별시") -> list[tuple[float, float]]:
-    """공원 좌표 (시도 필터)."""
-    items = await _fetch_amenity_page(_PARK_URL, {"ctpvNm": ctpv_nm})
-    return [c for i in items if (c := _extract_latlon(i))]
+def _load_static_coords(path: str) -> list[tuple[float, float]]:
+    """정적 JSON 파일에서 좌표 로드."""
+    import json as _json
+    try:
+        with open(path, encoding="utf-8") as f:
+            return [(s["lat"], s["lon"]) for s in _json.load(f)]
+    except Exception:
+        return []
 
 
 @app.get("/api/nearby-amenities")
@@ -487,32 +444,18 @@ async def nearby_amenities(
     """
     lat, lon = _utm_k_to_wgs84(entX, entY)
 
-    # 지하철: 정적 파일 — API 키 없어도 항상 계산, 도보 10분(800m) 기준
-    subway = _get_subway_coords()
-    subway_count = _count_within(subway, lat, lon, 800)
-
-    # 학교·공원: data.go.kr API (키 없으면 None 반환)
-    if DATA_GO_KR_API_KEY:
-        schools, parks = await asyncio.gather(
-            _get_school_coords(),
-            _get_park_coords(),
-        )
-        school_count = _count_within(schools, lat, lon, radius_m)
-        park_count   = _count_within(parks,   lat, lon, radius_m)
-        is_mock = False
-    else:
-        school_count = None
-        park_count   = None
-        is_mock = True
+    # 세 가지 모두 정적 JSON — API 키 불필요
+    subway_count = _count_within(_get_subway_coords(), lat, lon, 800)  # 도보 10분=800m
+    school_count = _count_within(_load_static_coords(_SCHOOL_JSON), lat, lon, radius_m)
+    park_count   = _count_within(_load_static_coords(_PARK_JSON),   lat, lon, radius_m)
 
     return {
         "lat": lat,
         "lon": lon,
         "radius_m": int(radius_m),
-        "subway_1km": subway_count,
+        "subway_10min": subway_count,
         "school_1km": school_count,
         "park_1km":   park_count,
-        "is_mock": is_mock,
     }
 
 

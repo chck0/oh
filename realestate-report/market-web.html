@@ -1050,18 +1050,14 @@ async function fetchAmenities() {
 function showAmenities(d) {
   const strip = document.getElementById('amenityStrip');
   if (!strip) return;
-  const fmt = (v, unit) => v !== null && v !== undefined ? `<strong>${v}</strong>${unit}` : '—';
   strip.innerHTML = `
     <span class="amenity-label">입지</span>
-    <span class="amenity-chip">🚇 도보 10분 내 ${fmt(d.subway_1km, '개')}</span>
-    <span class="amenity-chip">🏫 초등학교 ${fmt(d.school_1km, '개')}</span>
-    <span class="amenity-chip">🌳 공원 ${fmt(d.park_1km, '개')}</span>
+    <span class="amenity-chip">🚇 도보 10분 내 <strong>${d.subway_10min}</strong>개</span>
+    <span class="amenity-chip">🏫 초등학교 <strong>${d.school_1km}</strong>개</span>
+    <span class="amenity-chip">🌳 공원 <strong>${d.park_1km}</strong>개</span>
   `;
   strip.style.display = 'flex';
-  const parts = [`지하철역 ${d.subway_1km}개`];
-  if (d.school_1km !== null && d.school_1km !== undefined) parts.push(`초등학교 ${d.school_1km}개`);
-  if (d.park_1km   !== null && d.park_1km   !== undefined) parts.push(`공원 ${d.park_1km}개`);
-  amenitySummary = parts.join(', ') + ' (반경 1km 기준)';
+  amenitySummary = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 공원 ${d.park_1km}개 (반경 1km 기준)`;
 }
 
 // Mock responses for offline / fallback
