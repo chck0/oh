@@ -847,8 +847,9 @@ async function toggleDong(el, dong) {
   // 실API로 동 데이터 시도, 실패 시 mock fallback
   if (REAL_LAWD_CD) {
     try {
+      const pyeongParam = PAGE_PYEONG ? `&pyeong=${PAGE_PYEONG}` : '';
       const res = await fetch(
-        `http://localhost:8000/api/dong-data?lawd_cd=${REAL_LAWD_CD}&dong_name=${encodeURIComponent(dong)}`,
+        `http://localhost:8000/api/dong-data?lawd_cd=${REAL_LAWD_CD}&dong_name=${encodeURIComponent(dong)}${pyeongParam}`,
         { signal: AbortSignal.timeout(15000) }
       );
       if (res.ok) {

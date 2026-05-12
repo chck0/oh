@@ -364,8 +364,8 @@ async def apt_sizes(lawd_cd: str, apt_name: str) -> dict:
 
 
 @app.get("/api/dong-data")
-async def dong_data(lawd_cd: str, dong_name: str) -> dict:
-    """특정 동의 월별 평균 평단가 (최근 6개월)"""
+async def dong_data(lawd_cd: str, dong_name: str, pyeong: int | None = None) -> dict:
+    """특정 동의 월별 평균 평단가 (최근 36개월). pyeong 지정 시 ±2평 필터 적용."""
     months_ym = get_last_n_months(36)
 
     all_items = await asyncio.gather(*[
@@ -377,9 +377,11 @@ async def dong_data(lawd_cd: str, dong_name: str) -> dict:
 
     for ym, month_items in zip(months_ym, all_items):
         months_display.append(month_label(ym))
+        min_p = (pyeong - 2) if pyeong else 18
+        max_p = (pyeong + 2) if pyeong else 26
         dong_items = filter_area([
             i for i in month_items if i["umd_nm"] == dong_name
-        ])
+        ], min_p=min_p, max_p=max_p)
         prices.append(avg_ppp(dong_items))
 
     return {
