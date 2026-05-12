@@ -493,7 +493,7 @@
     <div class="chart-card">
       <div class="chart-header">
         <div>
-          <div class="chart-title">30평형대 평단가 추이</div>
+          <div class="chart-title" id="chartTitle">평단가 추이</div>
           <div class="chart-subtitle">단위: 만원/평 · 실거래 기준</div>
           <div class="pct-badge mid" id="percentileBadge">계산 중…</div>
         </div>
@@ -595,6 +595,12 @@ function initPage() {
   const label = pyeong ? `${address} · ${pyeong}평` : address;
   document.getElementById('topnavAddr').textContent = label;
   document.getElementById('summaryAddr').textContent = label;
+  if (pyeong) {
+    const band = Math.floor(pyeong / 10) * 10;
+    document.getElementById('chartTitle').textContent = `${band}평형대 평단가 추이`;
+  } else {
+    document.getElementById('chartTitle').textContent = '평단가 추이';
+  }
   return { address, lawd_cd, apt_name, dong, pyeong, entX, entY };
 }
 const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG, entX: PAGE_ENT_X, entY: PAGE_ENT_Y } = initPage();
