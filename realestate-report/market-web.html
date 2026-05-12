@@ -420,6 +420,8 @@
     white-space: nowrap;
   }
   .amenity-chip strong { color: var(--blue); }
+  .amenity-chip.bad { background: #fff8f0; border-color: #f0a060; color: #7a3a00; }
+  .amenity-chip.bad strong { color: #c05010; }
   .amenity-mock { font-size: 11px; color: var(--text-muted); }
 
   /* Quick questions */
@@ -1050,6 +1052,12 @@ async function fetchAmenities() {
 function showAmenities(d) {
   const strip = document.getElementById('amenityStrip');
   if (!strip) return;
+  const badChips = [];
+  if (d.crematorium_3km  > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 화장장 <strong>${d.crematorium_3km}</strong>개</span>`);
+  if (d.waste_plant_2km  > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 쓰레기처리장 <strong>${d.waste_plant_2km}</strong>개</span>`);
+  if (d.highvoltage_500m > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 고압선 <strong>${d.highvoltage_500m}</strong>개</span>`);
+  if (d.industrial_1km   > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 공장 <strong>${d.industrial_1km}</strong>개</span>`);
+
   strip.innerHTML = `
     <span class="amenity-label">입지</span>
     <span class="amenity-chip">🚇 도보 10분 <strong>${d.subway_10min}</strong>개</span>
@@ -1057,9 +1065,17 @@ function showAmenities(d) {
     <span class="amenity-chip">🏥 병원 <strong>${d.hospital_2km}</strong>개</span>
     <span class="amenity-chip">🌳 공원 <strong>${d.park_1km}</strong>개</span>
     <span class="amenity-chip">🚗 고속도로IC <strong>${d.highway_ic_3km}</strong>개</span>
+    ${badChips.join('')}
   `;
   strip.style.display = 'flex';
-  amenitySummary = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 종합·대학병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km) (반경 1km 기준)`;
+
+  const positives = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km)`;
+  const negParts = [];
+  if (d.crematorium_3km  > 0) negParts.push(`화장장 ${d.crematorium_3km}개(3km 내)`);
+  if (d.waste_plant_2km  > 0) negParts.push(`쓰레기처리장 ${d.waste_plant_2km}개(2km 내)`);
+  if (d.highvoltage_500m > 0) negParts.push(`고압선·변전소 ${d.highvoltage_500m}개(500m 내)`);
+  if (d.industrial_1km   > 0) negParts.push(`공장지역 ${d.industrial_1km}개(1km 내)`);
+  amenitySummary = positives + (negParts.length ? `\n혐오시설: ${negParts.join(', ')}` : '');
 }
 
 // Mock responses for offline / fallback

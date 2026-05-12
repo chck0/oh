@@ -43,6 +43,7 @@ _SECONDARY_SCHOOL_JSON = os.path.join(_SRC, "secondary_schools.json")
 _HOSPITAL_JSON         = os.path.join(_SRC, "hospitals.json")
 _PARK_JSON             = os.path.join(_SRC, "parks.json")
 _HIGHWAY_IC_JSON       = os.path.join(_SRC, "highway_ics.json")
+_DISAMENITY_JSON       = os.path.join(_SRC, "disamenities.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -425,6 +426,23 @@ def _get_subway_coords() -> list[tuple[float, float]]:
     return _subway_coords_cache
 
 
+def _load_static_json(path: str) -> list[dict]:
+    import json as _json
+    try:
+        with open(path, encoding="utf-8") as f:
+            return _json.load(f)
+    except Exception:
+        return []
+
+
+def _count_type_within(items: list[dict], lat: float, lon: float, type_val: str, radius_m: float) -> int:
+    return sum(
+        1 for item in items
+        if item.get("type") == type_val
+        and _haversine_m(lat, lon, item["lat"], item["lon"]) <= radius_m
+    )
+
+
 def _load_static_coords(path: str) -> list[tuple[float, float]]:
     """정적 JSON 파일에서 좌표 로드."""
     import json as _json
@@ -455,6 +473,12 @@ async def nearby_amenities(
     park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat, lon, radius_m)
     ic_count               = _count_within(_load_static_coords(_HIGHWAY_IC_JSON),        lat, lon, 3000)       # IC는 3km
 
+    disam = _load_static_json(_DISAMENITY_JSON)
+    crematorium_count  = _count_type_within(disam, lat, lon, "화장장",      3000)  # 심리적 영향 3km
+    waste_count        = _count_type_within(disam, lat, lon, "쓰레기처리장", 2000)  # 냄새 2km
+    highvoltage_count  = _count_type_within(disam, lat, lon, "고압시설",     500)   # 전자파·경관 500m
+    industrial_count   = _count_type_within(disam, lat, lon, "공장지역",    1000)  # 소음·냄새 1km
+
     return {
         "lat": lat,
         "lon": lon,
@@ -465,6 +489,10 @@ async def nearby_amenities(
         "hospital_2km":         hospital_count,
         "park_1km":             park_count,
         "highway_ic_3km":       ic_count,
+        "crematorium_3km":      crematorium_count,
+        "waste_plant_2km":      waste_count,
+        "highvoltage_500m":     highvoltage_count,
+        "industrial_1km":       industrial_count,
     }
 
 
