@@ -99,7 +99,8 @@ class ChatRequest(BaseModel):
     message: str
     context: ChartContext
     history: list[HistoryMessage] = []
-    amenity_summary: str = ""  # 입지 분석 데이터 (반경 1km 내 생활편의 현황)
+    amenity_summary: str = ""
+    dong_amenities: dict[str, str] = {}  # 비교 동별 입지 요약
 
 class ChatResponse(BaseModel):
     reply: str
@@ -607,56 +608,76 @@ async def nearby_amenities(
 # ── 챗봇 헬퍼 ──
 
 def build_context_str(ctx: ChartContext) -> str:
-    months_str = ", ".join(ctx.months) if ctx.months else "최근 6개월"
-    build_info = f", {ctx.build_year}년 준공" if ctx.build_year else ""
-    lines = [
-        f"매물: {ctx.address} ({ctx.size_pyeong}평{build_info})",
-        f"분석 기간: {months_str}",
-        f"단지 평단가 추이: {ctx.complex} (만원/평)",
-        f"동 평균 평단가: {ctx.dong} (만원/평)",
-    ]
+    build_info = f" · {ctx.build_year}년 준공" if ctx.build_year else ""
+    lines = [f"## 분석 대상: {ctx.address} ({ctx.size_pyeong}평형{build_info})"]
+
     if ctx.stats:
         s = ctx.stats
-        lines += [
-            f"단지 6개월 변화율: {s.complex_change_pct:+.1f}%",
-            f"동 평균 변화율: {s.dong_change_pct:+.1f}%",
-            f"단지 vs 동 평균: {s.complex_vs_dong_pct:+.1f}%",
-            f"최신 단지 평단가: {s.latest_complex:,.0f}만원/평",
-            f"최신 동 평균: {s.latest_dong:,.0f}만원/평",
-        ]
+        lc = s.latest_complex
+        ld = s.latest_dong
+        diff_pct = s.complex_vs_dong_pct
+
+        if lc > 0:
+            premium = "높음" if diff_pct > 10 else ("낮음" if diff_pct < -5 else "비슷함")
+            lines.append(
+                f"현재 단지 평단가 {lc:,.0f}만원/평 — 동 평균({ld:,.0f}만원/평) 대비 {diff_pct:+.1f}% ({premium})"
+            )
+            if abs(s.complex_change_pct) > 1:
+                lines.append(f"단지 36개월 변화: {s.complex_change_pct:+.1f}% · 동 평균: {s.dong_change_pct:+.1f}%")
+        else:
+            lines.append(f"동 평균 평단가: {ld:,.0f}만원/평 (단지 거래 없음)")
+
     for d in ctx.active_dongs:
-        pct = round((d.data[-1] / d.data[0] - 1) * 100, 1) if d.data and d.data[0] else 0
-        lines.append(f"{d.name} 평단가: {d.data} / 6개월 변화: {pct:+.1f}%")
+        vals = [v for v in d.data if v > 0]
+        if vals:
+            latest = vals[-1]
+            pct = round((vals[-1] / vals[0] - 1) * 100, 1) if len(vals) > 1 else 0
+            lines.append(f"비교 동 [{d.name}]: {latest:,.0f}만원/평 (변화 {pct:+.1f}%)")
+
     return "\n".join(lines)
 
 
 # ── 챗봇 엔드포인트 ──
 
 SYSTEM_PROMPT_TEMPLATE = """\
-당신은 VerifyHome의 시세 분석 AI입니다.
-사용자가 매입을 고려 중인 아파트의 실거래가 차트 데이터와 입지 정보를 분석해 궁금증에 답합니다.
+당신은 VerifyHome의 시세 분석 AI입니다. 사용자가 매입 검토 중인 아파트의 실거래·입지 데이터를 해석해 팩트 기반 답변을 드립니다.
 
-## 역할
-- 차트 데이터를 쉽게 해석해 주는 동네 부동산 전문가처럼 말합니다.
-- "데이터를 보면 ~" 식으로 근거를 명시합니다.
-
-## 현재 분석 대상 (이 수치만 사용)
+## 현재 분석 데이터
 {context_str}
 
-## 답변 규칙
-1. **할루시네이션 금지**: 위 데이터에 없는 수치는 절대 인용하지 않습니다.
-2. **수치 근거 필수**: 모든 판단에 위 데이터의 숫자를 근거로 붙입니다.
-3. **최대 5문장**: 간결하게.
-4. **투자 권유 금지**: "사세요/파세요" 금지. "데이터상으로는 ~로 보입니다" 수준까지만.
-5. **비교 동이 추가된 경우**: 추가된 동 데이터를 적극 활용해 비교 분석합니다.
-6. **추세 예측 금지**: 과거·현재 데이터만 서술, 미래 전망은 하지 않습니다.
-7. **이유·원인 질문** ("왜", "이유가", "원인이"): 입지 분석 데이터가 제공된 경우 아래 항목별로 근거를 활용합니다. 없으면 "추이만 말씀드리면 ~" 형식으로 피봇합니다.
-8. **교통 접근성**: 지하철역(도보 10분 내) N개, 고속도로IC(3km 내) N개는 교통 프리미엄의 상관관계 근거로 씁니다.
-9. **교육 환경(학군)**: 초등학교 수와 중고등학교 수가 많을수록 학군 프리미엄과 연관될 수 있습니다. 특히 중고등학교가 여럿이면 "학군 수요가 있는 지역"으로 언급할 수 있습니다.
-10. **의료·생활 편의**: 병원(2km 내), 이마트(2km 내), 백화점/복합몰(3km 내) 수를 생활 인프라 프리미엄 근거로 활용합니다.
-11. **혐오시설(시세 할인 요인)**: 입지 분석에 "혐오시설" 항목이 있으면 시세가 상대적으로 낮은 원인 중 하나로 언급할 수 있습니다. 화장장·쓰레기처리장은 심리적 기피, 고압시설은 전자기파 우려, 공장지역은 소음·매연, 교도소·군부대는 이미지 요인으로 표현합니다. 인과관계가 아닌 "관련이 있을 수 있습니다" 수준으로만 표현합니다.
-12. **상관관계 표현**: "때문에" 대신 "와 관련이 있을 수 있습니다", "영향을 줄 수 있는 요인입니다" 수준으로 표현합니다.
-13. **한국어**로 답합니다.
+## 입지 데이터 해석 기준 (입지 데이터가 제공된 경우에만 적용)
+- 지하철역(도보 10분/800m 내): 0개=교통 불편, 1개=보통, 2개+=교통 우수
+- 초등학교(1km 내): 0개=학군 취약, 1개=보통, 2개+=학군 양호
+- 중고등학교(1km 내): 2개+=학군 수요 지역
+- 병원(2km 내): 3개+=의료 인프라 양호
+- 공원(1km 내): 2개+=자연환경 양호
+- 혐오시설: 화장장·쓰레기처리장=심리적 기피, 고압시설=전자기파 우려, 공장=소음·매연, 교도소·군부대=이미지 요인 — "관련이 있을 수 있다" 수준으로만 언급
+
+## 답변 원칙
+1. 수치 근거 필수: 위 데이터의 숫자를 반드시 인용. 데이터에 없는 수치는 절대 만들지 않는다.
+2. 팩트 먼저, 해석 뒤: "단지 평단가 X만원/평으로 동 평균(Y만원)보다 Z% 높음 → 이는 ~와 관련이 있을 수 있습니다"
+3. 3~4문장: 핵심만 간결하게.
+4. 투자 권유·미래 예측 금지: "데이터상으로는 ~로 보입니다" 수준까지만.
+5. 비교 동 데이터가 있으면 반드시 비교 수치를 인용한다.
+6. 마크다운 볼드(**)는 절대 사용하지 않는다.
+
+## 답변 예시 (이 수준의 수치 밀도와 해석 방식을 유지하세요)
+
+Q: 왜 주변보다 비싸요?
+A: 논현동 신동아아파트(10평형)는 현재 4,200만원/평으로 논현동 평균(3,900만원)보다 +7.7% 높게 형성되어 있습니다. 입지를 보면 도보 10분 내 지하철역이 2개로 교통 접근성이 우수하고, 초등학교 2개·중고등학교 1개가 위치해 학군 수요가 있는 지역입니다. 1997년 준공으로 건물은 오래됐지만 교통·학군 프리미엄이 가격을 받쳐주고 있는 것으로 볼 수 있습니다.
+
+Q: 교통은 어때요?
+A: 입지 데이터 기준으로 도보 10분(800m) 내 지하철역이 2개 있어 교통 접근성이 양호한 편입니다. 고속도로IC는 3km 내 1개로 자차 이용도 가능합니다. 강남권 일반 주거지역의 평균(1~2개)과 비슷한 수준입니다.
+
+Q: 학군은 어때요?
+A: 1km 내 초등학교 2개, 중고등학교 1개가 있어 기본적인 학군 수요가 있는 지역입니다. 중고등학교 1개는 대치동(3개)·역삼동(2개) 대비 학원가 밀집도나 입시 수요 측면에서 다소 제한적일 수 있습니다. 정확한 학업 성취도는 이 데이터로는 알 수 없으니 실거주 전 직접 확인을 권장합니다.
+
+Q: 가격 차이 이유가 뭔가요?
+A: 차트를 보면 삼성동(현재 6,000만원/평)이 논현동 신동아(4,200만원/평)보다 +43% 높습니다. 삼성동 입지는 지하철역 3개, 백화점 2개로 생활 인프라가 풍부한 반면 논현동은 지하철역 2개, 백화점 0개입니다. 코엑스·테헤란로 상업지구 인접이라는 삼성동 고유의 수요가 가격 차이의 주요 요인 중 하나로 볼 수 있습니다.
+
+---
+
+한국어로 답합니다.
 """
 
 
@@ -664,7 +685,10 @@ SYSTEM_PROMPT_TEMPLATE = """\
 async def chat(req: ChatRequest) -> ChatResponse:
     context_str = build_context_str(req.context)
     if req.amenity_summary:
-        context_str += f"\n\n## 입지 분석\n{req.amenity_summary}"
+        context_str += f"\n\n## 분석 대상 입지\n{req.amenity_summary}"
+    if req.dong_amenities:
+        parts = [f"[{dong}] {summary}" for dong, summary in req.dong_amenities.items()]
+        context_str += "\n\n## 비교 동 입지\n" + "\n".join(parts)
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context_str=context_str)
 
     messages: list[dict[str, Any]] = []

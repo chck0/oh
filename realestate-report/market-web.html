@@ -647,6 +647,8 @@ let REAL_APT_NAME = PAGE_ADDRESS;
 
 // 입지 분석 — 챗봇 컨텍스트에 주입되는 요약 문자열
 let amenitySummary = '';
+// 비교 동별 입지 요약 (동 이름 → 요약 문자열)
+let dongAmenities = {};
 
 // ── 서울 25개 구 × 274개 동 (국토교통부 실거래 API 기준) ──
 const LAWD_GU_NAME = {
@@ -850,6 +852,7 @@ const activeDongs = new Set();
 async function toggleDong(el, dong) {
   if (activeDongs.has(dong)) {
     activeDongs.delete(dong);
+    delete dongAmenities[dong];
     el.classList.remove('active');
     removeDataset(dong);
     addBotMessage(`${dong} 데이터를 차트에서 제거했어요.`, 'system');
@@ -873,6 +876,18 @@ async function toggleDong(el, dong) {
         DATA[dong] = { data: d.data, color: DATA[dong]?.color ?? DONG_COLORS[colorIdx] };
       }
     } catch { /* mock 사용 */ }
+
+    // 비교 동 입지 데이터 비동기 로드 (dong_name fallback 좌표 활용)
+    try {
+      const res2 = await fetch(
+        `http://localhost:8000/api/nearby-amenities?entX=&entY=&dong_name=${encodeURIComponent(dong)}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      if (res2.ok) {
+        const amenData = await res2.json();
+        if (!amenData.error) dongAmenities[dong] = buildAmenitySummary(amenData);
+      }
+    } catch { /* 입지 없이 진행 */ }
   }
 
   if (!DATA[dong]) {
@@ -883,7 +898,7 @@ async function toggleDong(el, dong) {
   }
 
   addDataset(dong);
-  addBotMessage(`<strong>${dong}</strong>을 차트에 추가했어요! 비교 분석을 도와드릴게요.`);
+  addBotMessage(`${dong}을 차트에 추가했어요. 비교 분석을 도와드릴게요.`);
 }
 
 function addDataset(dong) {
@@ -1057,15 +1072,31 @@ async function loadRealData() {
 }
 
 async function fetchAmenities() {
-  if (!PAGE_ENT_X || !PAGE_ENT_Y) return;
+  if (!PAGE_ENT_X && !PAGE_ENT_Y && !PAGE_DONG) return;
   try {
     const dongParam = PAGE_DONG ? `&dong_name=${encodeURIComponent(PAGE_DONG)}` : '';
     const url = `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return;
     const d = await res.json();
+    if (d.error === 'no_coords') return;
     showAmenities(d);
   } catch {}
+}
+
+function buildAmenitySummary(d) {
+  const storeParts = [];
+  if (d.emart_2km     > 0) storeParts.push(`이마트 ${d.emart_2km}개(2km)`);
+  if (d.dept_store_3km > 0) storeParts.push(`백화점 ${d.dept_store_3km}개(3km)`);
+  const positives = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km)` + (storeParts.length ? `, ${storeParts.join(', ')}` : '');
+  const negParts = [];
+  if (d.crematorium_3km  > 0) negParts.push(`화장장 ${d.crematorium_3km}개(3km 내)`);
+  if (d.waste_plant_2km  > 0) negParts.push(`쓰레기처리장 ${d.waste_plant_2km}개(2km 내)`);
+  if (d.highvoltage_500m > 0) negParts.push(`고압선·변전소 ${d.highvoltage_500m}개(500m 내)`);
+  if (d.industrial_1km   > 0) negParts.push(`공장지역 ${d.industrial_1km}개(1km 내)`);
+  if (d.prison_1km       > 0) negParts.push(`교도소·구치소 ${d.prison_1km}개(1km 내)`);
+  if (d.military_1km     > 0) negParts.push(`군부대 ${d.military_1km}개(1km 내)`);
+  return positives + (negParts.length ? `\n혐오시설: ${negParts.join(', ')}` : '');
 }
 
 function showAmenities(d) {
@@ -1091,19 +1122,7 @@ function showAmenities(d) {
     ${badChips.join('')}
   `;
   strip.style.display = 'flex';
-
-  const storeParts = [];
-  if (d.emart_2km     > 0) storeParts.push(`이마트 ${d.emart_2km}개(2km)`);
-  if (d.dept_store_3km > 0) storeParts.push(`백화점 ${d.dept_store_3km}개(3km)`);
-  const positives = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km)` + (storeParts.length ? `, ${storeParts.join(', ')}` : '');
-  const negParts = [];
-  if (d.crematorium_3km  > 0) negParts.push(`화장장 ${d.crematorium_3km}개(3km 내)`);
-  if (d.waste_plant_2km  > 0) negParts.push(`쓰레기처리장 ${d.waste_plant_2km}개(2km 내)`);
-  if (d.highvoltage_500m > 0) negParts.push(`고압선·변전소 ${d.highvoltage_500m}개(500m 내)`);
-  if (d.industrial_1km   > 0) negParts.push(`공장지역 ${d.industrial_1km}개(1km 내)`);
-  if (d.prison_1km       > 0) negParts.push(`교도소·구치소 ${d.prison_1km}개(1km 내)`);
-  if (d.military_1km     > 0) negParts.push(`군부대 ${d.military_1km}개(1km 내)`);
-  amenitySummary = positives + (negParts.length ? `\n혐오시설: ${negParts.join(', ')}` : '');
+  amenitySummary = buildAmenitySummary(d);
 }
 
 // Mock responses for offline / fallback
@@ -1120,7 +1139,7 @@ async function callChatAPI(userMsg, context) {
     const res = await fetch('http://localhost:8000/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMsg, context, history: conversationHistory, amenity_summary: amenitySummary }),
+      body: JSON.stringify({ message: userMsg, context, history: conversationHistory, amenity_summary: amenitySummary, dong_amenities: dongAmenities }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) throw new Error('API error');
