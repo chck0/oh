@@ -11,6 +11,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -18,6 +19,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import anthropic
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
 
 app = FastAPI(title="VerifyHome Market API")
 
@@ -191,6 +198,23 @@ async def fetch_month_items(lawd_cd: str, deal_ymd: str) -> list[dict]:
     return result
 
 
+def normalize_apt_name(name: str) -> str:
+    """아파트명 정규화: 공통 접미사 제거 후 핵심 명칭만 추출"""
+    suffixes = ["아파트", "빌라", "단지", "APT", "apt", "주상복합", "오피스텔"]
+    result = name.strip()
+    for s in suffixes:
+        if result.endswith(s):
+            result = result[: -len(s)].strip()
+            break
+    return result
+
+
+def filter_apt(items: list[dict], apt_name: str) -> list[dict]:
+    """단지명 매칭 (정규화된 이름으로 부분 일치)"""
+    core = normalize_apt_name(apt_name)
+    return [i for i in items if core in i["apt_nm"]]
+
+
 def filter_area(items: list[dict], min_p: float = 18, max_p: float = 26) -> list[dict]:
     return [i for i in items if min_p <= i["pyeong"] <= max_p]
 
@@ -303,10 +327,11 @@ async def market_data(
         min_p = (pyeong - 2) if pyeong else 18
         max_p = (pyeong + 2) if pyeong else 26
 
-        # 단지 데이터: aptNm 포함 + 면적 필터
-        apt_items = filter_area([
-            i for i in month_items if apt_name and apt_name in i["apt_nm"]
-        ], min_p, max_p)
+        # 단지 데이터: 정규화된 단지명 부분 일치 + 면적 필터
+        apt_items = filter_area(
+            filter_apt(month_items, apt_name) if apt_name else month_items,
+            min_p, max_p
+        )
 
         # 동 평균: 동명 필터(있으면) + 면적 필터
         dong_items = month_items
@@ -357,9 +382,8 @@ async def apt_sizes(lawd_cd: str, apt_name: str) -> dict:
     ])
     sizes: set[int] = set()
     for month_items in all_items:
-        for item in month_items:
-            if apt_name in item["apt_nm"]:
-                sizes.add(round(item["pyeong"]))
+        for item in filter_apt(month_items, apt_name):
+            sizes.add(round(item["pyeong"]))
     return {"sizes": sorted(sizes)}
 
 
@@ -458,15 +482,22 @@ def _load_static_coords(path: str) -> list[tuple[float, float]]:
 
 @app.get("/api/nearby-amenities")
 async def nearby_amenities(
-    entX: float,
-    entY: float,
+    entX: str = "",
+    entY: str = "",
     radius_m: float = 1000,
 ) -> dict:
     """
     건물 입구 좌표(UTM-K) 기준 반경 내 생활편의 카운트.
     entX·entY: JUSO address-search API 반환값 그대로.
     """
-    lat, lon = _utm_k_to_wgs84(entX, entY)
+    try:
+        lat, lon = _utm_k_to_wgs84(float(entX), float(entY))
+    except (ValueError, TypeError):
+        return {"error": "no_coords", "subway_10min": 0, "school_1km": 0,
+                "secondary_school_1km": 0, "hospital_2km": 0, "park_1km": 0,
+                "highway_ic_3km": 0, "crematorium_3km": 0, "waste_plant_2km": 0,
+                "highvoltage_500m": 0, "industrial_1km": 0, "prison_1km": 0,
+                "military_1km": 0, "emart_2km": 0, "dept_store_3km": 0}
 
     # 모두 정적 JSON — API 키 불필요
     subway_count           = _count_within(_get_subway_coords(),                          lat, lon, 800)       # 도보 10분=800m
