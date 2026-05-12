@@ -631,15 +631,26 @@ const MOCK_VOLUME  = [18,12,25,30,35,22,15,10,28,32,20,14,22,18,38,42,30,16,12,8
 
 const DONG_COLORS = ['#FF6B35','#9B59B6','#F39C12','#E74C3C','#1ABC9C','#95A5A6'];
 
-// 동별 mock 비교 데이터 (API 실패 시 fallback)
+// 동별 mock 비교 데이터 (API 실패 시 fallback) — ma: 이동평균 배열
 const DATA = {
-  '논현동':   { data: [3500,3520,3550,3580,3600,3650,3700,3750,3800,3820,3850,3900,3950,4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4730,4750,4800,4820,4850,4880,4900,4920], color: '#FF6B35' },
-  '삼성동':   { data: [4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5500,5550,5600,5650,5700,5750,5800,5850,5900,5950,6000], color: '#9B59B6' },
-  '대치동':   { data: [4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5450,5500,5550,5600,5650,5700,5750,5800,5900,5950,6000,6050,6100,6150,6200,6250,6300,6330,6350,6380,6400], color: '#F39C12' },
-  '청담동':   { data: [5700,5750,5800,5850,5900,5950,6000,6050,6100,6150,6200,6250,6300,6350,6400,6450,6500,6550,6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7230,7250,7270,7290,7300], color: '#E74C3C' },
-  '압구정동': { data: [6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7250,7300,7350,7400,7450,7500,7600,7700,7800,7900,8000,8050,8100,8150,8200,8250,8300,8400,8500,8550,8600,8650,8700], color: '#1ABC9C' },
-  '개포동':   { data: [4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4820,4850,4880,4900,4920,4950,4980,5000,5020,5050,5100,5150,5200,5230,5260,5290,5320,5360,5400], color: '#95A5A6' },
+  '논현동':   { ma: [3500,3520,3550,3580,3600,3650,3700,3750,3800,3820,3850,3900,3950,4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4730,4750,4800,4820,4850,4880,4900,4920], color: '#FF6B35' },
+  '삼성동':   { ma: [4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5500,5550,5600,5650,5700,5750,5800,5850,5900,5950,6000], color: '#9B59B6' },
+  '대치동':   { ma: [4700,4750,4800,4850,4900,4950,5000,5050,5100,5150,5200,5250,5300,5350,5400,5450,5500,5550,5600,5650,5700,5750,5800,5900,5950,6000,6050,6100,6150,6200,6250,6300,6330,6350,6380,6400], color: '#F39C12' },
+  '청담동':   { ma: [5700,5750,5800,5850,5900,5950,6000,6050,6100,6150,6200,6250,6300,6350,6400,6450,6500,6550,6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7230,7250,7270,7290,7300], color: '#E74C3C' },
+  '압구정동': { ma: [6600,6650,6700,6750,6800,6850,6900,6950,7000,7050,7100,7150,7200,7250,7300,7350,7400,7450,7500,7600,7700,7800,7900,8000,8050,8100,8150,8200,8250,8300,8400,8500,8550,8600,8650,8700], color: '#1ABC9C' },
+  '개포동':   { ma: [4000,4050,4100,4150,4200,4250,4300,4350,4400,4450,4500,4550,4600,4650,4700,4750,4800,4820,4850,4880,4900,4920,4950,4980,5000,5020,5050,5100,5150,5200,5230,5260,5290,5320,5360,5400], color: '#95A5A6' },
 };
+
+// mock scatter: 월별 평균에 노이즈 추가해서 건별 점 생성
+const MOCK_COMPLEX_RAW = MOCK_COMPLEX.flatMap((avg, mi) => {
+  const n = Math.max(1, Math.min(MOCK_VOLUME[mi] || 1, 8));
+  return Array.from({length: n}, () => ({
+    mi, v: Math.round(avg * (1 + (Math.random() - 0.5) * 0.08))
+  }));
+});
+// mock MA는 월별 평균값을 그대로 사용
+const MOCK_COMPLEX_MA = MOCK_COMPLEX;
+const MOCK_DONG_MA = MOCK_DONG;
 
 // 실API 로드 후 채워지는 값
 let REAL_LAWD_CD = null;
@@ -735,7 +746,9 @@ const zoneBgPlugin = {
   beforeDraw(chart) {
     const { ctx, chartArea, scales } = chart;
     if (!chartArea) return;
-    const data = chart.data.datasets[0]?.data.filter(v => v != null && !isNaN(v));
+    // MA 데이터셋(index 1)에서 y값 추출
+    const data = (chart.data.datasets[1]?.data ?? [])
+      .map(p => p?.y).filter(v => v != null && !isNaN(v) && v > 0);
     if (!data || data.length < 4) return;
     const sorted = [...data].sort((a, b) => a - b);
     const p25 = sorted[Math.floor(sorted.length * 0.25)];
@@ -756,16 +769,54 @@ const zoneBgPlugin = {
   }
 };
 
+// ── Chart helpers ──
+
+// x축 레이블 배열 (월별 "2024.01" 형식) — loadRealData 시 교체됨
+let monthLabels = [...MOCK_MONTHS];
+
+function applyJitter(rawPoints) {
+  return rawPoints.map(d => ({ x: d.mi + (Math.random() - 0.5) * 0.5, y: d.v }));
+}
+
+function makeScatterDataset(label, rawPoints, color) {
+  return {
+    type: 'scatter',
+    label,
+    data: applyJitter(rawPoints),
+    backgroundColor: color + '90',
+    borderColor: 'transparent',
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    order: 1,
+  };
+}
+
+function makeMaDataset(label, maValues, color, isBold = false) {
+  return {
+    type: 'line',
+    label,
+    data: maValues.map((v, i) => ({ x: i, y: v })),
+    borderColor: color,
+    backgroundColor: 'transparent',
+    borderWidth: isBold ? 3 : 2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.4,
+    fill: false,
+    spanGaps: false,  // 거래 2건 미만 구간 선 끊김
+    order: 0,
+  };
+}
+
 // ── Chart ──
 const ctx = document.getElementById('mainChart').getContext('2d');
 const chart = new Chart(ctx, {
-  type: 'line',
+  type: 'scatter',
   data: {
-    labels: MOCK_MONTHS,
     datasets: [
-      makeDataset(PAGE_ADDRESS, { data: MOCK_COMPLEX, color: '#1E5EFF' }, true),
-      makeDataset('동 평균', { data: MOCK_DONG, color: '#00B85E' }, false),
-      makeVolumeDataset(MOCK_VOLUME),
+      makeScatterDataset(PAGE_ADDRESS, MOCK_COMPLEX_RAW, '#1E5EFF'),
+      makeMaDataset(PAGE_ADDRESS + ' 추이', MOCK_COMPLEX_MA, '#1E5EFF', true),
+      makeMaDataset('동 평균', MOCK_DONG_MA, '#00B85E', false),
     ]
   },
   plugins: [zoneBgPlugin],
@@ -779,19 +830,34 @@ const chart = new Chart(ctx, {
         titleFont: { family: 'Pretendard', weight: '700' },
         bodyFont: { family: 'Pretendard' },
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}만원/평`
+          title: items => {
+            const xi = Math.round(items[0]?.parsed?.x ?? 0);
+            return monthLabels[xi] ?? '';
+          },
+          label: item => {
+            const y = item.parsed.y;
+            if (y == null) return null;
+            if (item.dataset.type === 'scatter')
+              return ` ${y.toLocaleString()}만원/평 (거래)`;
+            return ` ${item.dataset.label}: ${y.toLocaleString()}만원/평`;
+          }
         }
       }
     },
     scales: {
       x: {
+        type: 'linear',
+        min: -0.5,
+        max: 35.5,
         grid: { color: '#E4E8F2' },
         ticks: {
           font: { family: 'Pretendard', size: 11 },
           maxRotation: 0,
           autoSkip: false,
-          callback: function(val, index) {
-            const label = this.getLabelForValue(val);
+          callback: function(val) {
+            const idx = Math.round(val);
+            if (Math.abs(val - idx) > 0.01) return '';
+            const label = monthLabels[idx];
             if (label && label.endsWith('.01')) return label.split('.')[0] + '년';
             return '';
           }
@@ -799,48 +865,14 @@ const chart = new Chart(ctx, {
       },
       y: {
         grid: { color: '#E4E8F2' },
-        ticks: { font: { family: 'Pretendard', size: 12 }, callback: v => v.toLocaleString() },
+        ticks: { font: { family: 'Pretendard', size: 12 }, callback: v => v?.toLocaleString() },
         title: { display: true, text: '만원/평', font: { family: 'Pretendard', size: 11 }, color: '#9AA2B4' }
-      },
-      y1: {
-        position: 'right',
-        grid: { drawOnChartArea: false },
-        ticks: {
-          font: { family: 'Pretendard', size: 10 },
-          color: '#9AA2B4',
-          callback: v => v + '건',
-        },
-        title: { display: false },
       }
     }
   }
 });
 
-updateChartStats(MOCK_COMPLEX);
-
-function makeDataset(label, d, isBold) {
-  return {
-    label, data: d.data,
-    yAxisID: 'y', order: 0,
-    borderColor: d.color,
-    backgroundColor: d.color + '18',
-    borderWidth: isBold ? 3 : 2,
-    pointRadius: isBold ? 5 : 3,
-    pointBackgroundColor: d.color,
-    tension: 0.3, fill: false,
-  };
-}
-
-function makeVolumeDataset(data) {
-  return {
-    type: 'bar', label: '거래량',
-    data, yAxisID: 'y1', order: 1,
-    backgroundColor: 'rgba(30,94,255,0.10)',
-    borderColor: 'transparent',
-    borderRadius: 3,
-    pointRadius: 0,
-  };
-}
+updateChartStats(MOCK_COMPLEX_MA);
 
 // ── Dong Panel ──
 function toggleDongPanel() {
@@ -873,7 +905,7 @@ async function toggleDong(el, dong) {
       if (res.ok) {
         const d = await res.json();
         const colorIdx = (activeDongs.size - 1) % DONG_COLORS.length;
-        DATA[dong] = { data: d.data, color: DATA[dong]?.color ?? DONG_COLORS[colorIdx] };
+        DATA[dong] = { ma: d.ma, color: DATA[dong]?.color ?? DONG_COLORS[colorIdx] };
       }
     } catch { /* mock 사용 */ }
 
@@ -902,7 +934,7 @@ async function toggleDong(el, dong) {
 }
 
 function addDataset(dong) {
-  chart.data.datasets.push(makeDataset(dong, DATA[dong], false));
+  chart.data.datasets.push(makeMaDataset(dong, DATA[dong].ma, DATA[dong].color));
   chart.update();
   updateLegend();
 }
@@ -915,9 +947,13 @@ function removeDataset(dong) {
 
 function updateLegend() {
   const legend = document.getElementById('chartLegend');
-  legend.innerHTML = chart.data.datasets.map(d =>
-    `<span><span class="legend-dot" style="background:${DATA[d.label]?.color || d.borderColor}"></span>${d.label}</span>`
-  ).join('');
+  legend.innerHTML = chart.data.datasets.map(d => {
+    const color = d.borderColor || (d.backgroundColor ?? '').replace('90', '') || '#ccc';
+    const icon = d.type === 'scatter'
+      ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};opacity:0.8;margin-right:4px"></span>`
+      : `<span class="legend-dot" style="background:${color}"></span>`;
+    return `<span>${icon}${d.label}</span>`;
+  }).join('');
 }
 
 // ── Chat ──
@@ -997,26 +1033,26 @@ function escapeHtml(str) {
 
 function getChartContext() {
   const ds = chart.data.datasets;
-  const complexDs = ds[0];
-  const dongDs = ds[1];
-  const complexData = complexDs?.data ?? MOCK_COMPLEX;
-  const dongData = dongDs?.data ?? MOCK_DONG;
-  const first = v => v[0] || 1;
-  const last = v => v.at(-1) || 0;
+  // ds[0]=scatter, ds[1]=complex MA, ds[2]=dong MA
+  const extractMa = idx => (ds[idx]?.data ?? []).map(p => (p?.y) || 0);
+  const complexData = extractMa(1);
+  const dongData    = extractMa(2);
+  const firstValid = v => v.find(x => x > 0) || 1;
+  const lastValid  = v => [...v].reverse().find(x => x > 0) || 0;
   return {
     address: PAGE_ADDRESS,
     size_pyeong: PAGE_PYEONG || 30,
     build_year: window.PAGE_BUILD_YEAR || null,
-    months: chart.data.labels,
+    months: monthLabels,
     complex: complexData,
     dong: dongData,
-    active_dongs: [...activeDongs].map(d => ({ name: d, data: DATA[d]?.data ?? [] })),
+    active_dongs: [...activeDongs].map(d => ({ name: d, data: (DATA[d]?.ma ?? []).map(v => v || 0) })),
     stats: {
-      complex_change_pct: +((last(complexData) / first(complexData) - 1) * 100).toFixed(1),
-      dong_change_pct: +((last(dongData) / first(dongData) - 1) * 100).toFixed(1),
-      complex_vs_dong_pct: +((last(complexData) / last(dongData) - 1) * 100).toFixed(1),
-      latest_complex: last(complexData),
-      latest_dong: last(dongData),
+      complex_change_pct: +((lastValid(complexData) / firstValid(complexData) - 1) * 100).toFixed(1),
+      dong_change_pct:    +((lastValid(dongData)    / firstValid(dongData)    - 1) * 100).toFixed(1),
+      complex_vs_dong_pct: +((lastValid(complexData) / lastValid(dongData) - 1) * 100).toFixed(1),
+      latest_complex: lastValid(complexData),
+      latest_dong:    lastValid(dongData),
     }
   };
 }
@@ -1036,20 +1072,19 @@ async function loadRealData() {
     REAL_APT_NAME = d.apt_name;
     if (d.build_year) window.PAGE_BUILD_YEAR = d.build_year;
 
-    // 동 칩 업데이트
+    monthLabels = d.months;
     renderDongChips(d.lawd_cd, d.dong_name);
 
-    // 차트 업데이트
-    chart.data.labels = d.months;
+    // 차트 업데이트: [0] scatter, [1] complex MA, [2] dong MA
     chart.data.datasets[0].label = d.apt_name;
-    chart.data.datasets[0].data = d.complex;
-    chart.data.datasets[1].data = d.dong_avg;
-    if (d.volume) chart.data.datasets[2].data = d.volume;
+    chart.data.datasets[0].data = applyJitter(d.complex_raw || []);
+    chart.data.datasets[1].label = d.apt_name + ' 추이';
+    chart.data.datasets[1].data = (d.complex_ma || []).map((v, i) => ({ x: i, y: v }));
+    chart.data.datasets[2].data = (d.dong_ma || []).map((v, i) => ({ x: i, y: v }));
     chart.update();
     updateLegend();
-    updateChartStats(d.complex);
+    updateChartStats(d.complex_ma || []);
 
-    // 스탯 업데이트
     if (d.stats) {
       const s = d.stats;
       const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
@@ -1058,16 +1093,13 @@ async function loadRealData() {
       document.getElementById('statVsDong').textContent = fmt(s.complex_vs_dong_pct);
     }
 
-    addBotMessage(`실거래 데이터 로드 완료 — <strong>${d.apt_name}</strong> 최근 6개월 데이터입니다.`, 'system');
-
-    // 실거래 데이터 로드 후 입지 분석 비동기 시작 (차단하지 않음)
+    addBotMessage(`실거래 데이터 로드 완료 — ${d.apt_name} 최근 36개월 데이터입니다.`, 'system');
     fetchAmenities();
   } catch {
-    // mock 데이터 그대로 사용
     document.getElementById('statComplex').textContent = '+38%';
     document.getElementById('statDong').textContent = '+34%';
     document.getElementById('statVsDong').textContent = '+5.5%';
-    updateChartStats(MOCK_COMPLEX);
+    updateChartStats(MOCK_COMPLEX_MA);
   }
 }
 

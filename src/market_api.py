@@ -230,24 +230,24 @@ def avg_ppp(items: list[dict]) -> float | None:
     return round(sum(i["price_per_pyeong"] for i in items) / len(items))
 
 
-def forward_fill(lst: list[float | None]) -> list[float]:
-    """None을 앞 값으로 채움. 앞에서도 None이면 뒤 값으로"""
-    result: list[float | None] = list(lst)
-    # forward pass
-    last = None
-    for i, v in enumerate(result):
-        if v is not None:
-            last = v
-        elif last is not None:
-            result[i] = last
-    # backward pass (앞부분 None 처리)
-    last = None
-    for i in range(len(result) - 1, -1, -1):
-        if result[i] is not None:
-            last = result[i]
-        elif last is not None:
-            result[i] = last
-    return [v or 0.0 for v in result]
+def calc_ma(prices: list[float | None], counts: list[int], window: int = 3, min_count: int = 2) -> list[float | None]:
+    """3개월 이동평균. min_count 미만 거래 월은 계산에서 제외 → None 반환"""
+    filtered = [
+        p if (c >= min_count and p is not None) else None
+        for p, c in zip(prices, counts)
+    ]
+    result: list[float | None] = []
+    for i in range(len(filtered)):
+        window_vals = [v for v in filtered[max(0, i - window + 1): i + 1] if v is not None]
+        result.append(round(sum(window_vals) / len(window_vals)) if window_vals else None)
+    return result
+
+
+def _last_valid(series: list[float | None]) -> float:
+    for v in reversed(series):
+        if v:
+            return v
+    return 0.0
 
 
 def change_pct(data: list[float]) -> float:
@@ -319,25 +319,24 @@ async def market_data(
         fetch_month_items(lawd_cd, ym) for ym in months_ym
     ])
 
+    complex_raw: list[dict] = []  # 건별 원시 거래 {mi: month_index, v: price_per_pyeong}
     complex_prices: list[float | None] = []
     dong_prices: list[float | None] = []
-    volume_counts: list[int] = []
+    complex_counts: list[int] = []
+    dong_counts: list[int] = []
     months_display: list[str] = []
 
-    for ym, month_items in zip(months_ym, all_items):
+    for ym_idx, (ym, month_items) in enumerate(zip(months_ym, all_items)):
         months_display.append(month_label(ym))
 
-        # 평수 필터 범위 결정
         min_p = (pyeong - 2) if pyeong else 18
         max_p = (pyeong + 2) if pyeong else 26
 
-        # 단지 데이터: 정규화된 단지명 부분 일치 + 동 필터 + 면적 필터
         candidates = filter_apt(month_items, apt_name) if apt_name else month_items
         if dong_name:
             candidates = [i for i in candidates if i["umd_nm"] == dong_name]
         apt_items = filter_area(candidates, min_p, max_p)
 
-        # 동 평균: 동명 필터(있으면) + 면적 필터
         dong_items = month_items
         if dong_name:
             dong_items = [i for i in dong_items if i["umd_nm"] == dong_name]
@@ -345,21 +344,19 @@ async def market_data(
 
         complex_prices.append(avg_ppp(apt_items))
         dong_prices.append(avg_ppp(dong_items))
-        # 거래량: 동 전체(면적 무관) 또는 단지 건수
-        if dong_name:
-            vol = len([i for i in month_items if i["umd_nm"] == dong_name])
-        else:
-            vol = len(apt_items)
-        volume_counts.append(vol)
+        complex_counts.append(len(apt_items))
+        dong_counts.append(len(dong_items))
 
-    complex_filled = forward_fill(complex_prices)
-    dong_filled = forward_fill(dong_prices)
+        for item in apt_items:
+            complex_raw.append({"mi": ym_idx, "v": item["price_per_pyeong"]})
 
-    latest_c = complex_filled[-1]
-    latest_d = dong_filled[-1]
+    complex_ma = calc_ma(complex_prices, complex_counts)
+    dong_ma = calc_ma(dong_prices, dong_counts)
+
+    latest_c = _last_valid(complex_ma)
+    latest_d = _last_valid(dong_ma)
     vs_dong = round((latest_c / latest_d - 1) * 100, 1) if latest_d else 0.0
 
-    # 건축년도: 전체 기간 단지 items에서 가장 많이 등장하는 값
     all_complex_items = [
         i for month_items in all_items
         for i in filter_area(
@@ -378,12 +375,12 @@ async def market_data(
         "lawd_cd": lawd_cd,
         "build_year": build_year,
         "months": months_display,
-        "complex": complex_filled,
-        "dong_avg": dong_filled,
-        "volume": volume_counts,
+        "complex_raw": complex_raw,
+        "complex_ma": complex_ma,
+        "dong_ma": dong_ma,
         "stats": {
-            "complex_change_pct": change_pct(complex_filled),
-            "dong_change_pct": change_pct(dong_filled),
+            "complex_change_pct": change_pct(complex_ma),
+            "dong_change_pct": change_pct(dong_ma),
             "complex_vs_dong_pct": vs_dong,
             "latest_complex": latest_c,
             "latest_dong": latest_d,
@@ -418,6 +415,7 @@ async def dong_data(lawd_cd: str, dong_name: str, pyeong: int | None = None) -> 
     ])
 
     prices: list[float | None] = []
+    counts: list[int] = []
     months_display: list[str] = []
 
     for ym, month_items in zip(months_ym, all_items):
@@ -428,11 +426,12 @@ async def dong_data(lawd_cd: str, dong_name: str, pyeong: int | None = None) -> 
             i for i in month_items if i["umd_nm"] == dong_name
         ], min_p=min_p, max_p=max_p)
         prices.append(avg_ppp(dong_items))
+        counts.append(len(dong_items))
 
     return {
         "dong_name": dong_name,
         "months": months_display,
-        "data": forward_fill(prices),
+        "ma": calc_ma(prices, counts),
     }
 
 
