@@ -1056,9 +1056,10 @@ function showAmenities(d) {
     <span class="amenity-chip">🏫 초등 <strong>${d.school_1km}</strong> / 중고 <strong>${d.secondary_school_1km}</strong>개</span>
     <span class="amenity-chip">🏥 병원 <strong>${d.hospital_2km}</strong>개</span>
     <span class="amenity-chip">🌳 공원 <strong>${d.park_1km}</strong>개</span>
+    <span class="amenity-chip">🚗 고속도로IC <strong>${d.highway_ic_3km}</strong>개</span>
   `;
   strip.style.display = 'flex';
-  amenitySummary = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 종합·대학병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개 (반경 1km 기준)`;
+  amenitySummary = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 종합·대학병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km) (반경 1km 기준)`;
 }
 
 // Mock responses for offline / fallback

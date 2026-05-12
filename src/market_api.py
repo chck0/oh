@@ -42,6 +42,7 @@ _SCHOOL_JSON           = os.path.join(_SRC, "elementary_schools.json")
 _SECONDARY_SCHOOL_JSON = os.path.join(_SRC, "secondary_schools.json")
 _HOSPITAL_JSON         = os.path.join(_SRC, "hospitals.json")
 _PARK_JSON             = os.path.join(_SRC, "parks.json")
+_HIGHWAY_IC_JSON       = os.path.join(_SRC, "highway_ics.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -452,6 +453,7 @@ async def nearby_amenities(
     secondary_school_count = _count_within(_load_static_coords(_SECONDARY_SCHOOL_JSON),  lat, lon, radius_m)
     hospital_count         = _count_within(_load_static_coords(_HOSPITAL_JSON),          lat, lon, 2000)       # 병원은 2km
     park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat, lon, radius_m)
+    ic_count               = _count_within(_load_static_coords(_HIGHWAY_IC_JSON),        lat, lon, 3000)       # IC는 3km
 
     return {
         "lat": lat,
@@ -462,6 +464,7 @@ async def nearby_amenities(
         "secondary_school_1km": secondary_school_count,
         "hospital_2km":         hospital_count,
         "park_1km":             park_count,
+        "highway_ic_3km":       ic_count,
     }
 
 
