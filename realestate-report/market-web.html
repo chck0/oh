@@ -700,8 +700,10 @@ const SEOUL_DONG_MAP = {
   "11740":["강일동","고덕동","길동","둔촌동","명일동","상일동","성내동","암사동","천호동"],
 };
 
-function renderDongChips(lawd_cd, excludeDong) {
-  const dongs = (SEOUL_DONG_MAP[lawd_cd] || []).filter(d => d !== excludeDong);
+function renderDongChips(lawd_cd, excludeDong, dongCounts = {}) {
+  const MIN_TX = 10;
+  const dongs = (SEOUL_DONG_MAP[lawd_cd] || [])
+    .filter(d => d !== excludeDong && (dongCounts[d] ?? Infinity) >= MIN_TX);
   const guName = LAWD_GU_NAME[lawd_cd] || '인근';
   document.getElementById('dongPanelTitle').textContent = `${guName} 동 선택 (복수 가능)`;
   document.getElementById('dongChips').innerHTML = dongs
@@ -746,9 +748,7 @@ const zoneBgPlugin = {
   beforeDraw(chart) {
     const { ctx, chartArea, scales } = chart;
     if (!chartArea) return;
-    // MA 데이터셋(index 1)에서 y값 추출
-    const data = (chart.data.datasets[1]?.data ?? [])
-      .map(p => p?.y).filter(v => v != null && !isNaN(v) && v > 0);
+    const data = complexMaValues.filter(v => v != null && !isNaN(v) && v > 0);
     if (!data || data.length < 4) return;
     const sorted = [...data].sort((a, b) => a - b);
     const p25 = sorted[Math.floor(sorted.length * 0.25)];
@@ -773,6 +773,9 @@ const zoneBgPlugin = {
 
 // x축 레이블 배열 (월별 "2024.01" 형식) — loadRealData 시 교체됨
 let monthLabels = [...MOCK_MONTHS];
+// MA 값 — 챗봇 컨텍스트 및 통계 계산용 (차트 데이터셋에서 분리)
+let complexMaValues = [...MOCK_COMPLEX_MA];
+let dongMaValues    = [...MOCK_DONG_MA];
 
 function applyJitter(rawPoints) {
   return rawPoints.map(d => ({ x: d.mi + (Math.random() - 0.5) * 0.5, y: d.v }));
@@ -815,8 +818,7 @@ const chart = new Chart(ctx, {
   data: {
     datasets: [
       makeScatterDataset(PAGE_ADDRESS, MOCK_COMPLEX_RAW, '#1E5EFF'),
-      makeMaDataset(PAGE_ADDRESS + ' 추이', MOCK_COMPLEX_MA, '#1E5EFF', true),
-      makeMaDataset('동 평균', MOCK_DONG_MA, '#00B85E', false),
+      makeScatterDataset('동 거래', [], '#00B85E'),
     ]
   },
   plugins: [zoneBgPlugin],
@@ -905,7 +907,10 @@ async function toggleDong(el, dong) {
       if (res.ok) {
         const d = await res.json();
         const colorIdx = (activeDongs.size - 1) % DONG_COLORS.length;
-        DATA[dong] = { ma: d.ma, color: DATA[dong]?.color ?? DONG_COLORS[colorIdx] };
+        const color = DATA[dong]?.color ?? DONG_COLORS[colorIdx];
+        // 36개 이상(월평균 1건+) → MA 선, 미만 → scatter 점
+        const useScatter = (d.total_count ?? 0) < 36;
+        DATA[dong] = { type: useScatter ? 'scatter' : 'line', ma: d.ma, raw: d.raw || [], color };
       }
     } catch { /* mock 사용 */ }
 
@@ -934,7 +939,12 @@ async function toggleDong(el, dong) {
 }
 
 function addDataset(dong) {
-  chart.data.datasets.push(makeMaDataset(dong, DATA[dong].ma, DATA[dong].color));
+  const d = DATA[dong];
+  if (d.type === 'line') {
+    chart.data.datasets.push(makeMaDataset(dong, d.ma, d.color));
+  } else {
+    chart.data.datasets.push(makeScatterDataset(dong, d.raw, d.color));
+  }
   chart.update();
   updateLegend();
 }
@@ -1032,27 +1042,24 @@ function escapeHtml(str) {
 }
 
 function getChartContext() {
-  const ds = chart.data.datasets;
-  // ds[0]=scatter, ds[1]=complex MA, ds[2]=dong MA
-  const extractMa = idx => (ds[idx]?.data ?? []).map(p => (p?.y) || 0);
-  const complexData = extractMa(1);
-  const dongData    = extractMa(2);
   const firstValid = v => v.find(x => x > 0) || 1;
   const lastValid  = v => [...v].reverse().find(x => x > 0) || 0;
+  const cma = complexMaValues.map(v => v || 0);
+  const dma = dongMaValues.map(v => v || 0);
   return {
     address: PAGE_ADDRESS,
     size_pyeong: PAGE_PYEONG || 30,
     build_year: window.PAGE_BUILD_YEAR || null,
     months: monthLabels,
-    complex: complexData,
-    dong: dongData,
+    complex: cma,
+    dong: dma,
     active_dongs: [...activeDongs].map(d => ({ name: d, data: (DATA[d]?.ma ?? []).map(v => v || 0) })),
     stats: {
-      complex_change_pct: +((lastValid(complexData) / firstValid(complexData) - 1) * 100).toFixed(1),
-      dong_change_pct:    +((lastValid(dongData)    / firstValid(dongData)    - 1) * 100).toFixed(1),
-      complex_vs_dong_pct: +((lastValid(complexData) / lastValid(dongData) - 1) * 100).toFixed(1),
-      latest_complex: lastValid(complexData),
-      latest_dong:    lastValid(dongData),
+      complex_change_pct:  +((lastValid(cma) / firstValid(cma) - 1) * 100).toFixed(1),
+      dong_change_pct:     +((lastValid(dma) / firstValid(dma) - 1) * 100).toFixed(1),
+      complex_vs_dong_pct: +((lastValid(cma) / lastValid(dma) - 1) * 100).toFixed(1),
+      latest_complex: lastValid(cma),
+      latest_dong:    lastValid(dma),
     }
   };
 }
@@ -1073,17 +1080,17 @@ async function loadRealData() {
     if (d.build_year) window.PAGE_BUILD_YEAR = d.build_year;
 
     monthLabels = d.months;
-    renderDongChips(d.lawd_cd, d.dong_name);
+    complexMaValues = d.complex_ma || [];
+    dongMaValues    = d.dong_ma    || [];
+    renderDongChips(d.lawd_cd, d.dong_name, d.dong_counts || {});
 
-    // 차트 업데이트: [0] scatter, [1] complex MA, [2] dong MA
+    // 차트 업데이트: [0] 단지 scatter, [1] 동 scatter
     chart.data.datasets[0].label = d.apt_name;
-    chart.data.datasets[0].data = applyJitter(d.complex_raw || []);
-    chart.data.datasets[1].label = d.apt_name + ' 추이';
-    chart.data.datasets[1].data = (d.complex_ma || []).map((v, i) => ({ x: i, y: v }));
-    chart.data.datasets[2].data = (d.dong_ma || []).map((v, i) => ({ x: i, y: v }));
+    chart.data.datasets[0].data  = applyJitter(d.complex_raw || []);
+    chart.data.datasets[1].data  = applyJitter(d.dong_raw || []);
     chart.update();
     updateLegend();
-    updateChartStats(d.complex_ma || []);
+    updateChartStats(complexMaValues);
 
     if (d.stats) {
       const s = d.stats;

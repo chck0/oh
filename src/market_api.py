@@ -320,6 +320,8 @@ async def market_data(
     ])
 
     complex_raw: list[dict] = []  # 건별 원시 거래 {mi: month_index, v: price_per_pyeong}
+    dong_raw: list[dict] = []     # 동 전체 건별 거래 (scatter용)
+    dong_count_map: dict[str, int] = {}  # 동별 거래 건수 (칩 필터링용)
     complex_prices: list[float | None] = []
     dong_prices: list[float | None] = []
     complex_counts: list[int] = []
@@ -349,6 +351,13 @@ async def market_data(
 
         for item in apt_items:
             complex_raw.append({"mi": ym_idx, "v": item["price_per_pyeong"]})
+        for item in dong_items:
+            dong_raw.append({"mi": ym_idx, "v": item["price_per_pyeong"]})
+
+        # 동별 거래 건수 집계 (칩 필터링용 — 전 동, 평형 필터 적용)
+        for item in filter_area(month_items, min_p, max_p):
+            dn = item["umd_nm"]
+            dong_count_map[dn] = dong_count_map.get(dn, 0) + 1
 
     complex_ma = calc_ma(complex_prices, complex_counts)
     dong_ma = calc_ma(dong_prices, dong_counts)
@@ -377,7 +386,9 @@ async def market_data(
         "months": months_display,
         "complex_raw": complex_raw,
         "complex_ma": complex_ma,
+        "dong_raw": dong_raw,
         "dong_ma": dong_ma,
+        "dong_counts": dong_count_map,
         "stats": {
             "complex_change_pct": change_pct(complex_ma),
             "dong_change_pct": change_pct(dong_ma),
@@ -414,11 +425,12 @@ async def dong_data(lawd_cd: str, dong_name: str, pyeong: int | None = None) -> 
         fetch_month_items(lawd_cd, ym) for ym in months_ym
     ])
 
+    raw: list[dict] = []
     prices: list[float | None] = []
     counts: list[int] = []
     months_display: list[str] = []
 
-    for ym, month_items in zip(months_ym, all_items):
+    for ym_idx, (ym, month_items) in enumerate(zip(months_ym, all_items)):
         months_display.append(month_label(ym))
         min_p = (pyeong - 2) if pyeong else 18
         max_p = (pyeong + 2) if pyeong else 26
@@ -427,11 +439,15 @@ async def dong_data(lawd_cd: str, dong_name: str, pyeong: int | None = None) -> 
         ], min_p=min_p, max_p=max_p)
         prices.append(avg_ppp(dong_items))
         counts.append(len(dong_items))
+        for item in dong_items:
+            raw.append({"mi": ym_idx, "v": item["price_per_pyeong"]})
 
     return {
         "dong_name": dong_name,
         "months": months_display,
         "ma": calc_ma(prices, counts),
+        "raw": raw,
+        "total_count": sum(counts),
     }
 
 
