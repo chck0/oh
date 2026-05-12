@@ -299,13 +299,15 @@
     selectedJuso = results[idx];
     input.value = selectedJuso.bdNm;
     hideDropdown();
-    await fetchAptSizes(selectedJuso.admCd.slice(0, 5), selectedJuso.bdNm);
+    const dong = extractDong(selectedJuso.jibunAddr);
+    await fetchAptSizes(selectedJuso.admCd.slice(0, 5), selectedJuso.bdNm, dong);
   }
 
-  async function fetchAptSizes(lawd_cd, apt_name) {
+  async function fetchAptSizes(lawd_cd, apt_name, dong) {
     try {
+      const dongParam = dong ? `&dong=${encodeURIComponent(dong)}` : '';
       const res = await fetch(
-        `http://localhost:8000/api/apt-sizes?lawd_cd=${lawd_cd}&apt_name=${encodeURIComponent(apt_name)}`,
+        `http://localhost:8000/api/apt-sizes?lawd_cd=${lawd_cd}&apt_name=${encodeURIComponent(apt_name)}${dongParam}`,
         { signal: AbortSignal.timeout(10000) }
       );
       if (!res.ok) return;

@@ -327,11 +327,11 @@ async def market_data(
         min_p = (pyeong - 2) if pyeong else 18
         max_p = (pyeong + 2) if pyeong else 26
 
-        # 단지 데이터: 정규화된 단지명 부분 일치 + 면적 필터
-        apt_items = filter_area(
-            filter_apt(month_items, apt_name) if apt_name else month_items,
-            min_p, max_p
-        )
+        # 단지 데이터: 정규화된 단지명 부분 일치 + 동 필터 + 면적 필터
+        candidates = filter_apt(month_items, apt_name) if apt_name else month_items
+        if dong_name:
+            candidates = [i for i in candidates if i["umd_nm"] == dong_name]
+        apt_items = filter_area(candidates, min_p, max_p)
 
         # 동 평균: 동명 필터(있으면) + 면적 필터
         dong_items = month_items
@@ -374,7 +374,7 @@ async def market_data(
 
 
 @app.get("/api/apt-sizes")
-async def apt_sizes(lawd_cd: str, apt_name: str) -> dict:
+async def apt_sizes(lawd_cd: str, apt_name: str, dong: str | None = None) -> dict:
     """해당 아파트에서 실제 거래된 평수 목록 반환 (최근 3개월)"""
     months_ym = get_last_n_months(3)
     all_items = await asyncio.gather(*[
@@ -382,7 +382,10 @@ async def apt_sizes(lawd_cd: str, apt_name: str) -> dict:
     ])
     sizes: set[int] = set()
     for month_items in all_items:
-        for item in filter_apt(month_items, apt_name):
+        candidates = filter_apt(month_items, apt_name)
+        if dong:
+            candidates = [i for i in candidates if i["umd_nm"] == dong]
+        for item in candidates:
             sizes.add(round(item["pyeong"]))
     return {"sizes": sorted(sizes)}
 
