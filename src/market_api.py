@@ -44,6 +44,7 @@ _HOSPITAL_JSON         = os.path.join(_SRC, "hospitals.json")
 _PARK_JSON             = os.path.join(_SRC, "parks.json")
 _HIGHWAY_IC_JSON       = os.path.join(_SRC, "highway_ics.json")
 _DISAMENITY_JSON       = os.path.join(_SRC, "disamenities.json")
+_LARGE_STORE_JSON      = os.path.join(_SRC, "large_stores.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -473,6 +474,10 @@ async def nearby_amenities(
     park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat, lon, radius_m)
     ic_count               = _count_within(_load_static_coords(_HIGHWAY_IC_JSON),        lat, lon, 3000)       # IC는 3km
 
+    stores = _load_static_json(_LARGE_STORE_JSON)
+    emart_count  = _count_type_within(stores, lat, lon, "이마트", 2000)   # 2km (생활마트)
+    dept_count   = _count_type_within(stores, lat, lon, "백화점", 3000)   # 3km (목적 쇼핑)
+
     disam = _load_static_json(_DISAMENITY_JSON)
     crematorium_count  = _count_type_within(disam, lat, lon, "화장장",      3000)  # 심리적 영향 3km
     waste_count        = _count_type_within(disam, lat, lon, "쓰레기처리장", 2000)  # 냄새 2km
@@ -497,6 +502,8 @@ async def nearby_amenities(
         "industrial_1km":       industrial_count,
         "prison_1km":           prison_count,
         "military_1km":         military_count,
+        "emart_2km":            emart_count,
+        "dept_store_3km":       dept_count,
     }
 
 

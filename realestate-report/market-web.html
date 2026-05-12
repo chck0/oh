@@ -1067,11 +1067,16 @@ function showAmenities(d) {
     <span class="amenity-chip">🏥 병원 <strong>${d.hospital_2km}</strong>개</span>
     <span class="amenity-chip">🌳 공원 <strong>${d.park_1km}</strong>개</span>
     <span class="amenity-chip">🚗 고속도로IC <strong>${d.highway_ic_3km}</strong>개</span>
+    ${d.emart_2km   > 0 ? `<span class="amenity-chip">🛒 이마트 <strong>${d.emart_2km}</strong>개</span>` : ''}
+    ${d.dept_store_3km > 0 ? `<span class="amenity-chip">🛍️ 백화점 <strong>${d.dept_store_3km}</strong>개</span>` : ''}
     ${badChips.join('')}
   `;
   strip.style.display = 'flex';
 
-  const positives = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km)`;
+  const storeParts = [];
+  if (d.emart_2km     > 0) storeParts.push(`이마트 ${d.emart_2km}개(2km)`);
+  if (d.dept_store_3km > 0) storeParts.push(`백화점 ${d.dept_store_3km}개(3km)`);
+  const positives = `지하철역(도보 10분) ${d.subway_10min}개, 초등학교 ${d.school_1km}개, 중고등학교 ${d.secondary_school_1km}개, 병원 ${d.hospital_2km}개(2km), 공원 ${d.park_1km}개, 고속도로IC ${d.highway_ic_3km}개(3km)` + (storeParts.length ? `, ${storeParts.join(', ')}` : '');
   const negParts = [];
   if (d.crematorium_3km  > 0) negParts.push(`화장장 ${d.crematorium_3km}개(3km 내)`);
   if (d.waste_plant_2km  > 0) negParts.push(`쓰레기처리장 ${d.waste_plant_2km}개(2km 내)`);
