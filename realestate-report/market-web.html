@@ -32,8 +32,9 @@
     --topnav-h: 60px;
   }
 
+  html, body { height: 100vh; overflow: hidden; }
   html { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text-primary); font-size: 15px; }
-  body { min-height: 100vh; display: flex; flex-direction: column; }
+  body { display: flex; flex-direction: column; }
 
   /* ── Top Nav ── */
   .topnav {
@@ -126,6 +127,9 @@
     padding: 24px 24px 18px;
     box-shadow: var(--shadow-md);
     margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
   .chart-header {
     display: flex; align-items: flex-start;
@@ -212,6 +216,8 @@
     border-left: 1px solid var(--border);
     background: var(--surface);
     overflow: hidden;
+    min-height: 0;
+    height: 100%;
   }
 
   .chat-panel {
@@ -255,6 +261,7 @@
 
   .chat-messages {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 16px 16px 8px;
     display: flex; flex-direction: column; gap: 10px;
@@ -552,9 +559,10 @@
 
       <!-- Quick Questions -->
       <div class="quick-questions" id="quickQuestions">
-        <div class="quick-q" onclick="askQuick('지금 사면 비싼 건가요?')">지금 사면 비싼 건가요?</div>
-        <div class="quick-q" onclick="askQuick('역삼동 평균 대비 어때요?')">역삼동 대비 어때요?</div>
-        <div class="quick-q" onclick="askQuick('상승세가 계속될까요?')">상승세 전망은?</div>
+        <div class="quick-q" onclick="askQuick('왜 주변 같은 평형대보다 비싸요?')">왜 주변보다 비싸요?</div>
+        <div class="quick-q" onclick="askQuick('이 동네 교통은 어때요?')">교통은 어때요?</div>
+        <div class="quick-q" onclick="askQuick('이 동네 학군은 어때요?')">학군은 어때요?</div>
+        <div class="quick-q" onclick="askQuick('주변 동이랑 가격 차이 나는 이유가 뭔가요?')">가격 차이 이유가 뭔가요?</div>
       </div>
 
       <!-- Input -->
@@ -779,6 +787,7 @@ const chart = new Chart(ctx, {
         ticks: {
           font: { family: 'Pretendard', size: 11 },
           maxRotation: 0,
+          autoSkip: false,
           callback: function(val, index) {
             const label = this.getLabelForValue(val);
             if (label && label.endsWith('.01')) return label.split('.')[0] + '년';
@@ -981,7 +990,8 @@ function getChartContext() {
   const last = v => v.at(-1) || 0;
   return {
     address: PAGE_ADDRESS,
-    size_pyeong: 30,
+    size_pyeong: PAGE_PYEONG || 30,
+    build_year: window.PAGE_BUILD_YEAR || null,
     months: chart.data.labels,
     complex: complexData,
     dong: dongData,
@@ -1009,6 +1019,7 @@ async function loadRealData() {
 
     REAL_LAWD_CD = d.lawd_cd;
     REAL_APT_NAME = d.apt_name;
+    if (d.build_year) window.PAGE_BUILD_YEAR = d.build_year;
 
     // 동 칩 업데이트
     renderDongChips(d.lawd_cd, d.dong_name);
@@ -1048,7 +1059,8 @@ async function loadRealData() {
 async function fetchAmenities() {
   if (!PAGE_ENT_X || !PAGE_ENT_Y) return;
   try {
-    const url = `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X}&entY=${PAGE_ENT_Y}`;
+    const dongParam = PAGE_DONG ? `&dong_name=${encodeURIComponent(PAGE_DONG)}` : '';
+    const url = `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return;
     const d = await res.json();

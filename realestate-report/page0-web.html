@@ -145,7 +145,8 @@
     transition: background 0.12s;
   }
   .dropdown-item:last-child { border-bottom: none; }
-  .dropdown-item:hover { background: var(--blue-light); }
+  .dropdown-item:hover,
+  .dropdown-item.focused { background: var(--blue-light); }
   .dropdown-bdnm {
     font-size: 14px; font-weight: 700; color: var(--navy);
     margin-bottom: 2px;
@@ -186,6 +187,11 @@
   .hint {
     font-size: 13px;
     color: var(--text-muted);
+    text-align: center;
+  }
+  .hint-error {
+    font-size: 13px;
+    color: #e05050;
     text-align: center;
   }
 
@@ -246,14 +252,38 @@
   let debounceTimer = null;
   let selectedJuso = null;
   let selectedSize = null;
+  let focusedIdx = -1;
 
   const input = document.getElementById('addressInput');
   const dropdown = document.getElementById('dropdown');
 
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') goVerify();
-    if (e.key === 'Escape') hideDropdown();
+    const items = dropdown.querySelectorAll('.dropdown-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedIdx = Math.min(focusedIdx + 1, items.length - 1);
+      updateFocus(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedIdx = Math.max(focusedIdx - 1, 0);
+      updateFocus(items);
+    } else if (e.key === 'Enter') {
+      if (focusedIdx >= 0 && items[focusedIdx]) {
+        items[focusedIdx].click();
+      } else {
+        goVerify();
+      }
+    } else if (e.key === 'Escape') {
+      hideDropdown();
+    }
   });
+
+  function updateFocus(items) {
+    items.forEach((el, i) => {
+      el.classList.toggle('focused', i === focusedIdx);
+      if (i === focusedIdx) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   input.addEventListener('input', () => {
     selectedJuso = null;
@@ -282,6 +312,7 @@
 
   function showDropdown(results) {
     if (!results.length) { hideDropdown(); return; }
+    focusedIdx = -1;
     dropdown.dataset.results = JSON.stringify(results);
     dropdown.innerHTML = results.map((r, i) => `
       <div class="dropdown-item" onclick="selectAddress(${i})">
@@ -336,19 +367,33 @@
     return m ? m[1] : null;
   }
 
+  function showError(msg) {
+    const hint = document.querySelector('.hint');
+    hint.textContent = msg;
+    hint.className = 'hint-error';
+    setTimeout(() => {
+      hint.textContent = '단지명 또는 동 주소를 입력하면 평형을 선택할 수 있어요';
+      hint.className = 'hint';
+    }, 3000);
+  }
+
   function goVerify() {
     const addr = input.value.trim();
     if (!addr) { input.focus(); return; }
 
-    let url = 'market-web.html?address=' + encodeURIComponent(addr);
-    if (selectedJuso) {
-      url += '&lawd_cd=' + selectedJuso.admCd.slice(0, 5);
-      url += '&apt_name=' + encodeURIComponent(selectedJuso.bdNm);
-      const dong = extractDong(selectedJuso.jibunAddr);
-      if (dong) url += '&dong=' + encodeURIComponent(dong);
-      if (selectedJuso.entX) url += '&entX=' + selectedJuso.entX;
-      if (selectedJuso.entY) url += '&entY=' + selectedJuso.entY;
+    if (!selectedJuso) {
+      showError('목록에서 주소를 선택해주세요');
+      input.focus();
+      return;
     }
+
+    let url = 'market-web.html?address=' + encodeURIComponent(addr);
+    url += '&lawd_cd=' + selectedJuso.admCd.slice(0, 5);
+    url += '&apt_name=' + encodeURIComponent(selectedJuso.bdNm);
+    const dong = extractDong(selectedJuso.jibunAddr);
+    if (dong) url += '&dong=' + encodeURIComponent(dong);
+    if (selectedJuso.entX) url += '&entX=' + selectedJuso.entX;
+    if (selectedJuso.entY) url += '&entY=' + selectedJuso.entY;
     if (selectedSize) url += '&pyeong=' + selectedSize;
     window.location.href = url;
   }

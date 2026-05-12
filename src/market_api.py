@@ -84,6 +84,7 @@ class ChartStats(BaseModel):
 class ChartContext(BaseModel):
     address: str = ""
     size_pyeong: int = 30
+    build_year: str | None = None
     months: list[str] = []
     complex: list[float] = []
     dong: list[float] = []
@@ -179,6 +180,7 @@ async def fetch_month_items(lawd_cd: str, deal_ymd: str) -> list[dict]:
             area = float(item.findtext("excluUseAr", "0"))
             apt_nm = item.findtext("aptNm", "").strip()
             umd_nm = item.findtext("umdNm", "").strip()
+            build_year = item.findtext("buildYear", "").strip()
         except (ValueError, AttributeError):
             continue
 
@@ -193,6 +195,7 @@ async def fetch_month_items(lawd_cd: str, deal_ymd: str) -> list[dict]:
             "area": area,
             "pyeong": round(pyeong, 1),
             "price_per_pyeong": round(price / pyeong),
+            "build_year": build_year,
         })
 
     return result
@@ -355,10 +358,24 @@ async def market_data(
     latest_d = dong_filled[-1]
     vs_dong = round((latest_c / latest_d - 1) * 100, 1) if latest_d else 0.0
 
+    # 건축년도: 전체 기간 단지 items에서 가장 많이 등장하는 값
+    all_complex_items = [
+        i for month_items in all_items
+        for i in filter_area(
+            [j for j in (filter_apt(month_items, apt_name) if apt_name else month_items)
+             if dong_name is None or j["umd_nm"] == dong_name],
+            (pyeong - 2) if pyeong else 18,
+            (pyeong + 2) if pyeong else 26,
+        )
+    ]
+    build_years = [i["build_year"] for i in all_complex_items if i.get("build_year")]
+    build_year = max(set(build_years), key=build_years.count) if build_years else None
+
     return {
         "apt_name": apt_name,
         "dong_name": dong_name,
         "lawd_cd": lawd_cd,
+        "build_year": build_year,
         "months": months_display,
         "complex": complex_filled,
         "dong_avg": dong_filled,
@@ -483,19 +500,63 @@ def _load_static_coords(path: str) -> list[tuple[float, float]]:
         return []
 
 
+# 동 이름 → 중심 좌표 fallback (entX/entY 없을 때)
+_DONG_CENTROIDS: dict[str, tuple[float, float]] = {
+    # 강남구
+    "논현동": (37.5197, 127.0234), "역삼동": (37.5000, 127.0368),
+    "삼성동": (37.5140, 127.0583), "대치동": (37.4943, 127.0614),
+    "개포동": (37.4810, 127.0539), "도곡동": (37.4896, 127.0432),
+    "압구정동": (37.5272, 127.0279), "청담동": (37.5224, 127.0519),
+    "신사동": (37.5254, 127.0197), "수서동": (37.4850, 127.1003),
+    "일원동": (37.4870, 127.0840), "자곡동": (37.4812, 127.0917),
+    "세곡동": (37.4694, 127.0850),
+    # 서초구
+    "서초동": (37.4837, 127.0324), "반포동": (37.5040, 127.0058),
+    "잠원동": (37.5143, 127.0092), "방배동": (37.4779, 126.9954),
+    "양재동": (37.4686, 127.0344), "우면동": (37.4637, 127.0180),
+    # 송파구
+    "잠실동": (37.5128, 127.1008), "신천동": (37.5162, 127.1020),
+    "풍납동": (37.5263, 127.1159), "가락동": (37.4941, 127.1175),
+    "문정동": (37.4828, 127.1241), "거여동": (37.4871, 127.1480),
+    # 강동구
+    "천호동": (37.5386, 127.1237), "성내동": (37.5322, 127.1213),
+    "암사동": (37.5515, 127.1333),
+    # 마포구
+    "상암동": (37.5756, 126.8978), "합정동": (37.5499, 126.9138),
+    "망원동": (37.5551, 126.9099), "연남동": (37.5617, 126.9256),
+    # 용산구
+    "이태원동": (37.5346, 126.9946), "한남동": (37.5345, 127.0048),
+    "서빙고동": (37.5165, 126.9924),
+    # 성동구
+    "성수동": (37.5445, 127.0566), "왕십리동": (37.5616, 127.0374),
+    # 광진구
+    "광장동": (37.5426, 127.1019), "구의동": (37.5457, 127.0837),
+    # 노원구
+    "상계동": (37.6552, 127.0640), "중계동": (37.6311, 127.0769),
+    # 은평구
+    "불광동": (37.6122, 126.9293),
+}
+
+
 @app.get("/api/nearby-amenities")
 async def nearby_amenities(
     entX: str = "",
     entY: str = "",
+    dong_name: str = "",
     radius_m: float = 1000,
 ) -> dict:
     """
     건물 입구 좌표(UTM-K) 기준 반경 내 생활편의 카운트.
-    entX·entY: JUSO address-search API 반환값 그대로.
+    entX·entY 없으면 dong_name 중심 좌표로 fallback.
     """
+    lat, lon = None, None
     try:
         lat, lon = _utm_k_to_wgs84(float(entX), float(entY))
     except (ValueError, TypeError):
+        if dong_name and dong_name in _DONG_CENTROIDS:
+            lat, lon = _DONG_CENTROIDS[dong_name]
+
+    if lat is None:
         return {"error": "no_coords", "subway_10min": 0, "school_1km": 0,
                 "secondary_school_1km": 0, "hospital_2km": 0, "park_1km": 0,
                 "highway_ic_3km": 0, "crematorium_3km": 0, "waste_plant_2km": 0,
@@ -547,8 +608,9 @@ async def nearby_amenities(
 
 def build_context_str(ctx: ChartContext) -> str:
     months_str = ", ".join(ctx.months) if ctx.months else "최근 6개월"
+    build_info = f", {ctx.build_year}년 준공" if ctx.build_year else ""
     lines = [
-        f"매물: {ctx.address} ({ctx.size_pyeong}평)",
+        f"매물: {ctx.address} ({ctx.size_pyeong}평{build_info})",
         f"분석 기간: {months_str}",
         f"단지 평단가 추이: {ctx.complex} (만원/평)",
         f"동 평균 평단가: {ctx.dong} (만원/평)",
