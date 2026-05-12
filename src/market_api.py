@@ -6,6 +6,7 @@ market_api.py — FastAPI 백엔드 for VerifyHome 시세 AI 챗봇 + 실거래 
 """
 
 import asyncio
+import math
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -33,6 +34,14 @@ APT_TRADE_URL = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSD
 DATA_GO_KR_API_KEY = os.environ.get("DATA_GO_KR_API_KEY")
 JUSO_CONFIRM_KEY = os.environ.get("JUSO_CONFIRM_KEY")
 JUSO_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
+
+# 생활편의 API 엔드포인트 (DATA_GO_KR_API_KEY 공용)
+_SUBWAY_URL = "https://api.data.go.kr/openapi/tn_pubr_public_subway_sta_info_api"
+_SCHOOL_URL = "https://api.data.go.kr/openapi/tn_pubr_public_elementary_school_info_api"
+_PARK_URL   = "https://api.data.go.kr/openapi/tn_pubr_public_pblcfct_park_info_api"
+
+# 전국 지하철역은 변경이 드물어 모듈 수준에서 캐시
+_subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
 LAWD_CD_MAP: dict[str, str] = {
@@ -78,6 +87,7 @@ class ChatRequest(BaseModel):
     message: str
     context: ChartContext
     history: list[HistoryMessage] = []
+    amenity_summary: str = ""  # 입지 분석 데이터 (반경 1km 내 생활편의 현황)
 
 class ChatResponse(BaseModel):
     reply: str
@@ -248,6 +258,8 @@ async def address_search(keyword: str) -> dict:
                 "jibunAddr": j.get("jibunAddr", ""),
                 "bdNm": j.get("bdNm", ""),
                 "admCd": j.get("admCd", ""),
+                "entX": j.get("entX", ""),  # 건물 입구 X좌표 (UTM-K)
+                "entY": j.get("entY", ""),  # 건물 입구 Y좌표 (UTM-K)
             }
             for j in jusos
             if j.get("bdNm")  # 건물명 있는 것(아파트)만
@@ -373,6 +385,127 @@ async def dong_data(lawd_cd: str, dong_name: str) -> dict:
     }
 
 
+# ── 생활편의 헬퍼 ──
+
+def _utm_k_to_wgs84(ent_x: float, ent_y: float) -> tuple[float, float]:
+    """UTM-K (EPSG:5179) → 근사 WGS84 (lat, lon). 서울 기준 오차 < 200m."""
+    lon = (ent_x - 200_000) / 88_128 + 127.0
+    lat = (ent_y - 600_000) / 111_320 + 38.0
+    return lat, lon
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """두 WGS84 좌표 간 거리 (미터)."""
+    R = 6_371_000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = phi2 - phi1
+    dlam = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _count_within(coords: list[tuple[float, float]], lat: float, lon: float, radius_m: float) -> int:
+    return sum(1 for plat, plon in coords if _haversine_m(lat, lon, plat, plon) <= radius_m)
+
+
+async def _fetch_amenity_page(url: str, extra_params: dict) -> list[dict]:
+    """data.go.kr JSON API 단일 페이지 fetch → item 리스트."""
+    if not DATA_GO_KR_API_KEY:
+        return []
+    params = {
+        "serviceKey": DATA_GO_KR_API_KEY,
+        "resultType": "json",
+        "numOfRows": "3000",
+        "pageNo": "1",
+        **extra_params,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as hc:
+            res = await hc.get(url, params=params)
+        body = res.json().get("response", {}).get("body", {})
+        items = body.get("items") or {}
+        if isinstance(items, dict):
+            items = items.get("item", [])
+        if isinstance(items, dict):   # 단건 응답
+            items = [items]
+        return items if isinstance(items, list) else []
+    except Exception:
+        return []
+
+
+def _extract_latlon(item: dict) -> tuple[float, float] | None:
+    """item dict에서 위도·경도 추출. 한국 영역 유효성 검사 포함."""
+    for lat_key in ("latitude", "lat", "위도", "LATITUDE", "LAT"):
+        for lon_key in ("longitude", "lon", "경도", "LONGITUDE", "LON"):
+            try:
+                lat = float(item.get(lat_key) or 0)
+                lon = float(item.get(lon_key) or 0)
+                if 33.0 <= lat <= 39.0 and 124.0 <= lon <= 132.0:
+                    return lat, lon
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+async def _get_subway_coords() -> list[tuple[float, float]]:
+    """전국 지하철역 좌표 (캐시됨)."""
+    global _subway_coords_cache
+    if _subway_coords_cache is not None:
+        return _subway_coords_cache
+    items = await _fetch_amenity_page(_SUBWAY_URL, {})
+    _subway_coords_cache = [c for i in items if (c := _extract_latlon(i))]
+    return _subway_coords_cache
+
+
+async def _get_school_coords(ctpv_nm: str = "서울특별시") -> list[tuple[float, float]]:
+    """초등학교 좌표 (시도 필터)."""
+    items = await _fetch_amenity_page(_SCHOOL_URL, {"ctpvNm": ctpv_nm})
+    return [c for i in items if (c := _extract_latlon(i))]
+
+
+async def _get_park_coords(ctpv_nm: str = "서울특별시") -> list[tuple[float, float]]:
+    """공원 좌표 (시도 필터)."""
+    items = await _fetch_amenity_page(_PARK_URL, {"ctpvNm": ctpv_nm})
+    return [c for i in items if (c := _extract_latlon(i))]
+
+
+@app.get("/api/nearby-amenities")
+async def nearby_amenities(
+    entX: float,
+    entY: float,
+    radius_m: float = 1000,
+) -> dict:
+    """
+    건물 입구 좌표(UTM-K) 기준 반경 내 생활편의 카운트.
+    entX·entY: JUSO address-search API 반환값 그대로.
+    """
+    lat, lon = _utm_k_to_wgs84(entX, entY)
+
+    # API 키 없으면 서울 평균 mock 반환
+    if not DATA_GO_KR_API_KEY:
+        return {
+            "lat": lat, "lon": lon, "radius_m": int(radius_m),
+            "subway_1km": 2, "school_1km": 2, "park_1km": 1,
+            "is_mock": True,
+        }
+
+    subway, schools, parks = await asyncio.gather(
+        _get_subway_coords(),
+        _get_school_coords(),
+        _get_park_coords(),
+    )
+
+    return {
+        "lat": lat,
+        "lon": lon,
+        "radius_m": int(radius_m),
+        "subway_1km": _count_within(subway,  lat, lon, radius_m),
+        "school_1km": _count_within(schools, lat, lon, radius_m),
+        "park_1km":   _count_within(parks,   lat, lon, radius_m),
+        "is_mock": False,
+    }
+
+
 # ── 챗봇 헬퍼 ──
 
 def build_context_str(ctx: ChartContext) -> str:
@@ -402,7 +535,7 @@ def build_context_str(ctx: ChartContext) -> str:
 
 SYSTEM_PROMPT_TEMPLATE = """\
 당신은 VerifyHome의 시세 분석 AI입니다.
-사용자가 매입을 고려 중인 아파트의 실거래가 차트 데이터를 분석해 궁금증에 답합니다.
+사용자가 매입을 고려 중인 아파트의 실거래가 차트 데이터와 입지 정보를 분석해 궁금증에 답합니다.
 
 ## 역할
 - 차트 데이터를 쉽게 해석해 주는 동네 부동산 전문가처럼 말합니다.
@@ -418,14 +551,17 @@ SYSTEM_PROMPT_TEMPLATE = """\
 4. **투자 권유 금지**: "사세요/파세요" 금지. "데이터상으로는 ~로 보입니다" 수준까지만.
 5. **비교 동이 추가된 경우**: 추가된 동 데이터를 적극 활용해 비교 분석합니다.
 6. **추세 예측 금지**: 과거·현재 데이터만 서술, 미래 전망은 하지 않습니다.
-7. **이유·원인 질문** ("왜", "이유가", "원인이" 포함 시): "이유는 데이터만으로는 알 수 없지만, 추이를 말씀드리면 ~" 형식으로 자연스럽게 피봇합니다.
-8. **한국어**로 답합니다.
+7. **이유·원인 질문** ("왜", "이유가", "원인이"): 입지 데이터(지하철역·학교·공원 수)가 제공된 경우 이를 근거로 활용합니다. 없으면 "추이만 말씀드리면 ~" 형식으로 피봇합니다.
+8. **입지 데이터 활용**: "반경 1km 내 지하철역 N개, 학교 N개"는 시세 프리미엄의 **상관관계** 근거로 쓸 수 있습니다. "때문에"가 아닌 "와 관련이 있을 수 있습니다" 수준으로 표현합니다.
+9. **한국어**로 답합니다.
 """
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     context_str = build_context_str(req.context)
+    if req.amenity_summary:
+        context_str += f"\n\n## 입지 분석 (반경 1km)\n{req.amenity_summary}"
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context_str=context_str)
 
     messages: list[dict[str, Any]] = []

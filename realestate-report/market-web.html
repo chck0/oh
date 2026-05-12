@@ -391,6 +391,37 @@
     #printArea .print-footer { margin-top: 40px; font-size: 11px; color: #9AA2B4; text-align: center; }
   }
 
+  /* Amenity Strip */
+  .amenity-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--blue-light);
+    border-radius: 12px;
+    border: 1px solid #d0dcff;
+  }
+  .amenity-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+  }
+  .amenity-chip {
+    font-size: 13px;
+    color: var(--navy);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .amenity-chip strong { color: var(--blue); }
+  .amenity-mock { font-size: 11px; color: var(--text-muted); }
+
   /* Quick questions */
   .quick-questions {
     padding: 0 14px 10px;
@@ -474,6 +505,9 @@
       </div>
     </div>
 
+    <!-- Amenity Strip -->
+    <div class="amenity-strip" id="amenityStrip" style="display:none"></div>
+
     <!-- Compare Section -->
     <div class="compare-section">
       <button class="compare-btn" onclick="toggleDongPanel()">
@@ -554,12 +588,14 @@ function initPage() {
   const apt_name = params.get('apt_name') || null;
   const dong     = params.get('dong')     || null;
   const pyeong   = params.get('pyeong')   ? parseInt(params.get('pyeong')) : null;
+  const entX     = params.get('entX')     ? parseFloat(params.get('entX')) : null;
+  const entY     = params.get('entY')     ? parseFloat(params.get('entY')) : null;
   const label = pyeong ? `${address} · ${pyeong}평` : address;
   document.getElementById('topnavAddr').textContent = label;
   document.getElementById('summaryAddr').textContent = label;
-  return { address, lawd_cd, apt_name, dong, pyeong };
+  return { address, lawd_cd, apt_name, dong, pyeong, entX, entY };
 }
-const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG } = initPage();
+const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG, entX: PAGE_ENT_X, entY: PAGE_ENT_Y } = initPage();
 
 // ── Mock Data (fallback) ──
 const MOCK_MONTHS = (function() {
@@ -592,6 +628,9 @@ const DATA = {
 // 실API 로드 후 채워지는 값
 let REAL_LAWD_CD = null;
 let REAL_APT_NAME = PAGE_ADDRESS;
+
+// 입지 분석 — 챗봇 컨텍스트에 주입되는 요약 문자열
+let amenitySummary = '';
 
 // ── 서울 25개 구 × 274개 동 (국토교통부 실거래 API 기준) ──
 const LAWD_GU_NAME = {
@@ -985,6 +1024,9 @@ async function loadRealData() {
     }
 
     addBotMessage(`실거래 데이터 로드 완료 — <strong>${d.apt_name}</strong> 최근 6개월 데이터입니다.`, 'system');
+
+    // 실거래 데이터 로드 후 입지 분석 비동기 시작 (차단하지 않음)
+    fetchAmenities();
   } catch {
     // mock 데이터 그대로 사용
     document.getElementById('statComplex').textContent = '+38%';
@@ -992,6 +1034,32 @@ async function loadRealData() {
     document.getElementById('statVsDong').textContent = '+5.5%';
     updateChartStats(MOCK_COMPLEX);
   }
+}
+
+async function fetchAmenities() {
+  if (!PAGE_ENT_X || !PAGE_ENT_Y) return;
+  try {
+    const url = `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X}&entY=${PAGE_ENT_Y}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return;
+    const d = await res.json();
+    showAmenities(d);
+  } catch {}
+}
+
+function showAmenities(d) {
+  const strip = document.getElementById('amenityStrip');
+  if (!strip) return;
+  const mockNote = d.is_mock ? ' <span class="amenity-mock">(추정)</span>' : '';
+  strip.innerHTML = `
+    <span class="amenity-label">반경 1km 입지</span>
+    <span class="amenity-chip">🚇 지하철 <strong>${d.subway_1km}</strong>개</span>
+    <span class="amenity-chip">🏫 초등학교 <strong>${d.school_1km}</strong>개</span>
+    <span class="amenity-chip">🌳 공원 <strong>${d.park_1km}</strong>개</span>
+    ${mockNote}
+  `;
+  strip.style.display = 'flex';
+  amenitySummary = `지하철역 ${d.subway_1km}개, 초등학교 ${d.school_1km}개, 공원 ${d.park_1km}개 (반경 1km 기준${d.is_mock ? ', 추정값' : ''})`;
 }
 
 // Mock responses for offline / fallback
@@ -1008,7 +1076,7 @@ async function callChatAPI(userMsg, context) {
     const res = await fetch('http://localhost:8000/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMsg, context, history: conversationHistory }),
+      body: JSON.stringify({ message: userMsg, context, history: conversationHistory, amenity_summary: amenitySummary }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) throw new Error('API error');

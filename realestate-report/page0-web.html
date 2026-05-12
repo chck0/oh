@@ -335,6 +335,8 @@
       url += '&apt_name=' + encodeURIComponent(selectedJuso.bdNm);
       const dong = extractDong(selectedJuso.jibunAddr);
       if (dong) url += '&dong=' + encodeURIComponent(dong);
+      if (selectedJuso.entX) url += '&entX=' + selectedJuso.entX;
+      if (selectedJuso.entY) url += '&entY=' + selectedJuso.entY;
     }
     if (selectedSize) url += '&pyeong=' + selectedSize;
     window.location.href = url;
