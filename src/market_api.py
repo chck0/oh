@@ -37,9 +37,11 @@ JUSO_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 
 # 정적 JSON 파일 경로 (API 호출 불필요 — 하드코딩)
 _SRC = os.path.dirname(__file__)
-_SUBWAY_JSON  = os.path.join(_SRC, "subway_stations.json")
-_SCHOOL_JSON  = os.path.join(_SRC, "elementary_schools.json")
-_PARK_JSON    = os.path.join(_SRC, "parks.json")
+_SUBWAY_JSON           = os.path.join(_SRC, "subway_stations.json")
+_SCHOOL_JSON           = os.path.join(_SRC, "elementary_schools.json")
+_SECONDARY_SCHOOL_JSON = os.path.join(_SRC, "secondary_schools.json")
+_HOSPITAL_JSON         = os.path.join(_SRC, "hospitals.json")
+_PARK_JSON             = os.path.join(_SRC, "parks.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -444,18 +446,22 @@ async def nearby_amenities(
     """
     lat, lon = _utm_k_to_wgs84(entX, entY)
 
-    # 세 가지 모두 정적 JSON — API 키 불필요
-    subway_count = _count_within(_get_subway_coords(), lat, lon, 800)  # 도보 10분=800m
-    school_count = _count_within(_load_static_coords(_SCHOOL_JSON), lat, lon, radius_m)
-    park_count   = _count_within(_load_static_coords(_PARK_JSON),   lat, lon, radius_m)
+    # 모두 정적 JSON — API 키 불필요
+    subway_count           = _count_within(_get_subway_coords(),                          lat, lon, 800)       # 도보 10분=800m
+    school_count           = _count_within(_load_static_coords(_SCHOOL_JSON),            lat, lon, radius_m)
+    secondary_school_count = _count_within(_load_static_coords(_SECONDARY_SCHOOL_JSON),  lat, lon, radius_m)
+    hospital_count         = _count_within(_load_static_coords(_HOSPITAL_JSON),          lat, lon, 2000)       # 병원은 2km
+    park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat, lon, radius_m)
 
     return {
         "lat": lat,
         "lon": lon,
         "radius_m": int(radius_m),
-        "subway_10min": subway_count,
-        "school_1km": school_count,
-        "park_1km":   park_count,
+        "subway_10min":         subway_count,
+        "school_1km":           school_count,
+        "secondary_school_1km": secondary_school_count,
+        "hospital_2km":         hospital_count,
+        "park_1km":             park_count,
     }
 
 
