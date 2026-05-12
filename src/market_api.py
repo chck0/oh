@@ -40,7 +40,8 @@ _SUBWAY_URL = "https://api.data.go.kr/openapi/tn_pubr_public_subway_sta_info_api
 _SCHOOL_URL = "https://api.data.go.kr/openapi/tn_pubr_public_elementary_school_info_api"
 _PARK_URL   = "https://api.data.go.kr/openapi/tn_pubr_public_pblcfct_park_info_api"
 
-# 전국 지하철역은 변경이 드물어 모듈 수준에서 캐시
+# 서울 지하철역 좌표 — 정적 JSON 파일에서 로드 (API 호출 불필요)
+_SUBWAY_JSON = os.path.join(os.path.dirname(__file__), "subway_stations.json")
 _subway_coords_cache: list[tuple[float, float]] | None = None
 
 # 서울 25개 구 LAWD_CD
@@ -447,13 +448,18 @@ def _extract_latlon(item: dict) -> tuple[float, float] | None:
     return None
 
 
-async def _get_subway_coords() -> list[tuple[float, float]]:
-    """전국 지하철역 좌표 (캐시됨)."""
+def _get_subway_coords() -> list[tuple[float, float]]:
+    """서울 지하철역 좌표 — 정적 JSON 파일에서 로드 (API 불필요)."""
     global _subway_coords_cache
     if _subway_coords_cache is not None:
         return _subway_coords_cache
-    items = await _fetch_amenity_page(_SUBWAY_URL, {})
-    _subway_coords_cache = [c for i in items if (c := _extract_latlon(i))]
+    try:
+        import json as _json
+        with open(_SUBWAY_JSON, encoding="utf-8") as f:
+            stations = _json.load(f)
+        _subway_coords_cache = [(s["lat"], s["lon"]) for s in stations]
+    except Exception:
+        _subway_coords_cache = []
     return _subway_coords_cache
 
 
@@ -481,28 +487,32 @@ async def nearby_amenities(
     """
     lat, lon = _utm_k_to_wgs84(entX, entY)
 
-    # API 키 없으면 서울 평균 mock 반환
-    if not DATA_GO_KR_API_KEY:
-        return {
-            "lat": lat, "lon": lon, "radius_m": int(radius_m),
-            "subway_1km": 2, "school_1km": 2, "park_1km": 1,
-            "is_mock": True,
-        }
+    # 지하철: 정적 파일 — API 키 없어도 항상 계산, 도보 10분(800m) 기준
+    subway = _get_subway_coords()
+    subway_count = _count_within(subway, lat, lon, 800)
 
-    subway, schools, parks = await asyncio.gather(
-        _get_subway_coords(),
-        _get_school_coords(),
-        _get_park_coords(),
-    )
+    # 학교·공원: data.go.kr API (키 없으면 None 반환)
+    if DATA_GO_KR_API_KEY:
+        schools, parks = await asyncio.gather(
+            _get_school_coords(),
+            _get_park_coords(),
+        )
+        school_count = _count_within(schools, lat, lon, radius_m)
+        park_count   = _count_within(parks,   lat, lon, radius_m)
+        is_mock = False
+    else:
+        school_count = None
+        park_count   = None
+        is_mock = True
 
     return {
         "lat": lat,
         "lon": lon,
         "radius_m": int(radius_m),
-        "subway_1km": _count_within(subway,  lat, lon, radius_m),
-        "school_1km": _count_within(schools, lat, lon, radius_m),
-        "park_1km":   _count_within(parks,   lat, lon, radius_m),
-        "is_mock": False,
+        "subway_1km": subway_count,
+        "school_1km": school_count,
+        "park_1km":   park_count,
+        "is_mock": is_mock,
     }
 
 
