@@ -63,10 +63,19 @@
 
   /* ── Tagline ── */
   .tagline {
-    font-size: 17px;
-    color: var(--text-secondary);
-    font-weight: 400;
+    font-size: 22px;
+    color: var(--text-primary);
+    font-weight: 700;
     text-align: center;
+    line-height: 1.5;
+    letter-spacing: -0.3px;
+  }
+  .tagline-sub {
+    display: block;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 8px;
     line-height: 1.6;
   }
 
@@ -201,14 +210,14 @@
   </div>
 
   <!-- Tagline -->
-  <p class="tagline">내가 살 집, 제대로 확인하세요<br>주소 하나로 시작하는 데이터 기반 부동산 검증</p>
+  <p class="tagline">이 집 시세, 비교해봤어요?<br><span class="tagline-sub">주소 하나로 근처 동네 같은 평형 실거래가 비교 + AI와 가격 차이 이유를 상담해보세요</span></p>
 
   <!-- Search -->
   <div class="search-wrap">
     <input
       class="search-input"
       type="text"
-      placeholder="예: 역삼래미안, 마포구 상암동"
+      placeholder="예: 논현동 신동아아파트 101동"
       id="addressInput"
       autocomplete="off"
     />
@@ -227,7 +236,7 @@
   </div>
 
   <!-- Hint -->
-  <p class="hint">아파트 단지명 또는 도로명 주소로 입력하세요</p>
+  <p class="hint">단지명 또는 동 주소를 입력하면 평형을 선택할 수 있어요</p>
 
 </main>
 
