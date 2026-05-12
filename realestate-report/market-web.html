@@ -1057,6 +1057,8 @@ function showAmenities(d) {
   if (d.waste_plant_2km  > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 쓰레기처리장 <strong>${d.waste_plant_2km}</strong>개</span>`);
   if (d.highvoltage_500m > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 고압선 <strong>${d.highvoltage_500m}</strong>개</span>`);
   if (d.industrial_1km   > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 공장 <strong>${d.industrial_1km}</strong>개</span>`);
+  if (d.prison_1km       > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 교도소·구치소 <strong>${d.prison_1km}</strong>개</span>`);
+  if (d.military_1km     > 0) badChips.push(`<span class="amenity-chip bad">⚠️ 군부대 <strong>${d.military_1km}</strong>개</span>`);
 
   strip.innerHTML = `
     <span class="amenity-label">입지</span>
@@ -1075,6 +1077,8 @@ function showAmenities(d) {
   if (d.waste_plant_2km  > 0) negParts.push(`쓰레기처리장 ${d.waste_plant_2km}개(2km 내)`);
   if (d.highvoltage_500m > 0) negParts.push(`고압선·변전소 ${d.highvoltage_500m}개(500m 내)`);
   if (d.industrial_1km   > 0) negParts.push(`공장지역 ${d.industrial_1km}개(1km 내)`);
+  if (d.prison_1km       > 0) negParts.push(`교도소·구치소 ${d.prison_1km}개(1km 내)`);
+  if (d.military_1km     > 0) negParts.push(`군부대 ${d.military_1km}개(1km 내)`);
   amenitySummary = positives + (negParts.length ? `\n혐오시설: ${negParts.join(', ')}` : '');
 }
 

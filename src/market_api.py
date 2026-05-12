@@ -478,6 +478,8 @@ async def nearby_amenities(
     waste_count        = _count_type_within(disam, lat, lon, "쓰레기처리장", 2000)  # 냄새 2km
     highvoltage_count  = _count_type_within(disam, lat, lon, "고압시설",     500)   # 전자파·경관 500m
     industrial_count   = _count_type_within(disam, lat, lon, "공장지역",    1000)  # 소음·냄새 1km
+    prison_count       = _count_type_within(disam, lat, lon, "교도소",      1000)  # 기피 1km
+    military_count     = _count_type_within(disam, lat, lon, "군부대",      1000)  # 소음·개발제한 1km
 
     return {
         "lat": lat,
@@ -493,6 +495,8 @@ async def nearby_amenities(
         "waste_plant_2km":      waste_count,
         "highvoltage_500m":     highvoltage_count,
         "industrial_1km":       industrial_count,
+        "prison_1km":           prison_count,
+        "military_1km":         military_count,
     }
 
 
