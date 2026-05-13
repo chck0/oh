@@ -976,7 +976,7 @@ let isLoading = false;
 
 // Initial bot message
 addBotMessage(
-  `안녕하세요! <strong>${PAGE_ADDRESS}</strong> 시세 차트입니다.<br><br>` +
+  `안녕하세요! <strong>${escapeHtml(PAGE_ADDRESS)}</strong> 시세 차트입니다.<br><br>` +
   `도와드릴 수 있는 것:<br>` +
   `&nbsp;· 가격 추이 · 변화율 설명<br>` +
   `&nbsp;· 주변 동과 시세 비교<br>` +
@@ -1176,7 +1176,8 @@ async function autoGreet() {
   const context = getChartContext();
   const greetPrompt = '안녕하세요! 차트와 입지 데이터를 바탕으로 이 단지를 쉽게 설명해 주세요. 전문 용어 없이 2~3문장으로, 가장 눈에 띄는 점 한 가지를 먼저 말해주세요.';
 
-  let reply;
+  let replyText = null;   // LLM plain-text reply (needs escapeHtml before innerHTML)
+  let replyHtml = null;   // Fallback hardcoded HTML (already safe, no escaping needed)
   try {
     const res = await fetch('http://localhost:8000/api/chat', {
       method: 'POST',
@@ -1185,25 +1186,25 @@ async function autoGreet() {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error();
-    reply = (await res.json()).reply;
+    replyText = (await res.json()).reply;
   } catch {
-    // 서버 없을 때 — 차트 데이터 기반 간단 인사
+    // 서버 없을 때 — 차트 데이터 기반 간단 인사 (hardcoded HTML — no user input)
     const apt = PAGE_ADDRESS || '이 단지';
     const py  = PAGE_PYEONG ? `${PAGE_PYEONG}평` : '';
     const validMa = complexMaValues.filter(v => v != null && v > 0);
     const latest = validMa.length ? Math.round(validMa[validMa.length - 1]).toLocaleString() : null;
-    reply = `안녕하세요! ${apt}${py ? ' ' + py : ''} 시세 차트를 불러왔어요.`
-          + (latest ? ` 최근 평단가는 약 **${latest}만원**입니다.` : '')
+    replyHtml = `안녕하세요! ${escapeHtml(apt)}${py ? ' ' + py : ''} 시세 차트를 불러왔어요.`
+          + (latest ? ` 최근 평단가는 약 <strong>${latest}만원</strong>입니다.` : '')
           + ' 궁금한 점이 있으시면 아래에 질문해 주세요!';
   }
 
   removeTypingIndicator();
-  addBotMessage(reply);
-  conversationHistory.push({ role: 'assistant', content: reply });
+  // LLM output: escape before rendering as HTML; fallback HTML: already safe
+  addBotMessage(replyText !== null ? escapeHtml(replyText) : replyHtml);
+  conversationHistory.push({ role: 'assistant', content: replyText ?? replyHtml ?? '' });
 
   isLoading = false;
   sendBtn.disabled = false;
-  statusLabel.textContent = '준비';
 }
 
 // Mock responses for offline / fallback — dynamic, uses actual page variables
@@ -1261,12 +1262,11 @@ async function sendMessage() {
   const reply = await callChatAPI(text, context);
 
   removeTypingIndicator();
-  addBotMessage(reply);
+  addBotMessage(escapeHtml(reply));
   conversationHistory.push({ role: 'assistant', content: reply });
 
   isLoading = false;
   sendBtn.disabled = false;
-  statusLabel.textContent = '준비';
   chatInput.focus();
 }
 
@@ -1311,8 +1311,8 @@ async function savePDF() {
 
   document.getElementById('printArea').innerHTML = `
     <h1>VerifyHome 시세 분석 리포트</h1>
-    <p class="print-meta">${PAGE_ADDRESS} &nbsp;·&nbsp; ${now}</p>
-    ${summaryText ? `<h2>대화 요약</h2><div class="summary-box"><p>${summaryText}</p></div>` : ''}
+    <p class="print-meta">${escapeHtml(PAGE_ADDRESS)} &nbsp;·&nbsp; ${escapeHtml(now)}</p>
+    ${summaryText ? `<h2>대화 요약</h2><div class="summary-box"><p>${escapeHtml(summaryText)}</p></div>` : ''}
     <h2>대화 내용</h2>
     ${historyHtml}
     <p class="print-footer">본 리포트는 국토교통부 실거래가 공개시스템 기반 VerifyHome이 생성했습니다.</p>

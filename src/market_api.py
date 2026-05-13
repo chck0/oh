@@ -6,6 +6,7 @@ market_api.py — FastAPI 백엔드 for VerifyHome 시세 AI 챗봇 + 실거래 
 """
 
 import asyncio
+import json
 import math
 import os
 import re
@@ -128,7 +129,7 @@ def parse_address(address: str) -> tuple[str, str, str | None]:
     예) '강남구 역삼래미안' → ('11680', '역삼래미안', None)
         '역삼동 래미안아파트' → ('11680', '래미안아파트', '역삼동')  # 동 → 강남구 default
     """
-    lawd_cd = "11680"  # gu 미인식 시 강남구 기본값
+    lawd_cd = LAWD_CD_MAP["강남구"]  # gu 미인식 시 강남구 기본값
     remaining = address.strip()
 
     for gu, cd in LAWD_CD_MAP.items():
@@ -151,7 +152,9 @@ def parse_address(address: str) -> tuple[str, str, str | None]:
 
 
 async def fetch_month_items(lawd_cd: str, deal_ymd: str) -> list[dict]:
-    """단일 월 실거래 데이터 fetch → 정제된 항목 리스트 반환"""
+    """단일 월 실거래 데이터 fetch → 정제된 항목 리스트 반환.
+    네트워크 오류 / API 응답 이상 시 빈 리스트 반환 (호출자 asyncio.gather가 실패하지 않도록).
+    """
     if not DATA_GO_KR_API_KEY:
         return []
 
@@ -162,8 +165,11 @@ async def fetch_month_items(lawd_cd: str, deal_ymd: str) -> list[dict]:
         "numOfRows": "1000",
         "pageNo": "1",
     }
-    async with httpx.AsyncClient(timeout=15) as hclient:
-        res = await hclient.get(APT_TRADE_URL, params=params)
+    try:
+        async with httpx.AsyncClient(timeout=15) as hclient:
+            res = await hclient.get(APT_TRADE_URL, params=params)
+    except Exception:
+        return []  # 타임아웃 / 네트워크 오류 — 해당 월은 빈 결과로 처리
 
     try:
         root = ET.fromstring(res.text)
@@ -216,6 +222,8 @@ def normalize_apt_name(name: str) -> str:
 def filter_apt(items: list[dict], apt_name: str) -> list[dict]:
     """단지명 매칭 (정규화된 이름으로 부분 일치)"""
     core = normalize_apt_name(apt_name)
+    if not core:  # 빈 문자열이면 전체 매칭을 막음 (e.g. "아파트"만 입력 시 방지)
+        return []
     return [i for i in items if core in i["apt_nm"]]
 
 
@@ -245,13 +253,13 @@ def calc_ma(prices: list[float | None], counts: list[int], window: int = 3, min_
 
 def _last_valid(series: list[float | None]) -> float:
     for v in reversed(series):
-        if v:
+        if v is not None:
             return v
     return 0.0
 
 
 def change_pct(data: list[float]) -> float:
-    valid = [x for x in data if x]
+    valid = [x for x in data if x is not None]
     if len(valid) < 2:
         return 0.0
     return round((valid[-1] / valid[0] - 1) * 100, 1)
@@ -480,22 +488,27 @@ def _get_subway_coords() -> list[tuple[float, float]]:
     if _subway_coords_cache is not None:
         return _subway_coords_cache
     try:
-        import json as _json
         with open(_SUBWAY_JSON, encoding="utf-8") as f:
-            stations = _json.load(f)
+            stations = json.load(f)
         _subway_coords_cache = [(s["lat"], s["lon"]) for s in stations]
     except Exception:
         _subway_coords_cache = []
     return _subway_coords_cache
 
 
+# 모듈 로드 시 한 번만 읽는 정적 JSON 캐시 (요청마다 파일 재읽기 방지)
+_static_coord_cache: dict[str, list[tuple[float, float]]] = {}
+_static_json_cache: dict[str, list[dict]] = {}
+
+
 def _load_static_json(path: str) -> list[dict]:
-    import json as _json
-    try:
-        with open(path, encoding="utf-8") as f:
-            return _json.load(f)
-    except Exception:
-        return []
+    if path not in _static_json_cache:
+        try:
+            with open(path, encoding="utf-8") as f:
+                _static_json_cache[path] = json.load(f)
+        except Exception:
+            _static_json_cache[path] = []
+    return _static_json_cache[path]
 
 
 def _count_type_within(items: list[dict], lat: float, lon: float, type_val: str, radius_m: float) -> int:
@@ -507,13 +520,14 @@ def _count_type_within(items: list[dict], lat: float, lon: float, type_val: str,
 
 
 def _load_static_coords(path: str) -> list[tuple[float, float]]:
-    """정적 JSON 파일에서 좌표 로드."""
-    import json as _json
-    try:
-        with open(path, encoding="utf-8") as f:
-            return [(s["lat"], s["lon"]) for s in _json.load(f)]
-    except Exception:
-        return []
+    """정적 JSON 파일에서 좌표 로드 (모듈 레벨 캐시 사용)."""
+    if path not in _static_coord_cache:
+        try:
+            with open(path, encoding="utf-8") as f:
+                _static_coord_cache[path] = [(s["lat"], s["lon"]) for s in json.load(f)]
+        except Exception:
+            _static_coord_cache[path] = []
+    return _static_coord_cache[path]
 
 
 # 동 이름 → 중심 좌표 fallback (entX/entY 없을 때)
@@ -668,13 +682,26 @@ A: 차트를 보면 삼성동(현재 6,000만원/평)이 논현동 신동아(4,2
 """
 
 
+def _sanitize_data_field(text: str, max_len: int = 500) -> str:
+    """클라이언트 데이터 필드를 시스템 프롬프트에 삽입하기 전에 정제.
+    - 길이 제한: 프롬프트 인젝션용 긴 텍스트 차단
+    - '##' 제거: 마크다운 헤더로 시스템 프롬프트 구조를 주입하는 시도 차단
+    """
+    sanitized = text.replace("##", "").replace("\x00", "").strip()
+    return sanitized[:max_len]
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     context_str = build_context_str(req.context)
     if req.amenity_summary:
-        context_str += f"\n\n## 분석 대상 입지\n{req.amenity_summary}"
+        safe_summary = _sanitize_data_field(req.amenity_summary)
+        context_str += f"\n\n## 분석 대상 입지\n{safe_summary}"
     if req.dong_amenities:
-        parts = [f"[{dong}] {summary}" for dong, summary in req.dong_amenities.items()]
+        parts = [
+            f"[{_sanitize_data_field(dong, 30)}] {_sanitize_data_field(summary)}"
+            for dong, summary in list(req.dong_amenities.items())[:5]  # 최대 5개 동
+        ]
         context_str += "\n\n## 비교 동 입지\n" + "\n".join(parts)
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context_str=context_str)
 
