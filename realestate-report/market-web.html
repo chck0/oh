@@ -1087,9 +1087,12 @@ async function loadRealData() {
     renderDongChips(d.lawd_cd, d.dong_name, d.dong_counts || {});
 
     // 차트 업데이트: [0] 단지 scatter, [1] 동 scatter
+    // 실데이터가 있을 때만 교체 — 없으면 mock 점 유지 (사라지는 UX 방지)
     chart.data.datasets[0].label = d.apt_name;
-    chart.data.datasets[0].data  = applyJitter(d.complex_raw || []);
-    chart.data.datasets[1].data  = applyJitter(d.dong_raw || []);
+    if ((d.complex_raw || []).length > 0)
+      chart.data.datasets[0].data = applyJitter(d.complex_raw);
+    if ((d.dong_raw || []).length > 0)
+      chart.data.datasets[1].data = applyJitter(d.dong_raw);
     chart.update();
     updateLegend();
     updateChartStats(complexMaValues);
