@@ -1164,13 +1164,22 @@ function showAmenities(d) {
   amenitySummary = buildAmenitySummary(d);
 }
 
-// Mock responses for offline / fallback
-const MOCK_RESPONSES = [
-  '역삼동 래미안아파트 30평형은 최근 6개월간 4,200만원에서 5,800만원으로 <strong>+38%</strong> 상승했습니다. 역삼동 평균(+34%) 대비 4%p 빠른 속도로, 현재 평단가는 동 평균보다 5.5% 높은 수준입니다.',
-  '차트를 보면 단지 평단가가 역삼동 평균을 <strong>6개월 내내 지속적으로 상회</strong>하고 있어요. 이는 해당 단지가 동 내에서 상대적으로 프리미엄을 유지하고 있다는 신호입니다.',
-  '단기 상승폭이 크기 때문에 매입 시점에 따라 리스크가 다릅니다. 현재 평단가 5,800만원은 6개월 전(4,200만원) 대비 <strong>+38%</strong>로, 추가 상승 여력과 조정 가능성을 함께 고려하는 것이 중요합니다.',
-  '주변 동과 비교하려면 아래 "주변 시세와 비교하기" 버튼을 눌러 동을 추가해보세요. 삼성동(현재 6,000만원)이나 대치동(6,400만원)과 비교하면 역삼동의 상대적 위치를 파악할 수 있습니다.',
-];
+// Mock responses for offline / fallback — dynamic, uses actual page variables
+function getMockResponse() {
+  const apt  = PAGE_ADDRESS || '단지';
+  const dong = PAGE_DONG    || '';
+  const py   = PAGE_PYEONG  ? `${PAGE_PYEONG}평` : '';
+  const label = [apt, py].filter(Boolean).join(' ');
+  const validMa = complexMaValues.filter(v => v != null && v > 0);
+  const latestPrice = validMa.length ? Math.round(validMa[validMa.length - 1]).toLocaleString() : null;
+  const priceNote = latestPrice ? ` (최근 평단가 약 ${latestPrice}만원)` : '';
+  const responses = [
+    `현재 AI 챗봇 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해 주세요.\n\n차트에서 ${label}${priceNote}의 시세 흐름을 직접 확인할 수 있습니다.`,
+    `챗봇 응답을 받을 수 없는 상태입니다. 잠시 후 다시 시도하거나, 서버 상태를 확인해 주세요.\n\n${dong ? dong + ' ' : ''}시세 데이터는 차트에 표시되어 있습니다.`,
+    `서버 연결이 원활하지 않습니다. ${label} 관련 질문은 서버 재시작 후 다시 이용해 주세요.`,
+  ];
+  return responses[mockIdx++ % responses.length];
+}
 let mockIdx = 0;
 
 async function callChatAPI(userMsg, context) {
@@ -1186,7 +1195,7 @@ async function callChatAPI(userMsg, context) {
     return data.reply;
   } catch {
     // Offline fallback
-    return MOCK_RESPONSES[mockIdx++ % MOCK_RESPONSES.length];
+    return getMockResponse();
   }
 }
 
