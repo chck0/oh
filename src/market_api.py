@@ -10,6 +10,7 @@ import json
 import math
 import os
 import re
+import sqlite3
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -45,6 +46,7 @@ JUSO_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 
 # 정적 JSON 파일 경로 (API 호출 불필요 — 하드코딩)
 _SRC = os.path.dirname(__file__)
+_APT_DB_PATH = os.path.join(_SRC, "apartment.db")
 _SUBWAY_JSON           = os.path.join(_SRC, "subway_stations.json")
 _SCHOOL_JSON           = os.path.join(_SRC, "elementary_schools.json")
 _SECONDARY_SCHOOL_JSON = os.path.join(_SRC, "secondary_schools.json")
@@ -407,6 +409,84 @@ async def market_data(
     }
 
 
+@app.get("/api/apt-match")
+async def apt_match(bd_nm: str, sgg_cd: str, dong: str | None = None) -> dict:
+    """
+    JUSO bdNm + admCd(앞 5자리) + dong(선택) → apartment.db 매칭 → WGS84 lat/lng 반환.
+    DB가 없거나 매칭 실패 시 빈 dict 반환 (프론트가 dong centroid fallback 처리).
+    매칭 우선순위: 구+동+이름 > 구+이름 > 이름만
+    """
+    if not os.path.exists(_APT_DB_PATH):
+        return {}
+
+    core = normalize_apt_name(bd_nm)
+    if not core:
+        return {}
+
+    def _query() -> dict:
+        con = sqlite3.connect(_APT_DB_PATH)
+        try:
+            cur = con.cursor()
+            # 1순위: 구 + 동 + 이름 (가장 정확)
+            if dong:
+                cur.execute(
+                    """
+                    SELECT apt_seq, apt_nm, umd_nm, lat, lng
+                    FROM apartment_complexes
+                    WHERE sgg_cd = ?
+                      AND umd_nm = ?
+                      AND geocoded = 1
+                      AND apt_nm LIKE ?
+                    ORDER BY length(apt_nm) ASC
+                    LIMIT 1
+                    """,
+                    (sgg_cd, dong, f"%{core}%"),
+                )
+                row = cur.fetchone()
+                if row:
+                    return {"apt_seq": row[0], "apt_nm": row[1], "umd_nm": row[2], "lat": row[3], "lng": row[4]}
+
+            # 2순위: 구 + 이름
+            cur.execute(
+                """
+                SELECT apt_seq, apt_nm, umd_nm, lat, lng
+                FROM apartment_complexes
+                WHERE sgg_cd = ?
+                  AND geocoded = 1
+                  AND apt_nm LIKE ?
+                ORDER BY length(apt_nm) ASC
+                LIMIT 1
+                """,
+                (sgg_cd, f"%{core}%"),
+            )
+            row = cur.fetchone()
+            if row:
+                return {"apt_seq": row[0], "apt_nm": row[1], "umd_nm": row[2], "lat": row[3], "lng": row[4]}
+
+            # 3순위: 이름만 (구 코드 오류 등 대비)
+            cur.execute(
+                """
+                SELECT apt_seq, apt_nm, umd_nm, lat, lng
+                FROM apartment_complexes
+                WHERE geocoded = 1
+                  AND apt_nm LIKE ?
+                ORDER BY length(apt_nm) ASC
+                LIMIT 1
+                """,
+                (f"%{core}%",),
+            )
+            row = cur.fetchone()
+            if row:
+                return {"apt_seq": row[0], "apt_nm": row[1], "umd_nm": row[2], "lat": row[3], "lng": row[4]}
+        finally:
+            con.close()
+        return {}
+
+    # sqlite3는 동기 I/O → 스레드풀로 분리
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _query)
+
+
 @app.get("/api/apt-sizes")
 async def apt_sizes(lawd_cd: str, apt_name: str, dong: str | None = None) -> dict:
     """해당 아파트에서 실제 거래된 평수 목록 반환 (최근 3개월)"""
@@ -544,21 +624,27 @@ except ImportError:
 async def nearby_amenities(
     entX: str = "",
     entY: str = "",
+    lat: float | None = None,
+    lng: float | None = None,
     dong_name: str = "",
     radius_m: float = 1000,
 ) -> dict:
     """
-    건물 입구 좌표(UTM-K) 기준 반경 내 생활편의 카운트.
-    entX·entY 없으면 dong_name 중심 좌표로 fallback.
+    건물 좌표 기준 반경 내 생활편의 카운트.
+    우선순위: lat/lng (apartment.db WGS84) > entX/entY (UTM-K 변환) > dong_name centroid.
     """
-    lat, lon = None, None
-    try:
-        lat, lon = _utm_k_to_wgs84(float(entX), float(entY))
-    except (ValueError, TypeError):
-        if dong_name and dong_name in _DONG_CENTROIDS:
-            lat, lon = _DONG_CENTROIDS[dong_name]
+    lat_v, lon = None, None
+    if lat is not None and lng is not None:
+        lat_v, lon = lat, lng
+    else:
+        try:
+            lat_v, lon = _utm_k_to_wgs84(float(entX), float(entY))
+        except (ValueError, TypeError):
+            pass
+    if lat_v is None and dong_name and dong_name in _DONG_CENTROIDS:
+        lat_v, lon = _DONG_CENTROIDS[dong_name]
 
-    if lat is None:
+    if lat_v is None:
         return {"error": "no_coords", "subway_10min": 0, "school_1km": 0,
                 "secondary_school_1km": 0, "hospital_2km": 0, "park_1km": 0,
                 "highway_ic_3km": 0, "crematorium_3km": 0, "waste_plant_2km": 0,
@@ -566,27 +652,27 @@ async def nearby_amenities(
                 "military_1km": 0, "emart_2km": 0, "dept_store_3km": 0}
 
     # 모두 정적 JSON — API 키 불필요
-    subway_count           = _count_within(_get_subway_coords(),                          lat, lon, 800)       # 도보 10분=800m
-    school_count           = _count_within(_load_static_coords(_SCHOOL_JSON),            lat, lon, radius_m)
-    secondary_school_count = _count_within(_load_static_coords(_SECONDARY_SCHOOL_JSON),  lat, lon, radius_m)
-    hospital_count         = _count_within(_load_static_coords(_HOSPITAL_JSON),          lat, lon, 2000)       # 병원은 2km
-    park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat, lon, radius_m)
-    ic_count               = _count_within(_load_static_coords(_HIGHWAY_IC_JSON),        lat, lon, 3000)       # IC는 3km
+    subway_count           = _count_within(_get_subway_coords(),                          lat_v, lon, 800)       # 도보 10분=800m
+    school_count           = _count_within(_load_static_coords(_SCHOOL_JSON),            lat_v, lon, radius_m)
+    secondary_school_count = _count_within(_load_static_coords(_SECONDARY_SCHOOL_JSON),  lat_v, lon, radius_m)
+    hospital_count         = _count_within(_load_static_coords(_HOSPITAL_JSON),          lat_v, lon, 2000)       # 병원은 2km
+    park_count             = _count_within(_load_static_coords(_PARK_JSON),              lat_v, lon, radius_m)
+    ic_count               = _count_within(_load_static_coords(_HIGHWAY_IC_JSON),        lat_v, lon, 3000)       # IC는 3km
 
     stores = _load_static_json(_LARGE_STORE_JSON)
-    emart_count  = _count_type_within(stores, lat, lon, "이마트", 2000)   # 2km (생활마트)
-    dept_count   = _count_type_within(stores, lat, lon, "백화점", 3000)   # 3km (목적 쇼핑)
+    emart_count  = _count_type_within(stores, lat_v, lon, "이마트", 2000)   # 2km (생활마트)
+    dept_count   = _count_type_within(stores, lat_v, lon, "백화점", 3000)   # 3km (목적 쇼핑)
 
     disam = _load_static_json(_DISAMENITY_JSON)
-    crematorium_count  = _count_type_within(disam, lat, lon, "화장장",      3000)  # 심리적 영향 3km
-    waste_count        = _count_type_within(disam, lat, lon, "쓰레기처리장", 2000)  # 냄새 2km
-    highvoltage_count  = _count_type_within(disam, lat, lon, "고압시설",     500)   # 전자파·경관 500m
-    industrial_count   = _count_type_within(disam, lat, lon, "공장지역",    1000)  # 소음·냄새 1km
-    prison_count       = _count_type_within(disam, lat, lon, "교도소",      1000)  # 기피 1km
-    military_count     = _count_type_within(disam, lat, lon, "군부대",      1000)  # 소음·개발제한 1km
+    crematorium_count  = _count_type_within(disam, lat_v, lon, "화장장",      3000)  # 심리적 영향 3km
+    waste_count        = _count_type_within(disam, lat_v, lon, "쓰레기처리장", 2000)  # 냄새 2km
+    highvoltage_count  = _count_type_within(disam, lat_v, lon, "고압시설",     500)   # 전자파·경관 500m
+    industrial_count   = _count_type_within(disam, lat_v, lon, "공장지역",    1000)  # 소음·냄새 1km
+    prison_count       = _count_type_within(disam, lat_v, lon, "교도소",      1000)  # 기피 1km
+    military_count     = _count_type_within(disam, lat_v, lon, "군부대",      1000)  # 소음·개발제한 1km
 
     return {
-        "lat": lat,
+        "lat": lat_v,
         "lon": lon,
         "radius_m": int(radius_m),
         "subway_10min":         subway_count,

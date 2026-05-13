@@ -600,6 +600,8 @@ function initPage() {
   const pyeong   = params.get('pyeong')   ? parseInt(params.get('pyeong')) : null;
   const entX     = params.get('entX')     ? parseFloat(params.get('entX')) : null;
   const entY     = params.get('entY')     ? parseFloat(params.get('entY')) : null;
+  const lat      = params.get('lat')      ? parseFloat(params.get('lat'))  : null;
+  const lng      = params.get('lng')      ? parseFloat(params.get('lng'))  : null;
   const label = pyeong ? `${address} · ${pyeong}평` : address;
   document.getElementById('topnavAddr').textContent = label;
   document.getElementById('summaryAddr').textContent = label;
@@ -609,9 +611,9 @@ function initPage() {
   } else {
     document.getElementById('chartTitle').textContent = '평단가 추이';
   }
-  return { address, lawd_cd, apt_name, dong, pyeong, entX, entY };
+  return { address, lawd_cd, apt_name, dong, pyeong, entX, entY, lat, lng };
 }
-const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG, entX: PAGE_ENT_X, entY: PAGE_ENT_Y } = initPage();
+const { address: PAGE_ADDRESS, lawd_cd: PAGE_LAWD_CD, apt_name: PAGE_APT_NAME, dong: PAGE_DONG, pyeong: PAGE_PYEONG, entX: PAGE_ENT_X, entY: PAGE_ENT_Y, lat: PAGE_LAT, lng: PAGE_LNG } = initPage();
 
 // ── Mock Data (fallback) ──
 const MOCK_MONTHS = (function() {
@@ -1110,10 +1112,13 @@ async function loadRealData() {
 }
 
 async function fetchAmenities() {
-  if (!PAGE_ENT_X && !PAGE_ENT_Y && !PAGE_DONG) return;
+  if (!PAGE_LAT && !PAGE_LNG && !PAGE_ENT_X && !PAGE_ENT_Y && !PAGE_DONG) return;
   try {
     const dongParam = PAGE_DONG ? `&dong_name=${encodeURIComponent(PAGE_DONG)}` : '';
-    const url = `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
+    // DB 정확 좌표(lat/lng) 우선, 없으면 UTM-K(entX/entY) fallback
+    const url = PAGE_LAT && PAGE_LNG
+      ? `http://localhost:8000/api/nearby-amenities?lat=${PAGE_LAT}&lng=${PAGE_LNG}${dongParam}`
+      : `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return;
     const d = await res.json();

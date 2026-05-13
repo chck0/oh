@@ -252,6 +252,7 @@
 <script>
   let debounceTimer = null;
   let selectedJuso = null;
+  let aptMatch = null;   // apartment.db 매칭 결과 { lat, lng, apt_nm, umd_nm, apt_seq }
   let selectedSize = null;
   let focusedIdx = -1;
 
@@ -289,6 +290,7 @@
   input.addEventListener('input', () => {
     selectedJuso = null;
     selectedSize = null;
+    aptMatch = null;
     document.getElementById('sizePanel').style.display = 'none';
     const keyword = input.value.trim();
     clearTimeout(debounceTimer);
@@ -329,10 +331,31 @@
   async function selectAddress(idx) {
     const results = JSON.parse(dropdown.dataset.results);
     selectedJuso = results[idx];
+    aptMatch = null;
     input.value = selectedJuso.bdNm;
     hideDropdown();
+    const sggCd = selectedJuso.admCd.slice(0, 5);
     const dong = extractDong(selectedJuso.jibunAddr);
-    await fetchAptSizes(selectedJuso.admCd.slice(0, 5), selectedJuso.bdNm, dong);
+    // apt-match와 apt-sizes를 병렬 호출
+    const [, matchData] = await Promise.allSettled([
+      fetchAptSizes(sggCd, selectedJuso.bdNm, dong),
+      fetchAptMatch(selectedJuso.bdNm, sggCd, dong),
+    ]);
+    if (matchData.status === 'fulfilled' && matchData.value?.lat) {
+      aptMatch = matchData.value;
+    }
+  }
+
+  async function fetchAptMatch(bdNm, sggCd, dong) {
+    try {
+      const dongParam = dong ? `&dong=${encodeURIComponent(dong)}` : '';
+      const res = await fetch(
+        `http://localhost:8000/api/apt-match?bd_nm=${encodeURIComponent(bdNm)}&sgg_cd=${sggCd}${dongParam}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
   }
 
   async function fetchAptSizes(lawd_cd, apt_name, dong) {
@@ -393,8 +416,13 @@
     url += '&apt_name=' + encodeURIComponent(selectedJuso.bdNm);
     const dong = extractDong(selectedJuso.jibunAddr);
     if (dong) url += '&dong=' + encodeURIComponent(dong);
-    if (selectedJuso.entX) url += '&entX=' + selectedJuso.entX;
-    if (selectedJuso.entY) url += '&entY=' + selectedJuso.entY;
+    // apt-match DB 좌표 우선, 없으면 JUSO entX/entY fallback
+    if (aptMatch?.lat) {
+      url += '&lat=' + aptMatch.lat + '&lng=' + aptMatch.lng;
+    } else {
+      if (selectedJuso.entX) url += '&entX=' + selectedJuso.entX;
+      if (selectedJuso.entY) url += '&entY=' + selectedJuso.entY;
+    }
     if (selectedSize) url += '&pyeong=' + selectedSize;
     window.location.href = url;
   }
