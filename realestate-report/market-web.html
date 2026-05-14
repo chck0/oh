@@ -909,7 +909,7 @@ async function toggleDong(el, dong) {
     try {
       const pyeongParam = PAGE_PYEONG ? `&pyeong=${PAGE_PYEONG}` : '';
       const res = await fetch(
-        `http://localhost:8000/api/dong-data?lawd_cd=${REAL_LAWD_CD}&dong_name=${encodeURIComponent(dong)}${pyeongParam}`,
+        `/api/dong-data?lawd_cd=${REAL_LAWD_CD}&dong_name=${encodeURIComponent(dong)}${pyeongParam}`,
         { signal: AbortSignal.timeout(15000) }
       );
       if (res.ok) {
@@ -925,7 +925,7 @@ async function toggleDong(el, dong) {
     // 비교 동 입지 데이터 비동기 로드 (dong_name fallback 좌표 활용)
     try {
       const res2 = await fetch(
-        `http://localhost:8000/api/nearby-amenities?entX=&entY=&dong_name=${encodeURIComponent(dong)}`,
+        `/api/nearby-amenities?entX=&entY=&dong_name=${encodeURIComponent(dong)}`,
         { signal: AbortSignal.timeout(10000) }
       );
       if (res2.ok) {
@@ -1075,7 +1075,7 @@ function getChartContext() {
 
 async function loadRealData() {
   try {
-    let apiUrl = `http://localhost:8000/api/market-data?address=${encodeURIComponent(PAGE_ADDRESS)}`;
+    let apiUrl = `/api/market-data?address=${encodeURIComponent(PAGE_ADDRESS)}`;
     if (PAGE_LAWD_CD)  apiUrl += `&lawd_cd=${PAGE_LAWD_CD}`;
     if (PAGE_APT_NAME) apiUrl += `&apt_name=${encodeURIComponent(PAGE_APT_NAME)}`;
     if (PAGE_DONG)     apiUrl += `&dong=${encodeURIComponent(PAGE_DONG)}`;
@@ -1127,8 +1127,8 @@ async function fetchAmenities() {
     const dongParam = PAGE_DONG ? `&dong_name=${encodeURIComponent(PAGE_DONG)}` : '';
     // DB 정확 좌표(lat/lng) 우선, 없으면 UTM-K(entX/entY) fallback
     const url = PAGE_LAT && PAGE_LNG
-      ? `http://localhost:8000/api/nearby-amenities?lat=${PAGE_LAT}&lng=${PAGE_LNG}${dongParam}`
-      : `http://localhost:8000/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
+      ? `/api/nearby-amenities?lat=${PAGE_LAT}&lng=${PAGE_LNG}${dongParam}`
+      : `/api/nearby-amenities?entX=${PAGE_ENT_X ?? ''}&entY=${PAGE_ENT_Y ?? ''}${dongParam}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return;
     const d = await res.json();
@@ -1194,7 +1194,7 @@ async function autoGreet() {
   let replyText = null;   // LLM plain-text reply (needs escapeHtml before innerHTML)
   let replyHtml = null;   // Fallback hardcoded HTML (already safe, no escaping needed)
   try {
-    const res = await fetch('http://localhost:8000/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: greetPrompt, context, history: [], amenity_summary: amenitySummary, dong_amenities: dongAmenities }),
@@ -1242,7 +1242,7 @@ let mockIdx = 0;
 
 async function callChatAPI(userMsg, context) {
   try {
-    const res = await fetch('http://localhost:8000/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: userMsg, context, history: conversationHistory, amenity_summary: amenitySummary, dong_amenities: dongAmenities }),
@@ -1302,7 +1302,7 @@ async function savePDF() {
 
   let summaryText = '';
   try {
-    const res = await fetch('http://localhost:8000/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

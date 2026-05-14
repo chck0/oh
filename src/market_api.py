@@ -19,6 +19,7 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
 
@@ -29,6 +30,16 @@ except ImportError:
     pass
 
 app = FastAPI(title="VerifyHome Market API")
+
+_REPORT_DIR = Path(__file__).resolve().parent.parent / "realestate-report"
+
+@app.get("/")
+async def index():
+    return FileResponse(_REPORT_DIR / "page0-web.html")
+
+@app.get("/market")
+async def market():
+    return FileResponse(_REPORT_DIR / "market-web.html")
 
 app.add_middleware(
     CORSMiddleware,

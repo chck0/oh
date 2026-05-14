@@ -305,7 +305,7 @@
   async function fetchSuggestions(keyword) {
     try {
       const res = await fetch(
-        `http://localhost:8000/api/address-search?keyword=${encodeURIComponent(keyword)}`,
+        `/api/address-search?keyword=${encodeURIComponent(keyword)}`,
         { signal: AbortSignal.timeout(5000) }
       );
       if (!res.ok) return;
@@ -350,7 +350,7 @@
     try {
       const dongParam = dong ? `&dong=${encodeURIComponent(dong)}` : '';
       const res = await fetch(
-        `http://localhost:8000/api/apt-match?bd_nm=${encodeURIComponent(bdNm)}&sgg_cd=${sggCd}${dongParam}`,
+        `/api/apt-match?bd_nm=${encodeURIComponent(bdNm)}&sgg_cd=${sggCd}${dongParam}`,
         { signal: AbortSignal.timeout(5000) }
       );
       if (!res.ok) return null;
@@ -362,7 +362,7 @@
     try {
       const dongParam = dong ? `&dong=${encodeURIComponent(dong)}` : '';
       const res = await fetch(
-        `http://localhost:8000/api/apt-sizes?lawd_cd=${lawd_cd}&apt_name=${encodeURIComponent(apt_name)}${dongParam}`,
+        `/api/apt-sizes?lawd_cd=${lawd_cd}&apt_name=${encodeURIComponent(apt_name)}${dongParam}`,
         { signal: AbortSignal.timeout(10000) }
       );
       if (!res.ok) return;
