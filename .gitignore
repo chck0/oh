@@ -39,4 +39,4 @@ profiles/*.json
 !profiles/example.json
 
 # Large binary data files
-src/apartment.db
+src/apartment.db.bak
