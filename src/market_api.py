@@ -216,8 +216,7 @@ def change_pct(data: list[float]) -> float:
 
 
 def month_label(yyyymm: str) -> str:
-    dt = datetime.strptime(yyyymm, "%Y%m")
-    return dt.strftime("%m월").lstrip("0")
+    return f"{yyyymm[:4]}.{yyyymm[4:]}"  # "202501" → "2025.01"
 
 
 # ── 실거래 엔드포인트 ──
@@ -278,6 +277,7 @@ async def market_data(
 
     complex_prices: list[float | None] = []
     dong_prices: list[float | None] = []
+    volume_counts: list[int] = []
     months_display: list[str] = []
 
     for ym, month_items in zip(months_ym, all_items):
@@ -300,6 +300,12 @@ async def market_data(
 
         complex_prices.append(avg_ppp(apt_items))
         dong_prices.append(avg_ppp(dong_items))
+        # 거래량: 동 전체(면적 무관) 또는 단지 건수
+        if dong_name:
+            vol = len([i for i in month_items if i["umd_nm"] == dong_name])
+        else:
+            vol = len(apt_items)
+        volume_counts.append(vol)
 
     complex_filled = forward_fill(complex_prices)
     dong_filled = forward_fill(dong_prices)
@@ -315,6 +321,7 @@ async def market_data(
         "months": months_display,
         "complex": complex_filled,
         "dong_avg": dong_filled,
+        "volume": volume_counts,
         "stats": {
             "complex_change_pct": change_pct(complex_filled),
             "dong_change_pct": change_pct(dong_filled),
