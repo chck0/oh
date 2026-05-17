@@ -61,18 +61,56 @@ class _RowProxy:
         return len(self._t)
 
 
-# ── '?' → '%s' 변환 (문자열 리터럴 보호) ─────────────────────
-_PLACEHOLDER_RE = re.compile(r"""
-    '(?:[^']|'')*'        # single-quoted literal (anything between, escaped '')
-    |                     # OR
-    \?                    # 변환 대상
-""", re.VERBOSE)
+# ── SQL 어댑터 (PG 모드 한정) ─────────────────────────────────
+# Postgres는 unquoted identifier를 lowercase로 fold함. 스키마(supabase_schema.sql)
+# 에선 camelCase 컬럼을 큰따옴표로 case 보존했는데, 앱 코드 SQL은 unquoted라
+# `a.kaptCode` → `a.kaptcode` lookup으로 깨짐. 알려진 camelCase 컬럼만 골라
+# 자동으로 `"..."`로 감싸 해결.
+_CAMEL_COLS = (
+    'kaptCode', 'kaptName', 'kaptAddr', 'doroJuso', 'kaptdaCnt',
+    'ktownFlrNo', 'kaptBaseFloor', 'kaptMparea60', 'kaptMparea85',
+    'kaptMparea135', 'kaptMparea136', 'kaptBcompany', 'kaptdPcnt',
+    'kaptdPcntu', 'kaptdCccnt', 'groundElChargerCnt',
+    'undergroundElChargerCnt', 'codeAptNm',
+    'bjdCode', 'codeSaleNm', 'codeHeatNm', 'codeMgrNm', 'codeHallNm',
+    'kaptUsedate', 'hoCnt', 'kaptDongCnt', 'kaptTopFloor', 'kaptdEcntp',
+    'kaptTarea', 'kaptMarea', 'privArea', 'kaptAcompany', 'kaptTel',
+    'kaptFax', 'kaptUrl', 'codeMgr', 'kaptMgrCnt', 'kaptCcompany',
+    'codeSec', 'kaptdScnt', 'kaptdSecCom', 'codeClean', 'kaptdClcnt',
+    'codeGarbage', 'codeDisinf', 'kaptdDcnt', 'disposalType', 'codeStr',
+    'kaptdEcapa', 'codeEcon', 'codeEmgr', 'codeFalarm', 'codeWsupply',
+    'codeElev', 'kaptdEcnt', 'codeNet', 'welfareFacility',
+    'kaptdWtimebus', 'subwayLine', 'subwayStation', 'kaptdWtimesub',
+    'convenientFacility', 'educationFacility', 'useYn',
+    'mgmBldrgstPk', 'dongNm', 'mainPurpsCdNm', 'etcPurps', 'hhldCnt',
+    'grndFlrCnt', 'ugrndFlrCnt', 'totArea', 'archArea', 'platArea',
+    'bcRat', 'vlRat', 'strctCdNm', 'useAprDay',
+)
+# 긴 것 먼저 → 짧은 이름이 긴 이름 안에서 잘못 매칭되는 것 방지
+_CAMEL_ALT = '|'.join(sorted(_CAMEL_COLS, key=len, reverse=True))
+
+# 한 번의 regex pass로:
+#   1) 이미 큰따옴표로 묶인 identifier ("...") → 그대로
+#   2) 작은따옴표 문자열 리터럴 ('...') → 그대로
+#   3) ? → %s
+#   4) camelCase 컬럼명 (word boundary) → "..."
+_SQL_RE = re.compile(
+    r'"[^"]*"'                           # already-quoted identifier
+    r"|'(?:[^']|'')*'"                   # string literal
+    r'|\?'                                # placeholder
+    r'|\b(?:' + _CAMEL_ALT + r')\b',     # camelCase column
+    re.VERBOSE,
+)
 
 def _q_to_pg(sql: str) -> str:
     def repl(m):
         s = m.group(0)
-        return '%s' if s == '?' else s
-    return _PLACEHOLDER_RE.sub(repl, sql)
+        if s == '?':
+            return '%s'
+        if s[0] in ('"', "'"):
+            return s  # 이미 quoted거나 리터럴
+        return f'"{s}"'  # camelCase 컬럼명 → 큰따옴표로
+    return _SQL_RE.sub(repl, sql)
 
 
 # ── psycopg 커서 / 커넥션 래퍼 ────────────────────────────────
