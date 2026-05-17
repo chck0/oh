@@ -10,6 +10,14 @@
       "memory": 1024
     }
   },
+  "build": {
+    "env": {
+      "PYTHONUNBUFFERED": "1"
+    }
+  },
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  },
   "rewrites": [
     { "source": "/api/(.*)",     "destination": "/api/index" },
     { "source": "/health",       "destination": "/api/index" },
