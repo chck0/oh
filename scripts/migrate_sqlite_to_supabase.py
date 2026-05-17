@@ -3,9 +3,9 @@ SQLite(data/apartment.db) → Supabase(Postgres) 데이터 이관
 
 전제:
     1. supabase_schema.sql 을 Supabase SQL Editor에서 미리 실행해 스키마 생성
-    2. .env (또는 환경변수)에 DATABASE_URL 세팅 (Supabase 'Direct connection' 사용 권장 — 5432 포트)
+    2. .env (또는 환경변수)에 DATABASE_URL 세팅 (Supabase 'Direct connection' 사용 권장 - 5432 포트)
        예: postgresql://postgres:[PWD]@db.[PROJECT-REF].supabase.co:5432/postgres
-       (이관 시에는 pgBouncer 6543 포트 말고 5432 직접 연결을 권장 — COPY/대량 INSERT 안전)
+       (이관 시에는 pgBouncer 6543 포트 말고 5432 직접 연결을 권장 - COPY/대량 INSERT 안전)
     3. pip install psycopg[binary] python-dotenv
 
 실행:
@@ -20,6 +20,13 @@ SQLite(data/apartment.db) → Supabase(Postgres) 데이터 이관
 from __future__ import annotations
 import sys, os, sqlite3, argparse, time
 from pathlib import Path
+
+# Windows cp949 콘솔에서 UTF-8 출력 강제 (em-dash 등 인코딩 에러 방지)
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
 
 # 프로젝트 루트의 .env 로드
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -74,16 +81,16 @@ def migrate_table(sl: sqlite3.Connection, pg, table: str, batch: int, truncate: 
     if not sl.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
     ).fetchone():
-        print(f'  [{table}] SQLite에 없음 — 스킵')
+        print(f'  [{table}] SQLite에 없음 - 스킵')
         return
 
-    # 2) 컬럼 목록 (SQLite 기준 — Postgres와 동일해야 함)
+    # 2) 컬럼 목록 (SQLite 기준 - Postgres와 동일해야 함)
     cols = [r[1] for r in sl.execute(f'PRAGMA table_info({table})').fetchall()]
     if not cols:
-        print(f'  [{table}] 컬럼 없음 — 스킵')
+        print(f'  [{table}] 컬럼 없음 - 스킵')
         return
 
-    # apt_walking_poi.id 같은 AUTOINCREMENT는 Postgres에선 SERIAL —
+    # apt_walking_poi.id 같은 AUTOINCREMENT는 Postgres에선 SERIAL -
     # SQLite의 기존 id값을 그대로 보존하려면 그대로 넣고, 마지막에 sequence reset.
     quoted_cols = [quote_ident(c) for c in cols]
     placeholders = ','.join(['%s'] * len(cols))
@@ -95,7 +102,7 @@ def migrate_table(sl: sqlite3.Connection, pg, table: str, batch: int, truncate: 
     # 3) 총 행수
     total = sl.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
     if total == 0:
-        print(f'  [{table}] 0행 — 스킵')
+        print(f'  [{table}] 0행 - 스킵')
         return
 
     with pg.cursor() as cur:
@@ -141,8 +148,8 @@ def _fix_sequence(pg, table: str):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--only', help='쉼표 구분 — 이 테이블만 이관')
-    ap.add_argument('--skip', help='쉼표 구분 — 이 테이블 제외')
+    ap.add_argument('--only', help='쉼표 구분 - 이 테이블만 이관')
+    ap.add_argument('--skip', help='쉼표 구분 - 이 테이블 제외')
     ap.add_argument('--batch', type=int, default=1000)
     ap.add_argument('--truncate', action='store_true',
                     help='이관 전 대상 테이블 TRUNCATE')
@@ -162,7 +169,7 @@ def main():
     print()
 
     sl = sqlite3.connect(SQLITE_PATH)
-    # prepare_threshold=None — Supabase Free의 6543 Transaction pooler 호환
+    # prepare_threshold=None - Supabase Free의 6543 Transaction pooler 호환
     # (5432 Direct/Session pooler면 굳이 필요 없지만 켜둬도 무해)
     pg = psycopg.connect(PG_URL, prepare_threshold=None)
     try:
