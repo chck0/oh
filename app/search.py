@@ -77,10 +77,12 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     ).fetchall()))
 
     # ─ 3. 캐시 미스 셀만 ODsay 호출 ─
+    # passed_filter=1 인 셀만 "캐시됨"으로 간주 → passed_filter=0/응답실패는 재호출
+    # (ApiKey 인증 실패한 키가 섞여 있던 시기에 만들어진 빈 캐시 자동 복구)
     cached = set(r['origin_cell'] for r in conn.execute(
-        'SELECT origin_cell FROM transit_cache WHERE wp_id=? AND response_size>0', (wp_id,)
+        'SELECT origin_cell FROM transit_cache WHERE wp_id=? AND passed_filter=1', (wp_id,)
     ).fetchall())
-    conn.execute('DELETE FROM transit_cache WHERE wp_id=? AND response_size=0', (wp_id,))
+    conn.execute('DELETE FROM transit_cache WHERE wp_id=? AND passed_filter=0', (wp_id,))
     conn.commit()
     to_fetch = [c for c in cells if c not in cached]
 

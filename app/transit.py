@@ -112,12 +112,21 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
                 raw  = await r.text()
                 data = json.loads(raw)
                 if 'result' not in data:
-                    # 처음 몇 개만 자세히 로깅 (스팸 방지)
                     log.warning(
                         'ODsay no-result [%s] key=%s status=%d body=%s',
                         origin_cell, key_info['owner'], r.status, raw[:300],
                     )
-                    return origin_cell, [], raw
+                    # ApiKey 인증 실패 → 캐시 절대 X. raw='' 반환 → 호출자가
+                    # response_size=0 으로 저장 → 다음 검색에서 다른 키로 재시도.
+                    err = data.get('error')
+                    err_msg = ''
+                    if isinstance(err, list) and err:
+                        err_msg = str(err[0].get('message', ''))
+                    elif isinstance(err, dict):
+                        err_msg = str(err.get('message', ''))
+                    if 'ApiKeyAuthFailed' in err_msg or 'apikey' in err_msg.lower():
+                        return origin_cell, [], ''  # 캐시 X
+                    return origin_cell, [], raw    # 캐시 O (legit no-transit)
                 return origin_cell, rank_paths(data['result'].get('path', [])), raw
         except Exception as e:
             log.error('ODsay exception [%s] key=%s: %s', origin_cell, key_info['owner'], e)
