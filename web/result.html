@@ -1670,8 +1670,10 @@ function onSearchDone(){
   document.getElementById('loading-title').classList.add('done');
   const cnt = resultData.cards.length;
   document.getElementById('loading-subtitle').innerHTML =
-    `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요. AI가 코멘트를 마저 다듬는 동안 결과를 먼저 살펴보세요.`;
+    `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요.`;
   document.getElementById('done-btn').classList.add('show');
+  // 분석 완료 메시지 잠깐 보여준 뒤 자동 전환 (수동 클릭도 그대로 가능)
+  setTimeout(showResults, 1200);
 }
 function showResults(){
   document.getElementById('loading').classList.add('hidden');
