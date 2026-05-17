@@ -14,8 +14,10 @@ log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
 ODSAY_URL           = "https://api.odsay.com/v1/api/searchPubTransPathT"
-PER_KEY_CONCURRENCY = 2
-ROUND_SLEEP_MS      = 300
+# 동시성 2→4, 슬립 300→100 — Vercel 60s 한도 내 더 많은 셀 처리.
+# ODsay 키 4개 × 4 = 16 병렬, rate limit 측면에선 키당 4req/s 정도라 안전권.
+PER_KEY_CONCURRENCY = 4
+ROUND_SLEEP_MS      = 100
 HTTP_TIMEOUT        = 15
 
 ALLOWED_COMBOS    = {(0,1),(0,2),(1,0),(2,0),(1,1)}

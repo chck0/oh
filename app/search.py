@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from app.db import get_db, connect as db_connect
 from app.workplaces import get_or_create
-from app.transit import fetch_cells, haversine
+from app.transit import fetch_cells, haversine, cell_center
 from app.ai import build_recommendations, build_stats, build_comments, card_key
 from app.portable import upsert_sql, year_month_minus, year_minus
 
@@ -26,7 +26,13 @@ class SearchRequest(BaseModel):
     min_kaptdaCnt: int | None = Field(None, description="최소 단지 세대수 (선택). 미지정=100")
 
 # 통근시간 여유분 (사용자 선택값에서 차감)
-COMMUTE_BUFFER_MIN = 10
+# 10→15: 60분 입력 시 effective 45분, 반경 16.7→15km, 셀 ~19%↓
+COMMUTE_BUFFER_MIN = 15
+
+# Vercel Hobby maxDuration 60s 안에 끝내기 위한 ODsay 호출 셀 상한.
+# 신규 워크플레이스 첫 검색에서 초과분은 다음 검색에 캐시 채워짐 (자연 점진 완성).
+# 4키 × 4동시 × ~1.2s/round × 100ms sleep → ~250셀이 ~25s 안에 처리됨.
+MAX_FETCH_CELLS_PER_CALL = 250
 
 
 # ── POST /api/search ─────────────────────────────────────────
@@ -84,7 +90,16 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     ).fetchall())
     conn.execute('DELETE FROM transit_cache WHERE wp_id=? AND passed_filter=0', (wp_id,))
     conn.commit()
-    to_fetch = [c for c in cells if c not in cached]
+    to_fetch_all = [c for c in cells if c not in cached]
+
+    # 직장 가까운 셀부터 N개만 처리 (60s 안에 끝내기).
+    # 남은 셀은 다음 검색에서 캐시 채워짐.
+    def _cell_dist(c):
+        clat, clng = cell_center(c)
+        return haversine(clat, clng, dest_lat, dest_lng)
+    to_fetch_sorted = sorted(to_fetch_all, key=_cell_dist)
+    to_fetch = to_fetch_sorted[:MAX_FETCH_CELLS_PER_CALL]
+    deferred_cells = len(to_fetch_all) - len(to_fetch)
 
     odsay_stats = await fetch_cells(conn, wp, to_fetch)
 
@@ -218,6 +233,11 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             'llm_pending':      len(miss_cards),
             'llm_pending_recommend': sum(1 for c in miss_cards if c.get('is_recommended')),
             'llm_pending_regular':   sum(1 for c in miss_cards if not c.get('is_recommended')),
+            # 신규 워크플레이스 첫 검색에선 일부 셀이 다음 검색으로 미뤄짐.
+            # partial=True 면 프론트가 잠시 후 재검색해서 결과 보강 가능.
+            'partial':          deferred_cells > 0,
+            'deferred_cells':   deferred_cells,
+            'total_cells':      len(cells),
         },
     }
 

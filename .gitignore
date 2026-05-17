@@ -46,8 +46,8 @@ sandbox/*
 !sandbox/README.md
 !sandbox/.gitkeep
 
-# ── 로딩 영상 (저작권·용량) ─────────────────────────────────
-web/static/videos/
+# ── 로딩 영상 — 저작권 회색지대지만 데모용으로 포함 (57MB) ──
+# (필요시 다시 web/static/videos/ 로 ignore 처리)
 
 # ── 로컬 도구 / 바이너리 ─────────────────────────────────────
 ngrok.exe
