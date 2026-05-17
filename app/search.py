@@ -119,7 +119,16 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
           AND t.deal_amount_int<=?
           AND t.pyeong_type IN ({pt})
           {min_cnt_clause}
-        GROUP BY a.apt_seq, t.pyeong_type
+        GROUP BY
+            a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+            a.kaptCode,
+            r.total_time_min, r.bus_cnt, r.subway_cnt,
+            r.step1_type, r.step1_time_min, r.step1_노선,
+            r.step2_type, r.step2_time_min, r.step2_노선,
+            r.step3_type, r.step3_time_min, r.step3_노선,
+            r.step4_type, r.step4_time_min, r.step4_노선,
+            r.step5_type, r.step5_time_min, r.step5_노선,
+            t.pyeong_type
         ORDER BY r.total_time_min, price_low
     """, cards_params).fetchall()
 
