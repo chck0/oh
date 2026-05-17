@@ -4,12 +4,13 @@ ODsay 호출 + transit_cache/routes 적재
 
 Vercel(서버리스)에서는 raw JSON 아카이브 쓰기를 자동 스킵 (IS_SERVERLESS).
 """
-import os, asyncio, aiohttp, sqlite3, json, time, math
+import os, asyncio, aiohttp, sqlite3, json, time, math, logging
 from config import cfg
 from app.workplaces import raw_dir, cell_file
 from app.portable import upsert_sql
 
 IS_SERVERLESS = bool(os.getenv('VERCEL'))
+log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
 ODSAY_URL           = "https://api.odsay.com/v1/api/searchPubTransPathT"
@@ -111,9 +112,15 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
                 raw  = await r.text()
                 data = json.loads(raw)
                 if 'result' not in data:
+                    # 처음 몇 개만 자세히 로깅 (스팸 방지)
+                    log.warning(
+                        'ODsay no-result [%s] key=%s status=%d body=%s',
+                        origin_cell, key_info['owner'], r.status, raw[:300],
+                    )
                     return origin_cell, [], raw
                 return origin_cell, rank_paths(data['result'].get('path', [])), raw
-        except Exception:
+        except Exception as e:
+            log.error('ODsay exception [%s] key=%s: %s', origin_cell, key_info['owner'], e)
             return origin_cell, [], ''
 
 
