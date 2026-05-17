@@ -59,17 +59,20 @@ class _Config:
     DATABASE_URL: str = _optional('DATABASE_URL') or _optional('SUPABASE_DB_URL')
 
     # ── ODsay — KEY_N / REFERER_N 쌍을 리스트로 자동 조립 ────
-    # 런타임 필수 — transit 캐시 미스 시 호출
+    # 런타임 필수 — transit 캐시 미스 시 호출.
+    # ODSAY_KEY_1 ~ ODSAY_KEY_20 까지 스캔하고 빈 번호는 건너뜀
+    # (망가진 키 1개 삭제해도 뒤 번호 살릴 수 있게 gap 허용)
     @property
     def ODSAY_KEYS(self) -> list[dict]:
         keys = []
-        i = 1
-        while os.getenv(f'ODSAY_KEY_{i}'):
+        for i in range(1, 21):
+            k = os.getenv(f'ODSAY_KEY_{i}')
+            if not k:
+                continue
             keys.append({
-                'key':     os.getenv(f'ODSAY_KEY_{i}'),
+                'key':     k,
                 'referer': os.getenv(f'ODSAY_REFERER_{i}', ''),
             })
-            i += 1
         if not keys:
             raise EnvironmentError('[config] ODsay 키가 없습니다 (ODSAY_KEY_1 이상 필요)')
         return keys
