@@ -314,7 +314,7 @@ def get_comments(wp_id: int, keys: str, conn=Depends(get_db)):
         params.extend([s, p])
     rows = conn.execute(
         f'SELECT apt_seq, pyeong_type, comment FROM apt_pt_friend_comment '
-        f'WHERE wp_id=? AND ({conds}) AND comment != ""',
+        f"WHERE wp_id=? AND ({conds}) AND comment != ''",
         params,
     ).fetchall()
     return {
