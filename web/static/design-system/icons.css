@@ -1,0 +1,158 @@
+/* =============================================================
+   바둑이 아이콘 시스템
+   v0.1 · MINIMAL
+   
+   사용법:
+     1. <head>에서 Tabler Icons 웹폰트 import:
+        <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/[email protected]/dist/tabler-icons.min.css">
+     2. 이 파일을 import 후 클래스 사용:
+        @import url("./icons.css");
+   
+   원칙:
+     - Outline 1.5px만 사용 (filled 금지)
+     - 크기 3단계만 (16/20/24px)
+     - 색상은 currentColor 상속 (회색 기본)
+     - ICONS.md 참고
+   ============================================================= */
+
+
+/* ===============================================================
+   기본 — Tabler <i class="ti ti-xxx"> 베이스 스타일
+   =============================================================== */
+
+.ti {
+  font-size: 16px;
+  color: currentColor;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+
+/* ===============================================================
+   크기 (3단계만 — 18px·22px 등 어중간한 크기 금지)
+   =============================================================== */
+
+.ti-sm { font-size: 16px; }
+.ti-md { font-size: 20px; }
+.ti-lg { font-size: 24px; }
+
+
+/* ===============================================================
+   상태 색상 (시맨틱 컬러 — ICONS.md §5.4 참조)
+   =============================================================== */
+
+.ti-brand   { color: var(--color-brand-primary); }
+.ti-success { color: var(--color-status-success-text); }
+.ti-info    { color: var(--color-status-info-text); }
+.ti-warning { color: var(--color-status-warning-text); }
+
+.ti-muted     { color: var(--color-text-tertiary); }
+.ti-secondary { color: var(--color-text-secondary); }
+
+
+/* ===============================================================
+   액션 아이콘 (저장 ♥ 등) — 호버 시 색 변화
+   =============================================================== */
+
+.icon-action {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--color-text-tertiary);
+  transition: color 120ms ease, background 120ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-action:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-subtle);
+}
+
+.icon-action--favorite-active {
+  color: var(--color-brand-primary);
+}
+.icon-action--favorite-active:hover {
+  color: var(--color-brand-hover);
+}
+
+
+/* ===============================================================
+   사용 예시 (참고용)
+   =============================================================== */
+
+/*
+  1. 검색바 아이콘 (장식, aria-hidden):
+
+  <div class="search-bar">
+    <i class="ti ti-search ti-md ti-muted" aria-hidden="true"></i>
+    <input type="text" placeholder="강남구 · 30분 이내" />
+    <button class="btn btn-ghost btn-sm">
+      <i class="ti ti-adjustments-horizontal ti-sm" aria-hidden="true"></i>
+      필터
+    </button>
+  </div>
+
+
+  2. 매물 카드 저장 버튼 (단독 액션):
+
+  <button class="icon-action" aria-label="저장">
+    <i class="ti ti-heart ti-md" aria-hidden="true"></i>
+  </button>
+
+  <button class="icon-action icon-action--favorite-active" aria-label="저장 취소">
+    <i class="ti ti-heart ti-md" aria-hidden="true"></i>
+  </button>
+
+
+  3. 베스트 매치 배지 (상태 + 색):
+
+  <div style="display: inline-flex; align-items: center; gap: 6px;">
+    <i class="ti ti-star ti-sm ti-brand" aria-hidden="true"></i>
+    <span class="badge badge-brand">BEST MATCH</span>
+  </div>
+
+
+  4. 닫기 버튼 (모달·패널 우상단):
+
+  <button class="icon-action" aria-label="닫기">
+    <i class="ti ti-x ti-md" aria-hidden="true"></i>
+  </button>
+
+
+  5. 지도 줌 컨트롤:
+
+  <div class="panel panel--elevated" style="padding: 0;">
+    <button class="icon-action" aria-label="확대">
+      <i class="ti ti-plus ti-sm" aria-hidden="true"></i>
+    </button>
+    <button class="icon-action" aria-label="축소">
+      <i class="ti ti-minus ti-sm" aria-hidden="true"></i>
+    </button>
+  </div>
+
+
+  안 쓰는 예시 (참고용 — 절대 이렇게 하지 말 것):
+
+  <!-- ❌ 매물 옵션 아이콘화 -->
+  <i class="ti ti-bed"></i> 3
+  <i class="ti ti-bath"></i> 2
+  <i class="ti ti-car"></i> 1
+
+  <!-- ✅ 텍스트로 -->
+  침실 3 · 욕실 2 · 주차 1
+
+
+  <!-- ❌ 태그 안 아이콘 -->
+  <span class="tag tag-info">
+    <i class="ti ti-clock"></i>통근 27분
+  </span>
+
+  <!-- ✅ 색상만 -->
+  <span class="tag tag-info">통근 27분</span>
+*/

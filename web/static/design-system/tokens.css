@@ -1,0 +1,200 @@
+/* =============================================================
+   바둑이 디자인 시스템 — CSS 변수
+   v0.2 · Map Overlay Edition
+   
+   사용법:
+     1. <head>에서 import: @import url("./tokens.css");
+     2. 컴포넌트에서: background: var(--color-bg-panel);
+   
+   원칙:
+     - primitive (--red-600 등) 직접 사용 금지
+     - 항상 semantic 변수 (--color-brand-primary 등) 사용
+     - DESIGN_SYSTEM.md 참고
+   ============================================================= */
+
+:root {
+  /* ─────────────────────────────────────────
+     PRIMITIVE — 원시 색상 스케일 (직접 사용 X)
+     ───────────────────────────────────────── */
+
+  /* Baduki Red — 벽돌 톤 빨강 */
+  --red-50:  #FDF4F2;
+  --red-100: #F9DDD6;
+  --red-200: #F2BAA9;
+  --red-300: #E89789;
+  --red-400: #DA6E58;
+  --red-500: #C8462F;
+  --red-600: #A82E1B;  /* MAIN */
+  --red-700: #8E2618;
+  --red-800: #7E2113;  /* hover */
+  --red-900: #4D140C;  /* active */
+
+  /* Warm Gray — 따뜻한 회색 (2% 옐로우-브라운) */
+  --gray-white: #FFFFFF;
+  --gray-50:    #FAF9F7;
+  --gray-100:   #F1EFEB;
+  --gray-200:   #E8E6E3;
+  --gray-300:   #C9C5BF;
+  --gray-400:   #A6A19A;
+  --gray-500:   #8A857E;
+  --gray-600:   #6B6661;
+  --gray-700:   #4A4642;
+  --gray-800:   #2E2B28;
+  --gray-900:   #1A1816;
+
+  /* Status — 채도 낮춤 (지도 마커와 충돌 방지) */
+  --green-100: #E6F0E5;
+  --green-700: #2D6A3F;
+  --amber-100: #FBF1DC;
+  --amber-700: #8C5E0E;
+  --blue-100:  #E4ECF4;
+  --blue-700:  #2E4E6E;
+
+
+  /* ─────────────────────────────────────────
+     SEMANTIC — 의미 단위 변수 (컴포넌트에서 사용)
+     ───────────────────────────────────────── */
+
+  /* Brand */
+  --color-brand-primary:   var(--red-600);
+  --color-brand-hover:     var(--red-800);
+  --color-brand-active:    var(--red-900);
+  --color-brand-disabled:  var(--red-300);
+  --color-brand-bg-subtle: var(--red-50);
+
+  /* Background */
+  --color-bg-panel:  var(--gray-white);  /* 모든 패널 기본 */
+  --color-bg-subtle: var(--gray-50);     /* 호버, 섹션 구분 */
+  --color-bg-muted:  var(--gray-100);    /* 비활성 카드 */
+
+  /* Border */
+  --color-border-default: var(--gray-200);
+  --color-border-strong:  var(--gray-300);
+  --color-border-focus:   var(--red-600);
+
+  /* Text */
+  --color-text-primary:   var(--gray-900);
+  --color-text-secondary: var(--gray-700);
+  --color-text-tertiary:  var(--gray-500);
+  --color-text-disabled:  var(--gray-400);
+  --color-text-on-brand:  var(--gray-white);
+
+  /* Status */
+  --color-status-success-bg:   var(--green-100);
+  --color-status-success-text: var(--green-700);
+  --color-status-warning-bg:   var(--amber-100);
+  --color-status-warning-text: var(--amber-700);
+  --color-status-info-bg:      var(--blue-100);
+  --color-status-info-text:    var(--blue-700);
+
+  /* Map Pin — 지도 핀 (DESIGN_SYSTEM.md §4 참조) */
+  --color-pin-recommended-bg:   var(--red-600);
+  --color-pin-recommended-text: var(--gray-white);
+  --color-pin-default-bg:       var(--gray-white);
+  --color-pin-default-text:     var(--gray-900);
+  --color-pin-default-border:   var(--gray-300);
+  --color-pin-visited-bg:       var(--gray-100);
+  --color-pin-visited-text:     var(--gray-500);
+  --color-pin-selected-bg:      var(--gray-900);
+  --color-pin-selected-text:    var(--gray-white);
+  --color-pin-cluster-bg:       var(--gray-white);
+  --color-pin-cluster-text:     var(--red-600);
+  --color-pin-cluster-border:   var(--red-600);
+
+
+  /* ─────────────────────────────────────────
+     SHADOW — 그림자
+     ───────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-xl: 0 8px 28px rgba(0, 0, 0, 0.14);
+  --shadow-pin-recommended: 0 3px 10px rgba(168, 46, 27, 0.40);
+
+
+  /* ─────────────────────────────────────────
+     RADIUS — 모서리 반경
+     ───────────────────────────────────────── */
+  --radius-sm:   4px;   /* inputs, small chips */
+  --radius-md:   8px;   /* buttons, cards */
+  --radius-lg:   12px;  /* panels, large cards */
+  --radius-pill: 9999px;
+
+
+  /* ─────────────────────────────────────────
+     SPACING — 간격 (4px scale)
+     ───────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+}
+
+
+/* ===============================================================
+   사용 예시 (참고용 — 실제 컴포넌트에 적용)
+   =============================================================== */
+
+/* 메인 CTA 버튼 */
+.btn-primary {
+  background: var(--color-brand-primary);
+  color: var(--color-text-on-brand);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.btn-primary:hover  { background: var(--color-brand-hover); }
+.btn-primary:active { background: var(--color-brand-active); }
+.btn-primary:disabled {
+  background: var(--color-brand-disabled);
+  cursor: not-allowed;
+}
+
+/* 매물 카드 */
+.property-card {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-md);
+}
+.property-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* 추천 매물 핀 */
+.map-pin--recommended {
+  background: var(--color-pin-recommended-bg);
+  color: var(--color-pin-recommended-text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-pin-recommended);
+  font-weight: 500;
+}
+
+/* 일반 매물 핀 */
+.map-pin--default {
+  background: var(--color-pin-default-bg);
+  color: var(--color-pin-default-text);
+  border: 1px solid var(--color-pin-default-border);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+}
+
+/* 상태 태그 */
+.tag-success {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-text);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+}

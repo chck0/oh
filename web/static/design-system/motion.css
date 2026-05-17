@@ -1,0 +1,238 @@
+/* =============================================================
+   바둑이 모션 시스템
+   v0.1 · RESTRAINED
+   
+   사용법:
+     @import url("./motion.css");
+   
+   원칙:
+     - duration 4단계만 (80/120/200/300)
+     - easing 3가지만 (out / in-out / linear)
+     - 지도 위 카드는 transform 금지
+     - prefers-reduced-motion 자동 대응
+     - MOTION.md 참고
+   ============================================================= */
+
+:root {
+  /* ─────────────────────────────────────────
+     DURATION (4단계만 — 중간값 금지)
+     ───────────────────────────────────────── */
+  --duration-instant: 80ms;   /* 클릭 피드백 */
+  --duration-fast:    120ms;  /* 호버, 칩 토글 */
+  --duration-normal:  200ms;  /* 기본값 */
+  --duration-slow:    300ms;  /* 모달, 패널 */
+
+  /* ─────────────────────────────────────────
+     EASING (3가지만)
+     ───────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-linear: linear;
+
+  /* 자주 쓰는 조합 (편의용) */
+  --transition-base:   all var(--duration-normal) var(--ease-out);
+  --transition-fast:   all var(--duration-fast) var(--ease-out);
+  --transition-color:  color var(--duration-fast) var(--ease-out),
+                       background var(--duration-fast) var(--ease-out);
+  --transition-shadow: box-shadow var(--duration-normal) var(--ease-out);
+}
+
+
+/* ===============================================================
+   KEYFRAMES — 진입 애니메이션 4가지
+   =============================================================== */
+
+@keyframes baduki-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes baduki-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes baduki-slide-right {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes baduki-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+
+/* ===============================================================
+   KEYFRAMES — 로딩 상태
+   =============================================================== */
+
+@keyframes baduki-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes baduki-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes baduki-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+
+/* ===============================================================
+   ENTRY ANIMATION UTILITIES
+   =============================================================== */
+
+.anim-fade-in {
+  animation: baduki-fade-in var(--duration-normal) var(--ease-out);
+}
+
+.anim-fade-up {
+  animation: baduki-fade-up var(--duration-slow) var(--ease-out);
+}
+
+.anim-slide-right {
+  animation: baduki-slide-right var(--duration-slow) var(--ease-in-out);
+}
+
+.anim-scale-in {
+  animation: baduki-scale-in var(--duration-normal) var(--ease-out);
+}
+
+
+/* ===============================================================
+   LOADING UTILITIES
+   =============================================================== */
+
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--gray-100, #F1EFEB) 0%,
+    var(--gray-50, #FAF9F7) 50%,
+    var(--gray-100, #F1EFEB) 100%);
+  background-size: 200% 100%;
+  animation: baduki-shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-default, #E8E6E3);
+  border-top-color: var(--color-brand-primary, #A82E1B);
+  border-radius: 50%;
+  animation: baduki-spin 0.8s linear infinite;
+  display: inline-block;
+}
+.spinner-sm { width: 12px; height: 12px; border-width: 1.5px; }
+.spinner-lg { width: 24px; height: 24px; border-width: 3px; }
+
+
+/* ===============================================================
+   접근성 — prefers-reduced-motion 자동 대응
+   사용자가 OS에서 "동작 줄이기" 켜놓으면 모든 모션이 거의 즉시 처리됨
+   =============================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ===============================================================
+   사용 예시 (참고용)
+   =============================================================== */
+
+/*
+  1. 버튼 (호버 + 클릭):
+
+  .btn {
+    transition: background var(--duration-fast) var(--ease-out),
+                transform var(--duration-instant) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.97); }
+
+
+  2. 매물 카드 호버 (지도 위 — 그림자만):
+
+  .property-card {
+    transition: var(--transition-shadow);
+  }
+  .property-card:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+
+  3. 지도 핀 (transform 예외 허용):
+
+  .map-pin {
+    transition: transform var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .map-pin:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+
+  4. 모달 등장:
+
+  .modal {
+    animation: baduki-scale-in var(--duration-normal) var(--ease-out);
+  }
+
+
+  5. 사이드 패널 열림:
+
+  .side-panel {
+    animation: baduki-slide-right var(--duration-slow) var(--ease-in-out);
+  }
+
+
+  6. 토스트:
+
+  .toast {
+    animation: baduki-fade-up var(--duration-normal) var(--ease-out);
+  }
+
+
+  7. 매물 카드 스켈레톤:
+
+  <div class="property-card">
+    <div class="skeleton" style="height:18px; width:60%; margin-bottom:8px;"></div>
+    <div class="skeleton" style="height:14px; width:40%;"></div>
+  </div>
+
+
+  8. 버튼 안 스피너 (로딩 중):
+
+  <button class="btn btn-primary" disabled>
+    <span class="spinner spinner-sm" style="margin-right:6px;"></span>
+    검색 중
+  </button>
+
+
+  안 쓰는 예시 (참고용 — 절대 이렇게 하지 말 것):
+
+  // ❌ Bounce easing
+  transition: transform 300ms cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+  // ❌ 지도 위 카드 호버 시 떠오름
+  .property-card:hover { transform: translateY(-4px); }
+
+  // ❌ 중간값 duration
+  transition: opacity 250ms ease-out;
+
+  // ❌ 스태거드 카드 등장
+  .card:nth-child(1) { animation-delay: 0ms; }
+  .card:nth-child(2) { animation-delay: 100ms; }
+  .card:nth-child(3) { animation-delay: 200ms; }
+*/

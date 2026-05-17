@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<!--
+  test-detail.html — 상세 패널 스켈레톤 테스트
+  목적: API 데이터 실제로 뜨는지 확인 + 섹션 구조 확정
+  Claude Code 디자인 작업 시 이 파일을 참고해서 result.html 상세 패널을 디자인할 것.
+
+  URL 파라미터:
+    apt_seq  예) 41135-83
+    wp_id    예) 1
+  예시: /test-detail.html?apt_seq=41135-83&wp_id=1
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>상세 패널 구조 테스트</title>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+  <link rel="stylesheet" href="/static/design-system/tokens.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── 레이아웃 토큰만 사용, 실제 디자인은 Claude Code가 담당 ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', system-ui, sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+
+    /* 전체 레이아웃: 좌(상세패널) + 우(지도 자리) */
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      height: 100vh;
+    }
+
+    /* ── 좌측 상세 패널 ─────────────────────────────────────── */
+    /* Claude Code: 이 패널 전체가 result.html 좌측 cards-panel을 대체함 */
+    .detail-panel {
+      overflow-y: auto;
+      background: white;
+      border-right: 1px solid #e0e0e0;
+    }
+
+    /* 패널 헤더 — [← 목록으로] 버튼 */
+    /* Claude Code: 상단 고정 헤더. 뒤로가기 + 아파트명 */
+    .panel-header {
+      position: sticky; top: 0; z-index: 10;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .back-btn {
+      background: none; border: 1px solid #ccc;
+      border-radius: 6px; padding: 4px 10px;
+      font-size: 13px; cursor: pointer;
+      font-family: inherit;
+    }
+    .panel-apt-nm { font-size: 15px; font-weight: 700; }
+    .panel-tier-badge {
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700;
+    }
+    .tier-BEST { background: #A82E1B; color: white; }
+    .tier-GOOD { background: #E07B39; color: white; }
+
+    /* 각 섹션 공통 */
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .section-title {
+      font-size: 11px; font-weight: 700;
+      color: #888; letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    /* ── [섹션1] 친구 한 마디 ── */
+    /* Claude Code: LLM이 생성한 친구톤 코멘트. BEST면 강조 배경. 맨 위에 위치. */
+    .friend-comment-box {
+      background: #fff8f7;
+      border-left: 3px solid #A82E1B;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-line;
+      color: #1a1a1a;
+    }
+    .friend-comment-box.no-comment {
+      color: #aaa; font-style: italic;
+      border-color: #ddd; background: #fafafa;
+    }
+
+    /* ── [섹션2] 단지 기본 정보 ── */
+    /* Claude Code: 동명/세대수/용도. 한 줄 요약 */
+    .apt-meta { font-size: 13px; color: #555; }
+
+    /* ── [섹션3] 통근 경로 ── */
+    /* Claude Code: 경로를 아코디언으로. 1번 경로는 기본 펼침. 2,3번은 접힘. */
+    .route-item {
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .route-head {
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      background: #fafafa;
+      font-size: 13px; font-weight: 600;
+    }
+    .route-head:hover { background: #f0f0f0; }
+    .route-time { color: #A82E1B; font-size: 16px; font-weight: 700; }
+    .route-mode { font-size: 11px; color: #888; }
+    .route-body { padding: 10px 14px; display: none; border-top: 1px solid #f0f0f0; }
+    .route-body.open { display: block; }
+    .step-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 5px 0;
+      font-size: 12px; color: #555;
+      border-bottom: 1px dashed #f0f0f0;
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-type {
+      width: 52px; flex-shrink: 0;
+      padding: 2px 6px; border-radius: 4px;
+      font-size: 10px; font-weight: 600; text-align: center;
+      background: #e4ecf4; color: #2e4e6e;
+    }
+    .step-type.walk { background: #f0f0f0; color: #555; }
+    .step-info { flex: 1; }
+    .step-time { width: 35px; text-align: right; flex-shrink: 0; font-weight: 600; color: #333; }
+
+    /* ── [섹션4] 가격 요약 지표 ── */
+    /* Claude Code: 3개 KPI 카드 나란히. 6개월변화 / 동평균대비 / 동대비초과 */
+    .price-kpis {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .kpi-card {
+      border: 1px solid #e8e8e8; border-radius: 8px;
+      padding: 10px 12px; text-align: center;
+    }
+    .kpi-label { font-size: 10px; color: #888; margin-bottom: 4px; }
+    .kpi-value { font-size: 17px; font-weight: 700; }
+    .positive { color: #C0392B; }
+    .negative { color: #2471A3; }
+
+    /* ── [섹션5] 시세 차트 ── */
+    /* Claude Code: Chart.js 라인차트. 평수 탭 전환. 단지선 + 동평균선. */
+    .pyeong-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .pyeong-tab {
+      padding: 4px 12px; border-radius: 999px;
+      border: 1px solid #ccc;
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      font-family: inherit; background: white;
+      transition: all 100ms;
+    }
+    .pyeong-tab.active {
+      background: #A82E1B; color: white; border-color: #A82E1B;
+    }
+    .chart-legend {
+      display: flex; gap: 14px; margin-bottom: 8px; font-size: 11px; color: #555;
+    }
+    .legend-dot {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; margin-right: 4px; vertical-align: middle;
+    }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* ── [섹션6] 최근 실거래 내역 ── */
+    /* Claude Code: 테이블 or 리스트. 날짜 / 평형 / 거래금액 / 층수. */
+    .trade-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .trade-table th {
+      text-align: left; padding: 6px 8px;
+      border-bottom: 2px solid #e0e0e0;
+      font-size: 11px; color: #888; font-weight: 600;
+    }
+    .trade-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .trade-amount { font-weight: 700; }
+
+    /* ── [섹션7] 도보 주요 시설 POI ── */
+    /* Claude Code: 아이콘 + 시설명 + 거리/시간. 카테고리별 그룹 or 플랫 리스트. */
+    .poi-list { display: flex; flex-direction: column; gap: 6px; }
+    .poi-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; padding: 4px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .poi-icon { width: 28px; height: 28px; border-radius: 6px;
+      background: #f0f0f0; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; }
+    .poi-name { flex: 1; }
+    .poi-dist { font-size: 11px; color: #888; white-space: nowrap; }
+
+    /* ── 우측 지도 자리 (테스트용) ── */
+    .map-placeholder {
+      background: #e8e8e8;
+      display: flex; align-items: center; justify-content: center;
+      color: #999; font-size: 14px;
+    }
+
+    /* ── 로딩/오류 ── */
+    .loading { text-align: center; padding: 40px; color: #888; }
+    .timing-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1a1a1a; color: #4ade80;
+      font-size: 12px; font-family: monospace;
+      padding: 6px 16px;
+      display: flex; gap: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── 좌측: 상세 패널 ── -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="loading" id="loading-msg">⏳ 데이터 로드 중…</div>
+  </div>
+
+  <!-- ── 우측: 지도 자리 (테스트용 플레이스홀더) ── -->
+  <div class="map-placeholder">
+    🗺 지도 영역<br><small>result.html에서는 카카오맵</small>
+  </div>
+
+</div>
+
+<!-- 타이밍 바 -->
+<div class="timing-bar" id="timing-bar">로딩 중…</div>
+
+<script>
+// ── URL 파라미터 ──────────────────────────────────────────────
+const params  = new URLSearchParams(location.search);
+const APT_SEQ = params.get('apt_seq') || '41135-83';
+const WP_ID   = params.get('wp_id')   || '1';
+
+// ── 포맷 헬퍼 ────────────────────────────────────────────────
+function fmtAmount(manwon) {
+  if (!manwon) return '-';
+  const eok = Math.floor(manwon / 10000);
+  const man = manwon % 10000;
+  if (eok && man) return `${eok}억 ${man.toLocaleString()}만`;
+  if (eok)        return `${eok}억`;
+  return `${man.toLocaleString()}만`;
+}
+function fmtPct(v) {
+  if (v == null) return '-';
+  const s = v > 0 ? '+' : '';
+  return `${s}${v}%`;
+}
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Chart 인스턴스 ────────────────────────────────────────────
+let chartInst = null;
+let chartData = null;   // API에서 받은 chart 원본
+let currentTabKey = null;
+
+// ── 메인 로드 ─────────────────────────────────────────────────
+async function loadDetail() {
+  const t0 = performance.now();
+
+  // ① detail API
+  const detailRes = await fetch(
+    `/api/apt/${APT_SEQ}/detail?wp_id=${WP_ID}`,
+    { headers: { 'ngrok-skip-browser-warning': '1' } }
+  );
+  const d = await detailRes.json();
+  const t1 = performance.now();
+
+  // ② routes API (통근경로 전체)
+  const routesRes = await fetch(
+    `/api/apt/${APT_SEQ}/routes?wp_id=${WP_ID}`,
+    { headers: { 'ngrok-skip-browser-warning': '1' } }
+  );
+  const r = await routesRes.json();
+  const t2 = performance.now();
+
+  // 타이밍 표시
+  document.getElementById('timing-bar').innerHTML =
+    `detail: ${(t1-t0).toFixed(0)}ms &nbsp;|&nbsp; ` +
+    `routes: ${(t2-t1).toFixed(0)}ms &nbsp;|&nbsp; ` +
+    `total: ${(t2-t0).toFixed(0)}ms &nbsp;|&nbsp; ` +
+    `tabs:${d.pyeong_tabs?.length} trades:${d.trades?.length} poi:${d.poi?.length} routes:${r.options?.length}`;
+
+  chartData = d.chart;
+  renderPanel(d, r.options || []);
+}
+
+// ── 패널 렌더 ─────────────────────────────────────────────────
+function renderPanel(d, routes) {
+  const tier = d.tier || '';
+  const panel = document.getElementById('detail-panel');
+
+  panel.innerHTML = `
+
+    <!-- ══ 패널 헤더 ══════════════════════════════════════════ -->
+    <!-- Claude Code: sticky 헤더. 뒤로가기 + 아파트명 + 티어 배지 -->
+    <div class="panel-header">
+      <button class="back-btn" onclick="history.back()">← 목록으로</button>
+      <span class="panel-apt-nm">${escHtml(d.apt_nm)}</span>
+      ${tier ? `<span class="panel-tier-badge tier-${tier}">${tier}</span>` : ''}
+    </div>
+
+    <!-- ══ 섹션1: 친구 한 마디 ══════════════════════════════════ -->
+    <!-- Claude Code: LLM 생성 코멘트. BEST는 빨간 왼쪽 보더 + 연한 배경.
+         없으면 "(검색 후 생성됩니다)" 안내 -->
+    <div class="section">
+      <div class="section-title">친구 한 마디</div>
+      <div class="friend-comment-box ${d.friend_comment ? '' : 'no-comment'}">
+        ${d.friend_comment
+          ? escHtml(d.friend_comment)
+          : '검색 결과 화면에서 이 단지를 클릭하면 AI 코멘트가 생성됩니다.'}
+      </div>
+    </div>
+
+    <!-- ══ 섹션2: 단지 기본 정보 ══════════════════════════════ -->
+    <!-- Claude Code: 한 줄 요약 텍스트. 동명 / 세대수 / 준공연도 등 -->
+    <div class="section">
+      <div class="section-title">단지 정보</div>
+      <div class="apt-meta">
+        📍 ${escHtml(d.umd_nm)} &nbsp;·&nbsp; 🏠 ${(d.kaptdaCnt||0).toLocaleString()}세대
+      </div>
+    </div>
+
+    <!-- ══ 섹션3: 통근 경로 ══════════════════════════════════════ -->
+    <!-- Claude Code: 아코디언. 경로1 기본 펼침, 나머지 접힘.
+         step마다 type(도보/버스/지하철) + 소요시간 + 거리 + 노선명 + 출발/도착역 -->
+    <div class="section">
+      <div class="section-title">🚇 통근 경로 (${routes.length}개 옵션)</div>
+      <div id="routes-container">${renderRoutes(routes)}</div>
+    </div>
+
+    <!-- ══ 섹션4: 가격 요약 지표 (KPI 3개) ════════════════════ -->
+    <!-- Claude Code: 3개 수치 카드. 양수=빨강(상승), 음수=파랑(하락/저렴) -->
+    <div class="section">
+      <div class="section-title">📊 시세 요약</div>
+      ${renderPriceSummary(d.price_summary)}
+    </div>
+
+    <!-- ══ 섹션5: 시세 차트 ════════════════════════════════════ -->
+    <!-- Claude Code: Chart.js 라인차트. 평수 탭으로 전환.
+         X축=월(YYYY-MM), Y축=만원(전체금액).
+         단지선(빨강 진하게) + 동평균선(초록 얇게) -->
+    <div class="section">
+      <div class="section-title">📈 실거래가 추이 (3년)</div>
+      <div class="pyeong-tabs" id="pyeong-tabs">${renderPyeongTabs(d.pyeong_tabs)}</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:#A82E1B"></span>${escHtml(d.apt_nm)}</span>
+        <span><span class="legend-dot" style="background:#2471A3"></span>${escHtml(d.umd_nm)} 동평균</span>
+      </div>
+      <div class="chart-wrap"><canvas id="price-chart"></canvas></div>
+    </div>
+
+    <!-- ══ 섹션6: 최근 실거래 내역 ════════════════════════════ -->
+    <!-- Claude Code: 날짜/평형/금액/층 테이블. 최신 20건.
+         헤더 고정, 스크롤 가능하게. -->
+    <div class="section">
+      <div class="section-title">📋 실거래 내역</div>
+      ${renderTrades(d.trades)}
+    </div>
+
+    <!-- ══ 섹션7: 도보 주요 시설 POI ════════════════════════════ -->
+    <!-- Claude Code: 카테고리 아이콘 + 시설명 + 도보시간 + 거리.
+         상위 15개 표시, 더보기 버튼 -->
+    <div class="section">
+      <div class="section-title">🗺 도보 주요 시설</div>
+      ${renderPoi(d.poi)}
+    </div>
+
+  `;
+
+  // 차트 초기화 — 가장 많이 거래된 평수 디폴트
+  if (d.pyeong_tabs && d.pyeong_tabs.length > 0) {
+    const defaultTab = d.pyeong_tabs[0];
+    const defaultKey = `${defaultTab.pyeong_type}_${defaultTab.pyeong}`;
+    initChart(defaultKey, d.apt_nm, d.umd_nm);
+    currentTabKey = defaultKey;
+    document.querySelector(`[data-key="${defaultKey}"]`)?.classList.add('active');
+  }
+}
+
+// ── 통근 경로 렌더 ────────────────────────────────────────────
+function renderRoutes(routes) {
+  if (!routes.length) return '<p style="color:#aaa;font-size:13px;">경로 정보 없음</p>';
+  return routes.map((o, i) => {
+    const isFirst = i === 0;
+    const modeLabel = o.subway_cnt && !o.bus_cnt ? `지하철${o.subway_cnt > 1 ? ' '+o.subway_cnt+'회환승' : ' 직통'}`
+                    : o.bus_cnt && !o.subway_cnt  ? `버스${o.bus_cnt > 1 ? ' '+o.bus_cnt+'회' : ''}`
+                    : `버스${o.bus_cnt}+지하철${o.subway_cnt}`;
+    const steps = o.steps.map(s => {
+      const isWalk = s.type === '도보';
+      const distTxt = s.dist_m ? ` ${s.dist_m.toLocaleString()}m` : '';
+      const lineTxt = s.line ? ` [${s.line}]` : '';
+      const staTxt  = (s.from || s.to) ? ` ${s.from||''} → ${s.to||''}` : '';
+      return `<div class="step-row">
+        <span class="step-type ${isWalk?'walk':''}">${s.type}</span>
+        <span class="step-info">${lineTxt}${staTxt}${distTxt}</span>
+        <span class="step-time">${s.time_min}분</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="route-item">
+        <div class="route-head" onclick="toggleRoute(this)">
+          <span>
+            <span class="route-time">${o.total_time_min}분</span>
+            &nbsp;<span class="route-mode">${modeLabel}</span>
+          </span>
+          <span>${isFirst ? '▲' : '▼'}</span>
+        </div>
+        <div class="route-body ${isFirst?'open':''}">${steps}</div>
+      </div>`;
+  }).join('');
+}
+function toggleRoute(el) {
+  const body = el.nextElementSibling;
+  const isOpen = body.classList.toggle('open');
+  el.querySelector('span:last-child').textContent = isOpen ? '▲' : '▼';
+}
+
+// ── 가격 KPI 렌더 ─────────────────────────────────────────────
+function renderPriceSummary(ps) {
+  if (!ps) return '<p style="color:#aaa;font-size:13px;">데이터 없음</p>';
+  const chg = ps.change_6m_pct;
+  const vsDong = ps.vs_dong_pct;
+  const diff = ps.vs_dong_diff;
+  return `
+    <div class="price-kpis">
+      <div class="kpi-card">
+        <div class="kpi-label">단지 6개월 변화</div>
+        <div class="kpi-value ${chg>0?'positive':chg<0?'negative':''}">${fmtPct(chg)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${escHtml(ps.pyeong_type)} · ${ps.pyeong}평 기준</div>
+        <div class="kpi-value" style="font-size:12px;color:#555;">동평균 대비</div>
+        <div class="kpi-value ${vsDong<0?'negative':vsDong>0?'positive':''}">${fmtPct(vsDong)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">동평균 대비 차액</div>
+        <div class="kpi-value ${diff<0?'negative':diff>0?'positive':''}">${diff!=null?fmtAmount(Math.abs(diff))+(diff<0?' 저렴':' 비쌈'):'-'}</div>
+      </div>
+    </div>`;
+}
+
+// ── 평수 탭 렌더 ─────────────────────────────────────────────
+function renderPyeongTabs(tabs) {
+  if (!tabs || !tabs.length) return '';
+  return tabs.map((t,i) => `
+    <button class="pyeong-tab" data-key="${t.pyeong_type}_${t.pyeong}"
+      onclick="switchTab('${t.pyeong_type}_${t.pyeong}')">
+      ${t.pyeong}평 <small style="color:inherit;opacity:.7">(${t.deal_count}건)</small>
+    </button>`).join('');
+}
+function switchTab(key) {
+  if (key === currentTabKey) return;
+  document.querySelectorAll('.pyeong-tab').forEach(b => b.classList.toggle('active', b.dataset.key===key));
+  currentTabKey = key;
+  const [aptNm, umdNm] = [document.querySelector('.panel-apt-nm')?.textContent || '', ''];
+  updateChart(key);
+}
+
+// ── Chart.js 초기화 / 업데이트 ───────────────────────────────
+function initChart(key, aptNm, umdNm) {
+  const ctx = document.getElementById('price-chart').getContext('2d');
+  const {labels, complexData, dongData} = getChartSeries(key);
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: aptNm,
+          data: complexData,
+          borderColor: '#A82E1B',
+          backgroundColor: '#A82E1B18',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#A82E1B',
+          tension: 0.3, fill: false,
+        },
+        {
+          label: `${umdNm} 동평균`,
+          data: dongData,
+          borderColor: '#2471A3',
+          backgroundColor: '#2471A318',
+          borderWidth: 1.5,
+          pointRadius: 2,
+          borderDash: [4,3],
+          tension: 0.3, fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { family: 'Pretendard', size: 11 }, maxTicksLimit: 12 } },
+        y: {
+          ticks: {
+            font: { family: 'Pretendard', size: 11 },
+            callback: v => fmtAmount(v)
+          }
+        }
+      }
+    }
+  });
+}
+function updateChart(key) {
+  if (!chartInst) return;
+  const {labels, complexData, dongData} = getChartSeries(key);
+  chartInst.data.labels = labels;
+  chartInst.data.datasets[0].data = complexData;
+  chartInst.data.datasets[1].data = dongData;
+  chartInst.update();
+}
+function getChartSeries(key) {
+  // key = "20평대_24" 또는 "30평대_34" 형태
+  const parts = key.split('_');
+  const pyeong_type = parts[0]; // 예: "20평대"
+  const complexSeries = chartData?.complex?.[key] || {};
+  const dongSeries    = chartData?.dong?.[pyeong_type] || {};
+  const allMonths = [...new Set([...Object.keys(complexSeries), ...Object.keys(dongSeries)])].sort();
+  return {
+    labels:      allMonths,
+    complexData: allMonths.map(m => complexSeries[m] ?? null),
+    dongData:    allMonths.map(m => dongSeries[m] ?? null),
+  };
+}
+
+// ── 실거래 테이블 ─────────────────────────────────────────────
+function renderTrades(trades) {
+  if (!trades || !trades.length) return '<p style="color:#aaa;font-size:13px;">거래 내역 없음</p>';
+  const rows = trades.map(t => `
+    <tr>
+      <td>${t.date}</td>
+      <td>${t.pyeong}평</td>
+      <td class="trade-amount">${fmtAmount(t.amount)}</td>
+      <td style="color:#888">${t.floor}층</td>
+    </tr>`).join('');
+  return `
+    <table class="trade-table">
+      <thead><tr><th>거래일</th><th>평형</th><th>금액</th><th>층</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── POI 리스트 ────────────────────────────────────────────────
+const POI_ICON = {
+  A:'🏪', B:'🚌', C:'🏫', D:'🏥', E:'🌳', F:'🏦', G:'🍽'
+};
+function renderPoi(poi) {
+  if (!poi || !poi.length) return '<p style="color:#aaa;font-size:13px;">POI 데이터 없음</p>';
+  const items = poi.slice(0, 15).map(p => `
+    <div class="poi-row">
+      <div class="poi-icon">${POI_ICON[p.category] || '📍'}</div>
+      <div class="poi-name">${escHtml(p.name)}</div>
+      <div class="poi-dist">${p.walking_min}분 · ${Math.round(p.distance_m)}m</div>
+    </div>`).join('');
+  return `<div class="poi-list">${items}</div>`;
+}
+
+// ── 실행 ─────────────────────────────────────────────────────
+loadDetail().catch(err => {
+  document.getElementById('detail-panel').innerHTML =
+    `<div class="loading" style="color:red;">오류: ${err.message}</div>`;
+  console.error(err);
+});
+</script>
+</body>
+</html>

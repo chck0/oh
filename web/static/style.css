@@ -1,0 +1,182 @@
+/* =============================================================
+   real_estate — BADUGI
+   PPT 사양: 색 #C00000, 굴림 Bold, 캔버스 788×784pt (×1.4 → web px)
+   ============================================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #C00000;
+}
+
+html, body {
+  font-family: '굴림', Gulim, 'Malgun Gothic', system-ui, sans-serif;
+  background: #ffffff;
+  color: #000;
+  min-height: 100vh;
+}
+
+.landing-page {
+  display: flex;
+  justify-content: center;
+}
+
+/* =============================================================
+   캔버스 (절대 좌표 기준) — PPT 788×784 × 1.4
+   ============================================================= */
+.canvas {
+  position: relative;
+  width: 1103px;
+  height: 1098px;
+}
+.canvas > * { position: absolute; }
+
+/* =============================================================
+   ① 좌상단 바둑인 + 말풍선
+   ============================================================= */
+.person-1 {
+  left: 60px;   top: 171px;
+  width: 216px; height: 228px;
+  object-fit: cover;
+}
+.bubble-1 {
+  left: 199px;  top: 88px;
+  width: 302px; height: 118px;
+}
+
+/* =============================================================
+   ② 우상단 바둑인 + 말풍선
+   ============================================================= */
+.person-2 {
+  left: 752px;  top: 171px;
+  width: 342px; height: 228px;
+  object-fit: cover;
+}
+.bubble-2 {
+  left: 678px;  top: 139px;
+  width: 200px; height: 70px;
+}
+
+/* 말풍선 공통 (빨간 타원) */
+.bubble {
+  background: var(--red);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+/* =============================================================
+   ③ 가운데 — 로고 + 멍멍 + BADUGI
+   ============================================================= */
+.logo {
+  left: 112px; top: 511px;
+  width: 70px; height: auto;
+}
+
+.meong {
+  left: 179px; top: 511px;
+  width: 50px; height: 29px;
+  background: var(--red);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.brand-box {
+  left: 248px;  top: 500px;
+  width: 510px;
+  font-weight: 700;
+  color: var(--red);
+  font-size: 22px;
+  line-height: 1.3;
+}
+.brand {
+  font-size: 50px;
+  letter-spacing: 1px;
+}
+.brand-sub {
+  font-size: 22px;
+}
+
+/* =============================================================
+   ④ 설명
+   ============================================================= */
+.description {
+  left: 99px;   top: 647px;
+  width: 634px; min-height: 91px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #000;
+}
+
+/* =============================================================
+   ⑤ 시작하기 폭발 (8점)
+   ============================================================= */
+.start-btn {
+  left: 220px;  top: 839px;
+  width: 259px; height: 259px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.start-btn:hover {
+  transform: scale(1.06) rotate(-4deg);
+}
+.start-btn svg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+.start-text {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 28px;
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: none;
+}
+.start-text small {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* =============================================================
+   ⑥ 환호
+   ============================================================= */
+.celebrate {
+  left: 777px;  top: 801px;
+  width: 225px; height: 276px;
+  object-fit: cover;
+}
+
+/* =============================================================
+   placeholder 페이지
+   ============================================================= */
+.placeholder-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+}
+.placeholder-page h1 {
+  color: var(--red);
+  margin-bottom: 16px;
+  font-size: 32px;
+}
+.placeholder-page a { color: var(--red); }

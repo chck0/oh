@@ -1,0 +1,15 @@
+[Unit]
+Description=real_estate FastAPI service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/real_estate
+EnvironmentFile=/opt/real_estate/.env
+ExecStart=/opt/real_estate/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

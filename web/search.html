@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BADUGI — 조건 입력</title>
+
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/static/design-system/tokens.css">
+  <link rel="stylesheet" href="/static/design-system/typography.css">
+  <link rel="stylesheet" href="/static/design-system/motion.css">
+
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Pretendard', system-ui, sans-serif;
+      background: white;
+      color: var(--color-text-primary);
+      min-height: 100vh;
+      letter-spacing: -0.0025em;
+      -webkit-font-smoothing: antialiased;
+      --color-text-tertiary: var(--gray-600);
+      --color-text-secondary: var(--gray-800);
+    }
+    .num { font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+
+    /* ─── Top nav ─────────────────────────────────────────── */
+    .top-nav {
+      background: white;
+      border-bottom: 1px solid var(--color-border-strong);
+      padding: 14px 22px;
+    }
+    .top-nav__inner {
+      max-width: 720px; margin: 0 auto;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .top-nav h1 {
+      color: var(--color-brand-primary);
+      font-size: 20px; font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .top-nav__back {
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: 14px; font-weight: 500;
+    }
+    .top-nav__back:hover { color: var(--color-brand-primary); }
+
+    /* ─── Page header ─────────────────────────────────────── */
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 22px 60px;
+    }
+    .page-head { text-align: center; margin-bottom: 36px; }
+    .page-head h2 {
+      font-size: 30px; font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-text-primary);
+      margin-bottom: 8px;
+    }
+    .page-head p {
+      font-size: 15px; color: var(--color-text-secondary);
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    /* ─── Section card ─────────────────────────────────────── */
+    .section {
+      background: white;
+      padding: 22px 24px;
+      margin-bottom: 14px;
+      border: 1.5px solid var(--color-border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-num {
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px;
+      background: var(--color-brand-primary);
+      color: white;
+      border-radius: 50%;
+      font-size: 13px; font-weight: 700;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.01em;
+    }
+    .section-title {
+      font-size: 18px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+      flex: 1;
+    }
+    .section-title .optional {
+      font-weight: 600; font-size: 13.5px;
+      color: var(--color-text-secondary);
+      margin-left: 6px;
+    }
+
+    /* ─── Info popover (ⓘ button) ──────────────────────────── */
+    .info-wrap { position: relative; }
+    .info-btn {
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-strong);
+      color: var(--color-text-tertiary);
+      font-size: 12px; font-weight: 700;
+      font-family: inherit;
+      cursor: help;
+      transition: all 120ms;
+    }
+    .info-btn:hover, .info-wrap:hover .info-btn {
+      background: var(--color-brand-bg-subtle);
+      border-color: var(--color-brand-primary);
+      color: var(--color-brand-primary);
+    }
+    .info-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 50;
+      width: 320px;
+      max-width: calc(100vw - 44px);
+      background: white;
+      border: 1.5px solid var(--color-border-strong);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--color-text-primary);
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px);
+      transition: opacity 150ms, transform 150ms;
+    }
+    .info-wrap:hover .info-popover,
+    .info-btn:focus + .info-popover {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .info-popover::before {
+      content: '';
+      position: absolute;
+      top: -7px; right: 8px;
+      width: 12px; height: 12px;
+      background: white;
+      border-top: 1px solid var(--color-border-strong);
+      border-left: 1px solid var(--color-border-strong);
+      transform: rotate(45deg);
+    }
+    .info-popover strong {
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+    .info-popover ul {
+      margin: 6px 0 0 0;
+      padding-left: 16px;
+    }
+    .info-popover li {
+      margin-bottom: 3px;
+    }
+
+    /* ─── Form helpers ─────────────────────────────────────── */
+    .hint {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-top: 10px;
+      line-height: 1.55;
+      font-weight: 500;
+    }
+    .error {
+      color: var(--color-brand-primary);
+      font-size: 13px; font-weight: 500;
+      margin-top: 8px;
+      display: none;
+    }
+    .error.show { display: block; }
+
+    /* ─── Inputs ──────────────────────────────────────────── */
+    input[type=text], input[type=number] {
+      font-family: inherit;
+      font-size: 15px;
+      font-feature-settings: 'tnum';
+      padding: 11px 14px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 8px;
+      background: white;
+      color: var(--color-text-primary);
+      letter-spacing: -0.0025em;
+      transition: border-color 120ms, box-shadow 120ms;
+    }
+    input[type=text]:focus, input[type=number]:focus {
+      outline: none;
+      border-color: var(--color-brand-primary);
+      box-shadow: 0 0 0 3px var(--color-brand-bg-subtle);
+    }
+    input.invalid {
+      border-color: var(--color-brand-primary);
+      background: #FDF8F7;
+    }
+    input[readonly] {
+      background: var(--color-bg-subtle);
+      cursor: default;
+    }
+
+    /* ─── 직장 주소 row ────────────────────────────────────── */
+    .address-row { display: flex; gap: 10px; }
+    .address-row input { flex: 1; }
+    .btn-secondary {
+      padding: 11px 18px;
+      background: white;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 120ms;
+    }
+    .btn-secondary:hover {
+      background: var(--color-bg-subtle);
+      border-color: var(--color-text-tertiary);
+    }
+    .btn-secondary:active {
+      background: var(--color-bg-muted);
+    }
+
+    /* ─── 가격 row ─────────────────────────────────────────── */
+    .price-row {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+    }
+    .price-row input { width: 96px; text-align: right; }
+    .price-row .unit {
+      font-size: 15px; font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+
+    /* ─── 칩 그룹 ──────────────────────────────────────────── */
+    .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      padding: 9px 20px;
+      border: 1px solid var(--color-border-strong);
+      background: white;
+      color: var(--color-text-primary);
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-size: 14px; font-weight: 600;
+      font-feature-settings: 'tnum';
+      cursor: pointer;
+      transition: all 120ms;
+    }
+    .chip:hover {
+      border-color: var(--color-text-tertiary);
+    }
+    .chip.active {
+      background: var(--color-brand-primary);
+      color: white;
+      border-color: var(--color-brand-primary);
+      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+    }
+    .chip.active:hover { background: var(--color-brand-hover); }
+
+    /* ─── 체크박스 칩 (평형) ──────────────────────────────── */
+    .check-chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .check-chip {
+      position: relative;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px 9px 14px;
+      border: 1px solid var(--color-border-strong);
+      background: white;
+      color: var(--color-text-primary);
+      border-radius: var(--radius-pill);
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: all 120ms;
+      user-select: none;
+    }
+    .check-chip:hover {
+      border-color: var(--color-text-tertiary);
+    }
+    .check-chip input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .check-chip__box {
+      flex-shrink: 0;
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--color-border-strong);
+      border-radius: 4px;
+      background: white;
+      position: relative;
+      transition: all 120ms;
+    }
+    .check-chip:has(input:checked) {
+      background: var(--color-brand-bg-subtle);
+      border-color: var(--color-brand-primary);
+      color: var(--color-brand-primary);
+    }
+    .check-chip:has(input:checked) .check-chip__box {
+      background: var(--color-brand-primary);
+      border-color: var(--color-brand-primary);
+    }
+    .check-chip:has(input:checked) .check-chip__box::after {
+      content: '';
+      position: absolute;
+      left: 4px; top: 1px;
+      width: 5px; height: 9px;
+      border-right: 2px solid white;
+      border-bottom: 2px solid white;
+      transform: rotate(45deg);
+    }
+
+    /* ─── 라디오 ───────────────────────────────────────────── */
+    .radio-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .radio-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      transition: all 120ms;
+      user-select: none;
+    }
+    .radio-item:hover {
+      border-color: var(--color-text-tertiary);
+      background: var(--color-bg-subtle);
+    }
+    .radio-item input {
+      position: absolute; opacity: 0; pointer-events: none;
+    }
+    .radio-item__dot {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--color-border-strong);
+      border-radius: 50%;
+      background: white;
+      position: relative;
+      transition: all 120ms;
+    }
+    .radio-item__label {
+      flex: 1;
+      font-size: 14.5px; font-weight: 600;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+    }
+    .radio-item__hint {
+      font-size: 12.5px; font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .radio-item:has(input:checked) {
+      border-color: var(--color-brand-primary);
+      background: var(--color-brand-bg-subtle);
+      border-width: 1.5px;
+      padding: 11.5px 13.5px;
+    }
+    .radio-item:has(input:checked) .radio-item__dot {
+      border-color: var(--color-brand-primary);
+      border-width: 5px;
+    }
+    .radio-item:has(input:checked) .radio-item__label {
+      color: var(--color-brand-primary);
+    }
+
+    /* ─── 제출 ─────────────────────────────────────────────── */
+    .submit-zone {
+      margin-top: 24px;
+      text-align: center;
+    }
+    .submit-note {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--color-brand-primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 16px; font-weight: 700;
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(168, 46, 27, 0.25);
+      transition: all 200ms;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+    }
+    .submit-btn:hover {
+      background: var(--color-brand-hover);
+      box-shadow: 0 6px 18px rgba(168, 46, 27, 0.32);
+      transform: translateY(-1px);
+    }
+    .submit-btn:active {
+      background: var(--color-brand-active);
+      transform: translateY(0);
+    }
+    .submit-btn:disabled {
+      background: var(--color-brand-disabled);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .submit-btn .arrow {
+      font-size: 18px;
+      transition: transform 200ms;
+    }
+    .submit-btn:hover .arrow { transform: translateX(3px); }
+  </style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav__inner">
+    <a href="/" class="top-nav__back">← 처음으로</a>
+    <h1>BADUGI</h1>
+  </div>
+</nav>
+
+<main class="page">
+
+  <header class="page-head">
+    <h2>조건을 알려주세요</h2>
+    <p>몇 가지만 알려주시면 맞춤 매물을 찾아드려요.</p>
+  </header>
+
+  <form id="search-form">
+
+    <!-- ① 직장 주소 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">1</span>
+        <span class="section-title">직장 주소</span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            서울 25구·경기 25시군구·인천 7구의 약 <strong>5,200여 개 단지</strong>에서 찾아드려요.
+            <br>도로명·지번 주소 모두 가능합니다.
+          </div>
+        </span>
+      </div>
+      <div class="address-row">
+        <input type="text" id="address" readonly required placeholder="주소 찾기 버튼을 눌러주세요">
+        <button type="button" class="btn-secondary" onclick="openPostcode()">주소 찾기</button>
+      </div>
+    </section>
+
+    <!-- ② 최대 금액 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">2</span>
+        <span class="section-title">최대 금액</span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            호가가 아니라 <strong>실제 사고팔린 가격</strong>으로 비교해드려요.
+            <br>시세는 자주 바뀌니까 <strong>최근 3개월 거래</strong>만 사용합니다.
+          </div>
+        </span>
+      </div>
+      <div class="price-row">
+        <input type="number" id="price-eok" value="5" min="0" step="1" required>
+        <span class="unit">억</span>
+        <input type="number" id="price-man" value="0" min="0" max="9000" step="1000" required>
+        <span class="unit">만원</span>
+      </div>
+      <div class="hint">최소 1억 이상 · 만원 칸은 천만 단위 (0, 1000, 2000, …, 9000)</div>
+      <div class="error" id="price-error"></div>
+    </section>
+
+    <!-- ③ 최대 통근시간 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">3</span>
+        <span class="section-title">최대 통근시간</span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            지각 안 하도록 <strong>10분 여유</strong>를 두고 추천합니다.
+            <br>예: 60분 선택 → 실제 경로 <strong>50분 이내</strong> 매물만 보여드려요.
+          </div>
+        </span>
+      </div>
+      <div class="chip-group" id="commute-chips">
+        <button type="button" class="chip num" data-value="10">10분</button>
+        <button type="button" class="chip num" data-value="20">20분</button>
+        <button type="button" class="chip num" data-value="30">30분</button>
+        <button type="button" class="chip num" data-value="40">40분</button>
+        <button type="button" class="chip num" data-value="50">50분</button>
+        <button type="button" class="chip num active" data-value="60">60분</button>
+      </div>
+      <div class="hint">선택한 시간 이하로 출근 가능한 매물만 보여드려요.</div>
+    </section>
+
+    <!-- ④ 관심 평형 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">4</span>
+        <span class="section-title">관심 평형 <span class="optional">복수 선택</span></span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            <strong>공급면적 기준</strong>이에요. 보통 "30평대 아파트"라고 부르는 그 단위.
+            <ul>
+              <li>10평대 (10~19평)</li>
+              <li>20평대 (20~29평)</li>
+              <li>30평대 (30~39평)</li>
+              <li>40평대 (40~49평)</li>
+            </ul>
+          </div>
+        </span>
+      </div>
+      <div class="check-chips">
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="10평미만"><span class="check-chip__box"></span><span>10평 미만</span></label>
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="10평대"><span class="check-chip__box"></span><span>10평대</span></label>
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="20평대" checked><span class="check-chip__box"></span><span>20평대</span></label>
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="30평대" checked><span class="check-chip__box"></span><span>30평대</span></label>
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="40평대"><span class="check-chip__box"></span><span>40평대</span></label>
+        <label class="check-chip"><input type="checkbox" name="pyeong" value="50평대+"><span class="check-chip__box"></span><span>50평대+</span></label>
+      </div>
+    </section>
+
+    <!-- ⑤ 단지 세대수 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">5</span>
+        <span class="section-title">단지 세대수 <span class="optional">선택</span></span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            <strong>단지 규모로 분위기가 달라져요.</strong>
+            <ul>
+              <li><strong>300세대 미만</strong> — 작은 단지. 시설은 놀이터 정도.</li>
+              <li><strong>300~700세대 (중형)</strong> — 기본 시설 갖춤. 가장 흔한 규모.</li>
+              <li><strong>700~1,500세대 (대형)</strong> — 수영장·도서관·카페 풍부.</li>
+              <li><strong>1,500세대+ (대단지)</strong> — 자체 상가·학교 갖춘 규모.</li>
+            </ul>
+          </div>
+        </span>
+      </div>
+      <div class="radio-list">
+        <label class="radio-item"><input type="radio" name="mincnt" value="" checked><span class="radio-item__dot"></span><span class="radio-item__label">제한 없음</span><span class="radio-item__hint">기본 100세대 이상</span></label>
+        <label class="radio-item"><input type="radio" name="mincnt" value="300"><span class="radio-item__dot"></span><span class="radio-item__label num">300세대 이상</span></label>
+        <label class="radio-item"><input type="radio" name="mincnt" value="500"><span class="radio-item__dot"></span><span class="radio-item__label num">500세대 이상</span></label>
+        <label class="radio-item"><input type="radio" name="mincnt" value="1000"><span class="radio-item__dot"></span><span class="radio-item__label num">1,000세대 이상</span></label>
+        <label class="radio-item"><input type="radio" name="mincnt" value="1500"><span class="radio-item__dot"></span><span class="radio-item__label num">1,500세대 이상</span></label>
+      </div>
+    </section>
+
+    <div class="submit-zone">
+      <p class="submit-note">분석에 약 <strong style="color:var(--color-text-secondary);font-weight:600;" class="num">30초~1분</strong> 정도 걸려요</p>
+      <button type="submit" class="submit-btn" id="submit-btn">
+        분석하기 <span class="arrow">→</span>
+      </button>
+    </div>
+
+  </form>
+
+</main>
+
+<script>
+// ── 통근시간 칩 단일선택 ──────────────────────────────────
+document.querySelectorAll('#commute-chips .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#commute-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+
+// ── Daum Postcode ─────────────────────────────────────────
+function openPostcode() {
+  new daum.Postcode({
+    oncomplete: (data) => {
+      document.getElementById('address').value = data.roadAddress || data.jibunAddress;
+    }
+  }).open();
+}
+
+// ── 가격 검증 ─────────────────────────────────────────────
+function validatePrice() {
+  const eokEl = document.getElementById('price-eok');
+  const manEl = document.getElementById('price-man');
+  const errorEl = document.getElementById('price-error');
+  const eok = parseInt(eokEl.value) || 0;
+  const man = parseInt(manEl.value) || 0;
+
+  eokEl.classList.remove('invalid');
+  manEl.classList.remove('invalid');
+  errorEl.classList.remove('show');
+
+  if (eok < 0 || man < 0) {
+    errorEl.textContent = '0 이상 입력해주세요';
+    errorEl.classList.add('show');
+    if (eok < 0) eokEl.classList.add('invalid');
+    if (man < 0) manEl.classList.add('invalid');
+    return null;
+  }
+  if (man % 1000 !== 0) {
+    errorEl.textContent = '만원 칸은 천만 단위로 입력해주세요 (0, 1000, 2000, …)';
+    errorEl.classList.add('show');
+    manEl.classList.add('invalid');
+    return null;
+  }
+  const total = eok * 10000 + man;
+  if (total < 10000) {
+    errorEl.textContent = '최소 1억 이상 입력해주세요';
+    errorEl.classList.add('show');
+    eokEl.classList.add('invalid');
+    return null;
+  }
+  return total;
+}
+document.getElementById('price-eok').addEventListener('input', validatePrice);
+document.getElementById('price-man').addEventListener('input', validatePrice);
+
+// ── 폼 제출 ────────────────────────────────────────────────
+document.getElementById('search-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const address = document.getElementById('address').value.trim();
+  if (!address) { alert('직장 주소를 입력해주세요'); return; }
+
+  const price = validatePrice();
+  if (price === null) { alert('금액을 확인해주세요'); return; }
+
+  const pyeongTypes = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(el => el.value);
+  if (pyeongTypes.length === 0) { alert('평형을 하나 이상 선택해주세요'); return; }
+
+  const chip = document.querySelector('#commute-chips .chip.active');
+  const maxMinutes = parseInt(chip.dataset.value);
+
+  const mincnt = document.querySelector('input[name=mincnt]:checked').value;
+
+  const params = new URLSearchParams({
+    workplace_address: address,
+    max_price: String(price),
+    max_minutes: String(maxMinutes),
+    pyeong_types: pyeongTypes.join(','),
+  });
+  if (mincnt) params.set('min_kaptdaCnt', mincnt);
+
+  window.location.href = '/result.html?' + params.toString();
+});
+</script>
+
+</body>
+</html>

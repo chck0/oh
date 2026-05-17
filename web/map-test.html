@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>카카오맵 테스트</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', system-ui, sans-serif;
+      display: flex; flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 12px 20px;
+      background: #C00000;
+      color: white;
+      display: flex; align-items: center; gap: 20px;
+    }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header a { color: white; font-size: 13px; text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+    .info {
+      padding: 8px 20px;
+      background: #FAF9F7;
+      border-bottom: 1px solid #E8E6E3;
+      font-size: 13px;
+      color: #4A4642;
+    }
+    #map {
+      flex: 1;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/">← 홈으로</a>
+  <h1>🗺️ 카카오맵 테스트</h1>
+</header>
+
+<div class="info" id="info">
+  지도 로딩 중...
+</div>
+
+<div id="map"></div>
+
+<!-- 카카오맵 JS SDK -->
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=928b7347492855e92855be5315d68d57&autoload=false"></script>
+
+<script>
+const t0 = performance.now();
+const info = document.getElementById('info');
+
+kakao.maps.load(function() {
+  const t1 = performance.now();
+
+  const container = document.getElementById('map');
+  const options = {
+    center: new kakao.maps.LatLng(37.5665, 126.9780),  // 서울 시청 부근
+    level: 8  // 1=가장 zoom-in, 14=가장 zoom-out. 8 ≈ 수도권 한눈에
+  };
+  const map = new kakao.maps.Map(container, options);
+
+  // 줌 컨트롤 추가 (우상단 +/- 버튼)
+  const zoomControl = new kakao.maps.ZoomControl();
+  map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+  // 지도 타입 컨트롤 (일반 / 스카이뷰)
+  const typeControl = new kakao.maps.MapTypeControl();
+  map.addControl(typeControl, kakao.maps.ControlPosition.TOPRIGHT);
+
+  // 테스트 마커 — 종로3길 33 (직장 좌표 예시)
+  const marker = new kakao.maps.Marker({
+    position: new kakao.maps.LatLng(37.5720065838703, 126.978848537308),
+    map: map
+  });
+
+  // 인포윈도우
+  const infowindow = new kakao.maps.InfoWindow({
+    content: '<div style="padding:8px 12px; font-size:13px; font-weight:600;">📍 직장 (종로3길 33)</div>'
+  });
+  infowindow.open(map, marker);
+
+  // 클릭하면 좌표/줌 레벨 정보 표시
+  kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+    const latlng = mouseEvent.latLng;
+    info.textContent = `클릭 좌표: ${latlng.getLat().toFixed(5)}, ${latlng.getLng().toFixed(5)} | 줌 레벨: ${map.getLevel()}`;
+  });
+
+  // 줌 변경 시
+  kakao.maps.event.addListener(map, 'zoom_changed', function() {
+    info.textContent = `줌 레벨: ${map.getLevel()} (1=가장 자세히, 14=가장 멀리)`;
+  });
+
+  const t2 = performance.now();
+  info.textContent = `✅ 지도 로드 완료 — SDK ${(t1-t0).toFixed(0)}ms + 렌더링 ${(t2-t1).toFixed(0)}ms · 지도를 클릭하거나 드래그해보세요`;
+});
+</script>
+
+</body>
+</html>

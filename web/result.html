@@ -1,0 +1,2653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BADUGI — 분석 결과</title>
+
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/static/design-system/tokens.css">
+  <link rel="stylesheet" href="/static/design-system/typography.css">
+  <link rel="stylesheet" href="/static/design-system/motion.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- 카카오맵 SDK (클러스터러 제거 — 단지 단위 핀 직접 표시) -->
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=928b7347492855e92855be5315d68d57&autoload=false"></script>
+
+  <style>
+    /* ── 기본 레이아웃 ──────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Pretendard', system-ui, sans-serif;
+      background: white;
+      color: var(--color-text-primary);
+      height: 100vh; line-height: 1.5;
+      display: flex; flex-direction: column;
+      letter-spacing: -0.0025em;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      flex-shrink: 0; background: white;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--color-border-strong);
+      display: flex; align-items: center; gap: 20px;
+    }
+    header h1 {
+      color: var(--color-brand-primary);
+      font-size: 20px; font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .back-link {
+      color: var(--color-text-secondary); text-decoration: none;
+      font-size: 14px; font-weight: 500;
+    }
+    .back-link:hover { color: var(--color-brand-primary); }
+
+    .num { font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
+
+    /* ════════════════════════════════════════════════════════
+       [5] 로딩 오버레이 — 3단계 진행 표시
+       ════════════════════════════════════════════════════════ */
+    .loading-overlay {
+      position: fixed; inset: 0; background: white; z-index: 1000;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 24px 32px; overflow-y: auto;
+    }
+    .loading-overlay.hidden { display: none; }
+
+    .loading-head {
+      text-align: center; margin-bottom: 24px; max-width: 520px;
+    }
+    .loading-head h2 {
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--color-text-primary);
+      margin-bottom: 6px;
+    }
+    .loading-head h2.done { color: var(--color-brand-primary); }
+    .loading-head p {
+      font-size: 14px; color: var(--color-text-secondary);
+      line-height: 1.55;
+    }
+    .loading-head p strong {
+      color: var(--color-text-primary); font-weight: 600;
+    }
+
+    /* 진행 단계 */
+    .progress-steps {
+      display: flex; align-items: flex-start; justify-content: center;
+      margin-bottom: 28px;
+      font-feature-settings: 'tnum';
+    }
+    .progress-step {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; padding: 0 4px;
+    }
+    .progress-step__dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--color-bg-muted);
+      border: 2px solid var(--color-border-default);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--color-text-tertiary);
+      position: relative;
+      transition: all 200ms;
+    }
+    .progress-step.active .progress-step__dot {
+      background: var(--color-brand-primary);
+      border-color: var(--color-brand-primary);
+      color: white;
+      box-shadow: 0 0 0 4px var(--color-brand-bg-subtle);
+    }
+    .progress-step.done .progress-step__dot {
+      background: var(--color-brand-primary);
+      border-color: var(--color-brand-primary);
+      color: white;
+    }
+    .progress-step.done .progress-step__dot .pn { display: none; }
+    .progress-step.done .progress-step__dot::after {
+      content: ''; position: absolute;
+      width: 10px; height: 6px;
+      border-left: 2px solid white;
+      border-bottom: 2px solid white;
+      transform: rotate(-45deg);
+      margin-top: -2px;
+    }
+    .progress-step__label {
+      font-size: 11.5px; font-weight: 600;
+      color: var(--color-text-tertiary);
+      white-space: nowrap;
+    }
+    .progress-step.active .progress-step__label { color: var(--color-brand-primary); }
+    .progress-step.done .progress-step__label { color: var(--color-text-secondary); }
+    .progress-connector {
+      width: 56px; height: 2px;
+      background: var(--color-border-default);
+      margin-top: 12px;
+      position: relative; overflow: hidden;
+      border-radius: 2px;
+    }
+    .progress-connector.done { background: var(--color-brand-primary); }
+    .progress-connector.in-progress::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, var(--color-brand-primary) 50%, transparent 50%);
+      background-size: 200% 100%;
+      animation: progress-flow 1.4s linear infinite;
+    }
+    @keyframes progress-flow {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 영상 + 플레이리스트 */
+    .video-row {
+      display: flex; gap: 16px; align-items: stretch;
+      width: 100%; max-width: 640px;
+    }
+    .video-stage {
+      flex-shrink: 0;
+      width: 280px; aspect-ratio: 9/16;
+      background: #1A1816;
+      border-radius: 12px; overflow: hidden;
+      position: relative;
+      box-shadow: var(--shadow-xl);
+    }
+    .video-stage video { width: 100%; height: 100%; object-fit: cover; }
+    .video-title {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 12px 14px 11px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+      color: white; font-size: 12.5px; font-weight: 500;
+      letter-spacing: -0.005em;
+    }
+    .video-side {
+      display: flex; flex-direction: column; gap: 10px;
+      flex: 1; min-width: 0;
+    }
+    .mute-btn {
+      padding: 10px 14px; background: white;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border-default);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 12.5px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 120ms;
+    }
+    .mute-btn:hover { background: var(--color-bg-subtle); }
+    .mute-btn .mute-icon { font-size: 14px; }
+    .mute-btn .mute-text { flex: 1; text-align: left; }
+    .mute-btn.unmuted {
+      background: var(--color-brand-bg-subtle);
+      border-color: var(--color-brand-primary);
+      color: var(--color-brand-primary);
+    }
+    .playlist {
+      background: white;
+      border: 1px solid var(--color-border-default);
+      border-radius: 10px; overflow: hidden;
+      flex: 1; display: flex; flex-direction: column;
+    }
+    .playlist-head {
+      padding: 10px 14px;
+      font-size: 10px; font-weight: 700;
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      border-bottom: 1px solid var(--color-border-default);
+      background: var(--color-bg-subtle);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .playlist-head .pl-count {
+      letter-spacing: 0; text-transform: none;
+      font-weight: 500;
+      font-feature-settings: 'tnum';
+    }
+    .playlist-items {
+      flex: 1; overflow-y: auto;
+      max-height: 320px;
+    }
+    .playlist-item {
+      padding: 9px 14px; font-size: 12.5px;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-bg-muted);
+      display: flex; align-items: center; gap: 8px;
+      transition: background 120ms;
+    }
+    .playlist-item:last-child { border-bottom: none; }
+    .playlist-item:hover { background: var(--color-bg-subtle); }
+    .playlist-item.active {
+      background: var(--color-brand-bg-subtle);
+      color: var(--color-brand-primary);
+      font-weight: 600;
+    }
+    .playlist-item .pl-num {
+      font-size: 11px; font-weight: 500;
+      width: 14px;
+      color: var(--color-text-tertiary);
+      font-feature-settings: 'tnum';
+    }
+    .playlist-item.active .pl-num { color: var(--color-brand-primary); }
+    .playlist-item .pl-glyph { width: 8px; font-size: 9px; }
+
+    .done-btn {
+      margin-top: 24px;
+      padding: 14px 36px;
+      background: var(--color-brand-primary); color: white;
+      border: none; border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px; font-weight: 700;
+      letter-spacing: -0.005em;
+      cursor: pointer; display: none;
+      align-items: center; gap: 8px;
+      box-shadow: 0 4px 16px rgba(168, 46, 27, 0.30);
+      transition: all 200ms;
+    }
+    .done-btn:hover {
+      background: var(--color-brand-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(168, 46, 27, 0.38);
+    }
+    .done-btn .arrow { font-size: 16px; transition: transform 200ms; }
+    .done-btn:hover .arrow { transform: translateX(3px); }
+    .done-btn.show {
+      display: inline-flex;
+      animation: fadeInUp 400ms ease;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ════════════════════════════════════════════════════════
+       메인 결과 레이아웃
+       ════════════════════════════════════════════════════════ */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .summary-bar {
+      flex-shrink: 0; background: white;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--color-border-strong);
+      font-size: 14px;
+      display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+      font-feature-settings: 'tnum';
+    }
+    .summary-bar strong {
+      color: var(--color-brand-primary);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .summary-bar .stats {
+      color: var(--color-text-secondary);
+      font-size: 13px; margin-left: auto;
+      font-weight: 500;
+    }
+    .summary-bar .sep {
+      color: var(--color-border-strong);
+      font-weight: 400;
+    }
+
+    .result-layout {
+      flex: 1; display: grid; grid-template-columns: 400px 1fr;
+      min-height: 0;
+    }
+    .cards-panel {
+      overflow-y: auto;
+      background: white;
+      padding: 14px;
+      border-right: 1px solid var(--color-border-strong);
+    }
+    .map-panel { position: relative; }
+    #map { width: 100%; height: 100%; background: #f0f0f0; }
+
+    /* ════════════════════════════════════════════════════════
+       [2] 통계 패널 — 미니 막대그래프
+       ════════════════════════════════════════════════════════ */
+    .stats-panel {
+      background: white;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-lg);
+      padding: 16px 16px 14px;
+      margin-bottom: 12px;
+    }
+    .stats-panel__top {
+      display: flex; align-items: baseline; gap: 8px;
+      padding-bottom: 14px;
+      border-bottom: 1.5px solid var(--color-border-strong);
+      margin-bottom: 16px;
+    }
+    .stats-panel__count {
+      font-size: 26px; font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+    }
+    .stats-panel__count .unit {
+      font-size: 14px; font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-left: 2px;
+    }
+    .stats-panel__avg {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-left: auto;
+      font-feature-settings: 'tnum';
+    }
+    .stats-panel__avg strong {
+      font-weight: 700;
+      color: var(--color-text-primary);
+      font-size: 15px;
+    }
+
+    .stats-block { margin-bottom: 14px; }
+    .stats-block:last-child { margin-bottom: 0; }
+    .stats-block__label {
+      font-size: 13px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .stats-block__label-helper {
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-secondary);
+      letter-spacing: 0;
+      margin-left: auto;
+    }
+
+    .minibar-row {
+      display: grid;
+      grid-template-columns: 76px 1fr 56px;
+      align-items: center; gap: 12px;
+      padding: 5px 0; font-size: 13.5px;
+      font-feature-settings: 'tnum';
+    }
+    .minibar-row__label {
+      color: var(--color-text-primary);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .minibar-row__track {
+      height: 9px;
+      background: var(--color-bg-muted);
+      border-radius: 3px; position: relative; overflow: hidden;
+    }
+    .minibar-row__fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: var(--color-text-secondary);
+      border-radius: 3px;
+    }
+    .minibar-row.cheap .minibar-row__fill {
+      background: var(--color-brand-primary);
+    }
+    .minibar-row__value {
+      text-align: right; font-weight: 700;
+      color: var(--color-text-primary);
+      font-size: 14px;
+    }
+
+    .stacked-bar {
+      display: flex; height: 10px;
+      border-radius: 4px; overflow: hidden;
+      background: var(--color-bg-muted);
+    }
+    .stacked-bar__seg { height: 100%; }
+    .stacked-bar__seg.s-new     { background: var(--green-700); }
+    .stacked-bar__seg.s-mid     { background: var(--amber-700); }
+    .stacked-bar__seg.s-old     { background: var(--gray-500); }
+    .stacked-bar__seg.s-unknown { background: var(--gray-300); }
+
+    .stacked-legend {
+      display: flex; flex-wrap: wrap; gap: 10px 16px;
+      margin-top: 10px; font-size: 13px;
+      font-feature-settings: 'tnum';
+    }
+    .stacked-legend__item {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--color-text-primary);
+      font-weight: 500;
+    }
+    .stacked-legend__dot { width: 8px; height: 8px; border-radius: 2px; }
+    .stacked-legend__dot.s-new     { background: var(--green-700); }
+    .stacked-legend__dot.s-mid     { background: var(--amber-700); }
+    .stacked-legend__dot.s-old     { background: var(--gray-500); }
+    .stacked-legend__dot.s-unknown { background: var(--gray-300); }
+    .stacked-legend__count {
+      font-weight: 600; color: var(--color-text-primary);
+      margin-left: 1px;
+    }
+
+    .pyeong-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .pyeong-grid__cell {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .pyeong-grid__pt {
+      font-size: 12.5px; font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 4px;
+    }
+    .pyeong-grid__val {
+      font-size: 16px; font-weight: 700;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.005em;
+    }
+    .pyeong-grid__cnt {
+      font-size: 12px; color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       추천 섹션 헤더
+       ════════════════════════════════════════════════════════ */
+    .rec-section-head {
+      background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
+      color: white; border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin: 4px 0 10px;
+    }
+    .rec-section-head h3 {
+      font-size: 16px; font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 5px;
+    }
+    .rec-section-head p {
+      font-size: 12.5px; opacity: 0.9;
+      line-height: 1.55;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       [1] 추천 카드 — AI 친구 코멘트 HERO
+       ════════════════════════════════════════════════════════ */
+    .rec-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border-strong);
+      border-left: 4px solid var(--color-brand-primary);
+      padding: 18px 18px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: box-shadow 200ms ease;
+    }
+    .rec-card:hover { box-shadow: var(--shadow-lg); }
+    .rec-card__slot {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700;
+      color: var(--color-brand-primary);
+      background: var(--color-brand-bg-subtle);
+      padding: 5px 11px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.01em;
+    }
+    .rec-card__slot-divider {
+      width: 1px; height: 9px;
+      background: currentColor; opacity: 0.4;
+    }
+    .rec-card__title-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin: 12px 0 4px;
+    }
+    .rec-card__title {
+      font-size: 18px; font-weight: 700;
+      letter-spacing: -0.005em;
+      color: var(--color-text-primary);
+      line-height: 1.3; flex: 1;
+    }
+    .rec-card__price {
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      white-space: nowrap; line-height: 1.2;
+    }
+    .rec-card__price .unit {
+      font-size: 14px; font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-left: 1px;
+    }
+    .rec-card__meta {
+      font-size: 13.5px; color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      margin-bottom: 14px; line-height: 1.55;
+      font-weight: 500;
+    }
+    .rec-card__meta .dot {
+      display: inline-block; width: 2px; height: 2px; border-radius: 50%;
+      background: currentColor; opacity: 0.5;
+      margin: 0 6px; vertical-align: middle;
+    }
+
+    /* AI 친구 한마디 — HERO */
+    .rec-card__friend {
+      display: flex; gap: 11px; align-items: flex-start;
+      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
+      border-radius: 10px;
+      padding: 12px 13px 13px;
+      margin-bottom: 12px;
+    }
+    .rec-card__friend.empty {
+      background: var(--color-bg-subtle);
+    }
+    .rec-card__friend-avatar {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--color-brand-primary);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+      margin-top: 1px;
+    }
+    .rec-card__friend.empty .rec-card__friend-avatar {
+      background: var(--color-text-tertiary);
+      box-shadow: none;
+    }
+    .rec-card__friend-body { flex: 1; min-width: 0; }
+    .rec-card__friend-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-brand-primary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .rec-card__friend.empty .rec-card__friend-label {
+      color: var(--color-text-tertiary);
+    }
+    .rec-card__friend-text {
+      font-size: 15px; line-height: 1.6;
+      color: var(--color-text-primary);
+      white-space: pre-line;
+      letter-spacing: -0.005em;
+      font-weight: 500;
+    }
+    .rec-card__friend.empty .rec-card__friend-text {
+      font-style: italic; color: var(--color-text-tertiary);
+      font-weight: 400;
+    }
+    .spinner-mini {
+      display: inline-block; width: 10px; height: 10px;
+      border: 1.5px solid var(--color-border-default);
+      border-top-color: var(--color-text-tertiary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px; vertical-align: -1px;
+    }
+
+    .rec-card__footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      padding-top: 14px;
+      border-top: 1px dashed var(--color-border-strong);
+    }
+    .rec-card__transit {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600;
+      color: var(--blue-700);
+      font-feature-settings: 'tnum';
+    }
+    .rec-card__transit strong {
+      font-size: 14px; font-weight: 700;
+    }
+    .commute-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 11px;
+      background: var(--blue-100);
+      color: var(--blue-700);
+      border-radius: var(--radius-pill);
+      font-size: 12.5px; font-weight: 600;
+      font-feature-settings: 'tnum';
+    }
+    .rec-card__reason {
+      font-size: 12.5px;
+      color: var(--color-text-secondary);
+      font-weight: 500;
+      text-align: right;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       [3] 버킷 섹션 — 접힘 상태 정보 노출
+       ════════════════════════════════════════════════════════ */
+    .bucket-divider {
+      font-size: 13px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+      padding: 18px 4px 10px;
+    }
+    .bucket-section {
+      background: white;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-lg);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 200ms, box-shadow 200ms;
+    }
+    .bucket-section:hover { box-shadow: var(--shadow-sm); }
+    .bucket-section:hover { border-color: var(--color-border-strong); }
+    .bucket-section.open { border-color: var(--color-border-strong); }
+    .bucket-head {
+      padding: 16px 18px; cursor: pointer; user-select: none;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .bucket-head__top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+    }
+    .bucket-head__title {
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .bucket-head__time {
+      font-size: 17px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.01em;
+    }
+    .bucket-head__cnt {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+    }
+    .bucket-head__chev {
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-tertiary);
+      transition: transform 200ms;
+    }
+    .bucket-section.open .bucket-head__chev { transform: rotate(180deg); }
+    .bucket-head__bottom {
+      display: flex; align-items: center;
+      gap: 12px; flex-wrap: wrap;
+      font-feature-settings: 'tnum';
+    }
+    .bucket-head__price {
+      font-size: 13.5px;
+      color: var(--color-text-secondary);
+      font-weight: 500;
+    }
+    .bucket-head__price strong {
+      font-weight: 700; color: var(--color-text-primary);
+      font-size: 14.5px;
+    }
+    .bucket-head__price .price-sep {
+      margin: 0 4px; color: var(--color-text-tertiary);
+    }
+    .bucket-head__pts {
+      display: flex; gap: 5px; flex-wrap: wrap;
+    }
+    .bucket-pt-chip {
+      display: inline-flex; align-items: baseline; gap: 4px;
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      padding: 3px 9px; font-size: 12.5px;
+      color: var(--color-text-secondary);
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+    }
+    .bucket-pt-chip strong {
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+    .bucket-head__ratio {
+      height: 4px;
+      background: var(--color-bg-muted);
+      border-radius: 2px; overflow: hidden;
+    }
+    .bucket-head__ratio-fill {
+      height: 100%;
+      background: var(--color-brand-primary);
+      opacity: 0.55; border-radius: 2px;
+    }
+    .bucket-body {
+      display: none;
+      border-top: 1.5px solid var(--color-border-strong);
+      background: var(--color-bg-subtle);
+      padding: 12px;
+    }
+    .bucket-section.open .bucket-body { display: block; }
+    .bucket-pt-label {
+      font-size: 12px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+      margin: 14px 2px 8px;
+    }
+    .bucket-pt-label:first-child { margin-top: 4px; }
+    .bucket-pt-label:first-child { margin-top: 4px; }
+
+    /* 일반 list-card (버킷 안) */
+    .list-card {
+      background: white;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 10px;
+      padding: 13px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: box-shadow 200ms, border-color 200ms;
+    }
+    .list-card:hover { border-color: var(--color-text-tertiary); }
+    .list-card:hover { box-shadow: var(--shadow-md); }
+    .list-card:last-child { margin-bottom: 0; }
+    .list-card__top {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 10px; margin-bottom: 4px;
+    }
+    .list-card__name {
+      font-size: 15px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+    }
+    .list-card__name .pt {
+      font-size: 13px; font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-left: 6px;
+    }
+    .list-card__price {
+      font-size: 16px; font-weight: 700;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.005em;
+    }
+    .list-card__meta {
+      font-size: 13px; color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      margin-bottom: 8px;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+    .list-card__row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .list-card__comment {
+      font-size: 13px; line-height: 1.6;
+      color: var(--color-text-primary);
+      background: var(--color-brand-bg-subtle);
+      border-left: 3px solid var(--color-brand-primary);
+      padding: 8px 11px; border-radius: 5px;
+      margin-top: 8px;
+      white-space: pre-line;
+      font-weight: 500;
+    }
+    .list-card__comment.empty {
+      background: var(--color-bg-subtle);
+      border-color: var(--color-border-default);
+      color: var(--color-text-tertiary);
+      font-style: italic;
+    }
+
+    .error-box {
+      background: white; padding: 24px;
+      border: 1px solid var(--color-brand-primary);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .error-box h2 {
+      color: var(--color-brand-primary); margin-bottom: 12px;
+      font-size: 18px; font-weight: 700;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       지도 핀 (디자인 시스템 §4 핀 체계)
+       ════════════════════════════════════════════════════════ */
+    .pin {
+      padding: 4px 10px;
+      background: var(--color-pin-default-bg);
+      border: 1px solid var(--color-pin-default-border);
+      border-radius: var(--radius-pill);
+      font-size: 12px; font-weight: 600;
+      color: var(--color-pin-default-text);
+      white-space: nowrap; cursor: pointer;
+      box-shadow: var(--shadow-md);
+      font-family: 'Pretendard', system-ui, sans-serif;
+      font-feature-settings: 'tnum';
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .pin:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    .pin-best {
+      background: var(--color-pin-recommended-bg);
+      color: var(--color-pin-recommended-text);
+      border-color: var(--color-pin-recommended-bg);
+      box-shadow: var(--shadow-pin-recommended);
+    }
+    .pin-workplace {
+      background: var(--color-pin-selected-bg);
+      color: var(--color-pin-selected-text);
+      border: 2px solid var(--color-brand-primary);
+      padding: 6px 14px;
+      font-size: 12.5px; font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .pin-multi-mark {
+      display: inline-block;
+      background: white; color: var(--color-text-tertiary);
+      font-size: 9px; font-weight: 700;
+      padding: 0 4px;
+      border-radius: 3px;
+      margin-left: 5px;
+      font-feature-settings: 'tnum';
+    }
+    .pin-best .pin-multi-mark {
+      background: rgba(255,255,255,0.25);
+      color: white;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       [4] 호버 툴팁
+       ════════════════════════════════════════════════════════ */
+    .pin-tooltip {
+      position: fixed; z-index: 900;
+      width: 310px;
+      background: white;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 12px;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      cursor: pointer;
+      transition: opacity 100ms ease;
+    }
+    .pin-tooltip.hidden { display: none; }
+    .pin-tooltip__head { padding: 14px 16px 0; }
+    .pin-tooltip__top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 3px;
+    }
+    .pin-tooltip__name {
+      font-size: 16px; font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+    .pin-tooltip__badge {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.05em;
+      background: var(--color-brand-primary);
+      color: white;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    .pin-tooltip__meta {
+      font-size: 13px; color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+    .pin-tooltip__tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--color-border-default);
+      padding: 0 16px;
+    }
+    .pin-tooltip__tab {
+      padding: 10px 0; margin-right: 18px;
+      font-size: 13.5px; font-weight: 600;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 120ms;
+      font-feature-settings: 'tnum';
+    }
+    .pin-tooltip__tab:hover { color: var(--color-text-secondary); }
+    .pin-tooltip__tab.active {
+      color: var(--color-brand-primary);
+      border-bottom-color: var(--color-brand-primary);
+    }
+    .pin-tooltip__body { padding: 12px 16px 0; }
+    .pin-tooltip__metric-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .pin-tooltip__metric {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .pin-tooltip__metric-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 1px;
+    }
+    .pin-tooltip__metric-val {
+      font-size: 17px; font-weight: 700;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.01em;
+    }
+    .pin-tooltip__metric-val .unit {
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-left: 2px;
+    }
+    .pin-tooltip__metric-sub {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      margin-top: 2px;
+      font-weight: 500;
+    }
+    .pin-tooltip__comment {
+      font-size: 13px; line-height: 1.6;
+      color: var(--color-text-primary);
+      background: var(--color-brand-bg-subtle);
+      border-left: 3px solid var(--color-brand-primary);
+      padding: 9px 12px;
+      border-radius: 5px;
+      margin-bottom: 14px;
+      white-space: pre-line;
+      font-weight: 500;
+    }
+    .pin-tooltip__comment.empty {
+      background: var(--color-bg-subtle);
+      border-color: var(--color-border-default);
+      color: var(--color-text-tertiary);
+      font-style: italic;
+    }
+    .pin-tooltip__cta {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--color-bg-subtle);
+      border-top: 1.5px solid var(--color-border-strong);
+      font-size: 13.5px; font-weight: 700;
+      color: var(--color-text-primary);
+      transition: background 120ms, color 120ms;
+    }
+    .pin-tooltip:hover .pin-tooltip__cta {
+      background: var(--color-brand-bg-subtle);
+      color: var(--color-brand-primary);
+    }
+    .pin-tooltip__cta-arrow {
+      font-size: 14px; transition: transform 200ms;
+    }
+    .pin-tooltip:hover .pin-tooltip__cta-arrow {
+      transform: translateX(3px);
+    }
+
+    /* ════════════════════════════════════════════════════════
+       [6] 상세 패널
+       ════════════════════════════════════════════════════════ */
+    .dp__header {
+      position: sticky; top: 0; z-index: 10;
+      background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
+    }
+    .dp__back {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 5px 11px;
+      font-size: 12.5px; font-weight: 600;
+      color: white;
+      cursor: pointer; font-family: inherit;
+      transition: all 120ms;
+      backdrop-filter: blur(4px);
+    }
+    .dp__back:hover {
+      background: rgba(255, 255, 255, 0.28);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    .dp__name {
+      font-size: 17px; font-weight: 700;
+      letter-spacing: -0.01em;
+      color: white;
+      flex: 1; min-width: 0;
+    }
+    .dp__badge {
+      font-size: 10.5px; font-weight: 700;
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--color-brand-primary);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.05em;
+    }
+
+    .dp__hero {
+      padding: 18px 16px 16px;
+      background: white;
+      border-bottom: 1.5px solid var(--color-border-strong);
+    }
+    .dp__meta {
+      font-size: 13.5px;
+      color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .dp__commute {
+      font-size: 14px; font-weight: 700;
+      color: var(--blue-700);
+      font-feature-settings: 'tnum';
+      margin-bottom: 14px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--blue-100);
+      padding: 7px 13px;
+      border-radius: var(--radius-pill);
+    }
+    .dp__friend {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
+      border-radius: 10px;
+      padding: 13px 14px 14px;
+    }
+    .dp__friend.empty {
+      background: var(--color-bg-subtle);
+    }
+    .dp__friend-body { flex: 1; min-width: 0; }
+    .dp__friend-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-brand-primary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .dp__friend.empty .dp__friend-label {
+      color: var(--color-text-tertiary);
+    }
+    .dp__friend-avatar {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--color-brand-primary);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+      margin-top: 1px;
+    }
+    .dp__friend.empty .dp__friend-avatar {
+      background: var(--color-text-tertiary);
+      box-shadow: none;
+    }
+    .dp__friend-text {
+      font-size: 15px; line-height: 1.6;
+      color: var(--color-text-primary);
+      font-weight: 500;
+      white-space: pre-line;
+      letter-spacing: -0.005em;
+    }
+    .dp__friend.empty .dp__friend-text {
+      font-style: italic;
+      color: var(--color-text-tertiary);
+      font-weight: 400;
+    }
+
+    .dp__section {
+      border-bottom: 1px solid var(--color-border-strong);
+    }
+    .dp__section:last-child { border-bottom: none; }
+    .dp__section-head {
+      padding: 16px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; user-select: none;
+      transition: background 120ms;
+    }
+    .dp__section-head:hover { background: var(--color-bg-subtle); }
+    .dp__section-icon {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-secondary);
+      transition: all 200ms;
+    }
+    .dp__section-icon svg { width: 17px; height: 17px; }
+    .dp__section-titlebox {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .dp__section-title {
+      font-size: 14.5px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: -0.005em;
+    }
+    .dp__section-preview {
+      font-size: 13px; color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .dp__section-chev {
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-tertiary);
+      transition: transform 200ms;
+      flex-shrink: 0;
+    }
+    .dp__section.open .dp__section-chev { transform: rotate(180deg); }
+    .dp__section.open .dp__section-icon {
+      background: var(--color-brand-bg-subtle);
+      color: var(--color-brand-primary);
+    }
+    .dp__section-body { display: none; padding: 0 16px 16px; }
+    .dp__section.open .dp__section-body { display: block; }
+
+    /* 통근 경로 */
+    .dp-route {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: 10px;
+      padding: 11px 13px;
+      margin-bottom: 6px;
+    }
+    .dp-route.best {
+      background: white;
+      border-color: var(--color-brand-primary);
+      border-width: 1.5px;
+    }
+    .dp-route__head {
+      display: flex; align-items: baseline; gap: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+    }
+    .dp-route__time {
+      font-size: 18px; font-weight: 700;
+      color: var(--color-brand-primary);
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.01em;
+    }
+    .dp-route__time .unit {
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-left: 1px;
+    }
+    .dp-route__mode {
+      font-size: 13px; color: var(--color-text-primary);
+      flex: 1; font-weight: 600;
+    }
+    .dp-route__chev {
+      font-size: 11px; color: var(--color-text-tertiary);
+      transition: transform 200ms;
+    }
+    .dp-route__body { display: none; padding-top: 8px; }
+    .dp-route__body.open { display: block; }
+    .dp-route.best .dp-route__chev { transform: rotate(180deg); }
+
+    .dp-step {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; font-size: 13px;
+      color: var(--color-text-primary);
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .dp-step:last-child { border-bottom: none; }
+    .dp-step-type {
+      flex-shrink: 0;
+      min-width: 44px; padding: 2px 0;
+      text-align: center;
+      border-radius: 4px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.02em;
+      background: var(--blue-100);
+      color: var(--blue-700);
+    }
+    .dp-step-type.walk { background: var(--color-bg-muted); color: var(--color-text-secondary); }
+    .dp-step-type.bus { background: var(--green-100); color: var(--green-700); }
+    .dp-step-type.subway { background: var(--blue-100); color: var(--blue-700); }
+    .dp-step-info { flex: 1; min-width: 0; line-height: 1.4; }
+    .dp-step-line { font-weight: 600; color: var(--color-text-primary); font-size: 13.5px; }
+    .dp-step-sta { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; font-weight: 500; }
+    .dp-step-time {
+      flex-shrink: 0; font-weight: 700;
+      color: var(--color-text-primary);
+      font-size: 12.5px;
+      font-feature-settings: 'tnum';
+    }
+    .dp-route-more-btn {
+      width: 100%;
+      padding: 9px;
+      background: white;
+      border: 1px solid var(--color-border-default);
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 4px;
+      transition: all 120ms;
+    }
+    .dp-route-more-btn:hover {
+      background: var(--color-bg-subtle);
+      border-color: var(--color-border-strong);
+    }
+    #dp-routes-extra { display: none; }
+    #dp-routes-extra.open { display: block; }
+
+    /* 건물 정보 그리드 */
+    .dp-building-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+    }
+    .dp-bld-item { display: flex; flex-direction: column; gap: 1px; }
+    .dp-bld-label {
+      font-size: 11.5px; font-weight: 700;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.02em;
+    }
+    .dp-bld-value {
+      font-size: 14px; color: var(--color-text-primary);
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+    }
+
+    /* KPI */
+    .dp-kpis {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-bottom: 12px;
+    }
+    .dp-kpi {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: 8px;
+      padding: 11px 8px;
+      text-align: center;
+    }
+    .dp-kpi-label {
+      font-size: 11.5px; color: var(--color-text-secondary);
+      margin-bottom: 5px;
+      line-height: 1.3;
+      letter-spacing: 0;
+      font-weight: 600;
+    }
+    .dp-kpi-value {
+      font-size: 17px; font-weight: 700;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.005em;
+    }
+    .clr-up   { color: #C0392B; }
+    .clr-dn   { color: #2471A3; }
+    .clr-flat { color: var(--color-text-secondary); }
+
+    /* 차트 */
+    .dp-pyeong-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .dp-tab {
+      padding: 5px 13px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border-strong);
+      font-size: 12.5px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      background: white;
+      color: var(--color-text-secondary);
+      font-feature-settings: 'tnum';
+      transition: all 100ms;
+    }
+    .dp-tab:hover { border-color: var(--color-text-tertiary); }
+    .dp-tab.active {
+      background: var(--color-brand-primary);
+      color: white;
+      border-color: var(--color-brand-primary);
+    }
+    .dp-chart-legend {
+      display: flex; gap: 14px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+    .dp-legend-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-right: 3px;
+      vertical-align: middle;
+    }
+    .dp-chart-wrap {
+      position: relative; height: 190px;
+    }
+
+    /* 실거래 테이블 */
+    .dp-trade-group { margin-bottom: 14px; }
+    .dp-trade-group:last-child { margin-bottom: 0; }
+    .dp-trade-group-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: 0;
+      margin-bottom: 6px;
+      padding-bottom: 5px;
+      border-bottom: 1.5px solid var(--color-border-strong);
+    }
+    .dp-trade-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 13px;
+      font-feature-settings: 'tnum';
+    }
+    .dp-trade-table th {
+      padding: 7px 6px; font-size: 11.5px;
+      color: var(--color-text-primary);
+      font-weight: 700;
+      letter-spacing: 0;
+      text-align: left;
+      border-bottom: 1.5px solid var(--color-border-strong);
+    }
+    .dp-trade-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--color-border-default);
+      color: var(--color-text-primary);
+      font-weight: 500;
+    }
+    .dp-trade-amount {
+      font-weight: 700; color: var(--color-text-primary);
+    }
+
+    /* POI */
+    .dp-poi-category {
+      font-size: 11.5px; font-weight: 700;
+      color: var(--color-text-primary);
+      letter-spacing: 0;
+      margin: 14px 0 6px;
+      padding-bottom: 5px;
+      border-bottom: 1.5px solid var(--color-border-strong);
+    }
+    .dp-poi-category:first-child { margin-top: 0; }
+    .dp-poi-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+      font-size: 14px;
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .dp-poi-row:last-child { border-bottom: none; }
+    .dp-poi-name {
+      flex: 1; color: var(--color-text-primary);
+    }
+    .dp-poi-dist {
+      font-size: 12.5px;
+      color: var(--color-text-secondary);
+      white-space: nowrap;
+      font-feature-settings: 'tnum';
+      font-weight: 500;
+    }
+
+
+    /* ── 텍스트 색상 강화 (회색 → 더 진하게) ─────────────── */
+    /* tertiary: gray-500 → gray-600 (눈에 거의 안 보이던 톤 강화) */
+    html, body {
+      --color-text-tertiary: var(--gray-600);
+      --color-text-secondary: var(--gray-800);
+    }
+
+    /* ── 입체감을 위한 패널 분리 ─────────────────────────── */
+    .stats-panel,
+    .bucket-section,
+    .rec-card,
+    .list-card {
+      background: white;
+    }
+    .bucket-body {
+      background: #FAF9F7;  /* 매우 살짝 톤 다운 */
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 로딩 오버레이 ── -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-head">
+    <h2 id="loading-title">맞춤 매물 찾는 중…</h2>
+    <p id="loading-subtitle">통근시간 분석 + AI 코멘트가 끝나는 동안 잠깐 음악 한 곡 어떠세요</p>
+  </div>
+
+  <div class="progress-steps" id="progress-steps">
+    <div class="progress-step done" data-step="search">
+      <div class="progress-step__dot"><span class="pn">1</span></div>
+      <div class="progress-step__label">매물 수집</div>
+    </div>
+    <div class="progress-connector in-progress" data-conn="1"></div>
+    <div class="progress-step active" data-step="commute">
+      <div class="progress-step__dot"><span class="pn">2</span></div>
+      <div class="progress-step__label">통근 분석</div>
+    </div>
+    <div class="progress-connector" data-conn="2"></div>
+    <div class="progress-step" data-step="ai">
+      <div class="progress-step__dot"><span class="pn">3</span></div>
+      <div class="progress-step__label">AI 코멘트</div>
+    </div>
+  </div>
+
+  <div class="video-row">
+    <div class="video-stage">
+      <video id="video-current" autoplay muted playsinline></video>
+      <video id="video-next" muted playsinline preload="auto" style="display:none;"></video>
+      <div class="video-title" id="video-title"></div>
+    </div>
+    <div class="video-side">
+      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" aria-label="소리 켜기">
+        <span class="mute-icon" id="mute-icon">🔇</span>
+        <span class="mute-text" id="mute-text">소리 켜기</span>
+      </button>
+      <div class="playlist">
+        <div class="playlist-head">Playlist <span class="pl-count" id="pl-count"></span></div>
+        <div class="playlist-items" id="playlist-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="done-btn" id="done-btn" onclick="showResults()">
+    결과 보기 <span class="arrow">→</span>
+  </button>
+</div>
+
+<header>
+  <a href="/" class="back-link">← 처음으로</a>
+  <h1>BADUGI</h1>
+  <a href="/search.html" class="back-link">조건 다시 입력</a>
+</header>
+
+<main id="main" style="display:none;">
+  <div class="summary-bar" id="summary"></div>
+  <div class="result-layout">
+    <div class="cards-panel" id="cards-panel"></div>
+    <div class="map-panel">
+      <div id="map"></div>
+    </div>
+  </div>
+</main>
+
+<!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
+<div class="pin-tooltip hidden" id="pin-tooltip" onclick="tooltipDetailClick()">
+  <div class="pin-tooltip__head">
+    <div class="pin-tooltip__top">
+      <span class="pin-tooltip__name" id="tt-apt-nm"></span>
+      <span class="pin-tooltip__badge" id="tt-badge" style="display:none">추천</span>
+    </div>
+    <div class="pin-tooltip__meta" id="tt-meta"></div>
+  </div>
+  <div class="pin-tooltip__tabs" id="tt-pt-tabs" style="display:none"></div>
+  <div class="pin-tooltip__body">
+    <div class="pin-tooltip__metric-row">
+      <div class="pin-tooltip__metric">
+        <span class="pin-tooltip__metric-label">통근</span>
+        <span class="pin-tooltip__metric-val" id="tt-transit-val"></span>
+        <span class="pin-tooltip__metric-sub" id="tt-transit-sub"></span>
+      </div>
+      <div class="pin-tooltip__metric">
+        <span class="pin-tooltip__metric-label" id="tt-price-label">가격대</span>
+        <span class="pin-tooltip__metric-val" id="tt-price-val"></span>
+        <span class="pin-tooltip__metric-sub" id="tt-price-sub"></span>
+      </div>
+    </div>
+    <div class="pin-tooltip__comment" id="tt-comment" style="display:none"></div>
+  </div>
+  <div class="pin-tooltip__cta">
+    <span>상세 보기</span>
+    <span class="pin-tooltip__cta-arrow">→</span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  영상 플레이리스트
+// ═══════════════════════════════════════════════════════
+const VIDEOS = [
+  '어이(크레용팝).mp4','lnsomnia(휘성).mp4','Love is(트라이앵글).mp4',
+  'No1(보아).mp4','Rollin (브레이브걸스).mp4','Shake It(씨스타).mp4',
+  '우리집(2PM).mp4','Hold Up (Neo, Jeiff).mp4',
+];
+const VIDEO_BASE = '/static/videos/';
+const vCurr = document.getElementById('video-current');
+const vNext = document.getElementById('video-next');
+const vTitle = document.getElementById('video-title');
+let currentIdx = 0; let playedRecently = new Set();
+function shortName(f){ return f.replace(/\.mp4$/,''); }
+function pickRandomNext(){
+  if(playedRecently.size>=VIDEOS.length-1) playedRecently.clear();
+  let c=VIDEOS.map((_,i)=>i).filter(i=>i!==currentIdx&&!playedRecently.has(i));
+  if(!c.length) c=VIDEOS.map((_,i)=>i).filter(i=>i!==currentIdx);
+  return c[Math.floor(Math.random()*c.length)];
+}
+function playVideo(idx){
+  currentIdx=idx; playedRecently.add(idx);
+  vCurr.src=VIDEO_BASE+encodeURIComponent(VIDEOS[idx]); vCurr.load(); vCurr.play().catch(()=>{});
+  vTitle.textContent=shortName(VIDEOS[idx]);
+  vNext.src=VIDEO_BASE+encodeURIComponent(VIDEOS[pickRandomNext()]); vNext.load();
+  renderPlaylist();
+}
+vCurr.addEventListener('ended',()=>playVideo(pickRandomNext()));
+function toggleMute(){
+  const btn=document.getElementById('mute-btn');
+  const icon=document.getElementById('mute-icon'); const text=document.getElementById('mute-text');
+  if(vCurr.muted){ vCurr.muted=false; vNext.muted=false; icon.textContent='🔊'; text.textContent='소리 켜짐'; btn.classList.add('unmuted'); }
+  else{ vCurr.muted=true; vNext.muted=true; icon.textContent='🔇'; text.textContent='소리 켜기'; btn.classList.remove('unmuted'); }
+}
+function renderPlaylist(){
+  const plCount = document.getElementById('pl-count');
+  if(plCount) plCount.textContent = VIDEOS.length+'곡';
+  document.getElementById('playlist-items').innerHTML=VIDEOS.map((name,i)=>`
+    <div class="playlist-item ${i===currentIdx?'active':''}" onclick="playVideo(${i})">
+      <span class="pl-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="pl-glyph">${i===currentIdx?'▶':''}</span>
+      <span>${shortName(name)}</span>
+    </div>`).join('');
+}
+playVideo(0);
+
+// ═══════════════════════════════════════════════════════
+//  검색 파라미터 + 전역 상태
+// ═══════════════════════════════════════════════════════
+const params = new URLSearchParams(location.search);
+const reqBody = {
+  workplace_address: params.get('workplace_address'),
+  max_price: parseInt(params.get('max_price')),
+  max_minutes: parseInt(params.get('max_minutes')),
+  pyeong_types: params.get('pyeong_types').split(','),
+};
+if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'));
+
+let resultData = null;
+let kakaoMap = null;
+let overlays = [];
+let panelMode = 'list';   // 'list' | 'detail'
+let detailChart = null;
+let detailChartData = null;
+let currentTabKey = null;
+let currentDetailCard = null;
+
+// 핀 pyeong 레이블 (검색 조건 첫 번째)
+const pyeongLabel = (reqBody.pyeong_types[0]||'')
+  .replace('평대+','평+').replace('평대','평').replace('10평미만','<10평');
+
+// ═══════════════════════════════════════════════════════
+//  헬퍼 함수
+// ═══════════════════════════════════════════════════════
+function fmtPrice(manwon){
+  if(!manwon) return '-';
+  const e=Math.floor(manwon/10000), m=manwon%10000;
+  if(e&&m) return `${e}억 ${m.toLocaleString()}만`;
+  if(e)    return `${e}억`;
+  return `${m.toLocaleString()}만`;
+}
+function shortPrice(manwon){
+  if(!manwon) return '-';
+  const e=Math.floor(manwon/10000);
+  const sub=Math.round((manwon%10000)/1000);
+  return sub===0 ? `${e}억` : `${e}.${sub}억`;
+}
+function fmtPct(v){
+  if(v==null) return '-';
+  return (v>0?'+':'')+v+'%';
+}
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════
+//  검색 실행
+// ═══════════════════════════════════════════════════════
+let kakaoReady = new Promise(resolve => { kakao.maps.load(resolve); });
+
+// 카카오맵 프리로드 — API 응답 기다리는 동안 SDK 초기화 시작
+kakaoReady.then(()=>{
+  // 미리 container에 지도 생성 시작 (wp 좌표는 나중에 pan)
+  // 아직 container가 display:none이라 실제 렌더는 showResults()에서 initMap()이 담당
+});
+
+async function runSearch(){
+  try{
+    const res = await fetch('/api/search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
+      body: JSON.stringify(reqBody),
+    });
+    if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
+    resultData = await res.json();
+    onSearchDone();
+    // LLM 폴링 즉시 시작 — 사용자가 음악 보는 동안 백그라운드에서 코멘트 미리 받아둠
+    // (백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음)
+    if(resultData.llm_pending){
+      setTimeout(pollComments, 2000);  // 첫 폴링까지 2초 (백그라운드 시작 시간 여유)
+    }
+  } catch(err){
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('main').style.display='flex';
+    document.getElementById('cards-panel').innerHTML=`
+      <div class="error-box"><h2>분석 중 오류</h2><p>${err.message}</p>
+      <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
+  }
+}
+
+// LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
+// 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
+async function pollComments(){
+  if(!resultData) return;
+  try{
+    const pendingCards = resultData.cards.filter(c=>!c.friend_comment);
+    if(!pendingCards.length) return;
+    // URL 길이 한계 대비: 최대 80개씩 끊어서 보냄
+    const CHUNK = 80;
+    let allComments = {};
+    for(let i=0; i<pendingCards.length; i+=CHUNK){
+      const slice = pendingCards.slice(i, i+CHUNK);
+      const keys = slice.map(c=>`${c.apt_seq}:${c.pyeong_type||''}`).join(',');
+      const res = await fetch(`/api/comments?wp_id=${resultData.wp_id}&keys=${encodeURIComponent(keys)}`,
+        {headers:{'ngrok-skip-browser-warning':'1'}});
+      Object.assign(allComments, await res.json());
+    }
+
+    let updated = false;
+    resultData.cards.forEach(c=>{
+      const ck = `${c.apt_seq}:${c.pyeong_type||''}`;
+      if(allComments[ck] && !c.friend_comment){
+        c.friend_comment = allComments[ck].comment;
+        updated = true;
+      }
+    });
+    if(updated && panelMode==='list') renderCards(resultData);
+
+    // 남은 게 있으면 또 폴링 (5초 간격으로 빠르게)
+    const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
+    if(remaining) setTimeout(pollComments, 5000);
+  } catch(e){
+    console.warn('댓글 폴링 실패', e);
+    setTimeout(pollComments, 10000);
+  }
+}
+
+function onSearchDone(){
+  // 모든 진행 단계 완료 표시 (AI 코멘트는 백그라운드 계속)
+  const steps = document.querySelectorAll('.progress-step');
+  steps.forEach(s=>{ s.classList.remove('active'); s.classList.add('done'); });
+  // 마지막 단계는 active 유지 (AI가 백그라운드로 계속 돌아감)
+  if(steps[2]){ steps[2].classList.remove('done'); steps[2].classList.add('active'); }
+  document.querySelectorAll('.progress-connector').forEach((c,i)=>{
+    c.classList.remove('in-progress');
+    if(i===0) c.classList.add('done');
+    else c.classList.add('in-progress');  // 2번째 커넥터는 진행 중 애니메이션 유지
+  });
+
+  document.getElementById('loading-title').textContent = '분석 완료';
+  document.getElementById('loading-title').classList.add('done');
+  const cnt = resultData.cards.length;
+  document.getElementById('loading-subtitle').innerHTML =
+    `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요. AI가 코멘트를 마저 다듬는 동안 결과를 먼저 살펴보세요.`;
+  document.getElementById('done-btn').classList.add('show');
+}
+function showResults(){
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('main').style.display='flex';
+  vCurr.pause(); vNext.pause();
+  renderSummary(resultData);
+  renderCards(resultData);
+  initMap(resultData);
+}
+function renderSummary(data){
+  document.getElementById('summary').innerHTML=`
+    <strong>${escHtml(data.workplace.address_norm)}</strong>
+    <span class="sep">|</span>
+    <span>${fmtPrice(reqBody.max_price)} 이하</span>
+    <span class="sep">·</span>
+    <span>${reqBody.max_minutes}분 이내</span>
+    <span class="sep">·</span>
+    <span>${reqBody.pyeong_types.join(', ')}</span>
+    ${reqBody.min_kaptdaCnt?`<span class="sep">·</span><span>${reqBody.min_kaptdaCnt.toLocaleString()}세대 이상</span>`:''}
+    <span class="stats">총 ${(data.stats.total||0).toLocaleString()}개 (평형 분리)</span>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  통계 패널 (인사이트 3줄)
+// ═══════════════════════════════════════════════════════
+function renderStatsPanel(data){
+  const s = data.stats || {};
+  if(!s.total) return '';
+
+  // 통근 × 평균가 — 미니 가로 막대 (최저 버킷만 빨강 강조)
+  let curveHtml = '';
+  if(s.commute_curve && s.commute_curve.length){
+    const maxPrice = Math.max(...s.commute_curve.map(b=>b.avg_price||0));
+    const minPrice = Math.min(...s.commute_curve.filter(b=>b.avg_price).map(b=>b.avg_price));
+    const rows = s.commute_curve.map(b=>{
+      const pct = maxPrice ? Math.max(8, Math.round((b.avg_price||0)/maxPrice*100)) : 0;
+      const isCheap = b.avg_price === minPrice;
+      // 라벨 정리: "30분 이내"→"≤30분", "50분 초과"→">50분"
+      const lbl = (b.label||'')
+        .replace(/^(\d+)분 이내$/, '≤$1분')
+        .replace(/^(\d+)분 초과$/, '>$1분')
+        .replace(/^(\d+)~(\d+)분$/, '$1~$2분');
+      return `<div class="minibar-row ${isCheap?'cheap':''}">
+        <span class="minibar-row__label num">${escHtml(lbl)}</span>
+        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%"></div></div>
+        <span class="minibar-row__value num">${shortPrice(b.avg_price).replace('억','')}</span>
+      </div>`;
+    }).join('');
+    curveHtml = `<div class="stats-block">
+      <div class="stats-block__label">통근시간 × 평균가<span class="stats-block__label-helper">단위: 억</span></div>
+      ${rows}
+    </div>`;
+  }
+
+  // 평형 분포 — 컴팩트 그리드
+  let ptHtml = '';
+  if(s.pyeong_breakdown && s.pyeong_breakdown.length){
+    const cells = s.pyeong_breakdown.map(p=>`
+      <div class="pyeong-grid__cell">
+        <div class="pyeong-grid__pt">${escHtml(p.pyeong_type)}</div>
+        <div class="pyeong-grid__val num">${shortPrice(p.avg_price)}</div>
+        <div class="pyeong-grid__cnt num">${p.count}건</div>
+      </div>`).join('');
+    ptHtml = `<div class="stats-block">
+      <div class="stats-block__label">평형 분포 · 평균가</div>
+      <div class="pyeong-grid">${cells}</div>
+    </div>`;
+  }
+
+  // 연식 분포 — stacked bar + legend
+  let ageHtml = '';
+  if(s.age_breakdown){
+    const a = s.age_breakdown;
+    const total = (a.new_10||0) + (a.mid_20||0) + (a.old||0) + (a.unknown||0);
+    if(total){
+      const pct = (n)=>(n||0)/total*100;
+      const segs = [];
+      if(a.new_10)  segs.push(`<div class="stacked-bar__seg s-new" style="width:${pct(a.new_10)}%"></div>`);
+      if(a.mid_20)  segs.push(`<div class="stacked-bar__seg s-mid" style="width:${pct(a.mid_20)}%"></div>`);
+      if(a.old)     segs.push(`<div class="stacked-bar__seg s-old" style="width:${pct(a.old)}%"></div>`);
+      if(a.unknown) segs.push(`<div class="stacked-bar__seg s-unknown" style="width:${pct(a.unknown)}%"></div>`);
+      const legend = [];
+      if(a.new_10)  legend.push(`<span class="stacked-legend__item"><span class="stacked-legend__dot s-new"></span>신축 10년↓ <strong class="stacked-legend__count num">${a.new_10}</strong></span>`);
+      if(a.mid_20)  legend.push(`<span class="stacked-legend__item"><span class="stacked-legend__dot s-mid"></span>준신축 20년↓ <strong class="stacked-legend__count num">${a.mid_20}</strong></span>`);
+      if(a.old)     legend.push(`<span class="stacked-legend__item"><span class="stacked-legend__dot s-old"></span>구축 <strong class="stacked-legend__count num">${a.old}</strong></span>`);
+      if(a.unknown) legend.push(`<span class="stacked-legend__item"><span class="stacked-legend__dot s-unknown"></span>미상 <strong class="stacked-legend__count num">${a.unknown}</strong></span>`);
+      ageHtml = `<div class="stats-block">
+        <div class="stats-block__label">연식 분포</div>
+        <div class="stacked-bar">${segs.join('')}</div>
+        <div class="stacked-legend">${legend.join('')}</div>
+      </div>`;
+    }
+  }
+
+  return `<div class="stats-panel">
+    <div class="stats-panel__top">
+      <span class="stats-panel__count num">${s.total}<span class="unit">개</span></span>
+      <span class="stats-panel__avg">평균 <strong class="num">${shortPrice(s.avg_price)}</strong></span>
+    </div>
+    ${curveHtml}
+    ${ptHtml}
+    ${ageHtml}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  카드 목록 렌더
+// ═══════════════════════════════════════════════════════
+function fmtTradeAmount(manwon){
+  if(!manwon) return '-';
+  const e=Math.floor(manwon/10000);
+  const rem=manwon%10000;
+  const chon=Math.round(rem/1000);
+  if(chon===0) return `${e}억`;
+  if(chon===10) return `${e+1}억`;
+  return `${e}억 ${chon}천`;
+}
+
+function renderCardRecentTrades(trades){
+  if(!trades||!trades.length) return '<div class="card-no-trade">3개월 내 거래 없음</div>';
+  return trades.map(t=>`
+    <div class="card-recent-row">
+      <span class="rr-amount">${fmtTradeAmount(t.amount)}</span>
+      <span>${t.pyeong}평 ${t.floor}층</span>
+      <span class="rr-dim">${t.date}</span>
+    </div>`).join('');
+}
+
+// 카드 키 (apt_seq + pyeong_type)
+function cardKey(c){ return `${c.apt_seq}:${c.pyeong_type||''}`; }
+
+// 카드 클릭: 지도만 pan (상세 패널은 핀 클릭으로 열림)
+function panToCard(aptSeq){
+  if(!kakaoMap || !resultData) return;
+  const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
+  if(card && card.lat && card.lng){
+    kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+  }
+}
+
+// 추천 카드 (긴 코멘트형)
+function renderRecCard(c, wpId){
+  const thisYear = new Date().getFullYear();
+  let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
+  if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
+  if(c.top_floor) metaParts.push(`최고 ${c.top_floor}층`);
+  const meta = metaParts.join('<span class="dot"></span>');
+
+  // 가격 분리: 억 + 만
+  const priceHtml = splitPrice(c.price_low);
+
+  const comment = c.friend_comment || '';
+  const friendHtml = comment
+    ? `<div class="rec-card__friend">
+        <div class="rec-card__friend-avatar">친구</div>
+        <div class="rec-card__friend-body">
+          <div class="rec-card__friend-label">한마디</div>
+          <div class="rec-card__friend-text">${escHtml(comment)}</div>
+        </div>
+      </div>`
+    : `<div class="rec-card__friend empty">
+        <div class="rec-card__friend-avatar">···</div>
+        <div class="rec-card__friend-body">
+          <div class="rec-card__friend-label">한마디 (생성 중)</div>
+          <div class="rec-card__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+        </div>
+      </div>`;
+
+  const transitTxt = c.transit_summary ? escHtml(c.transit_summary) : '경로 정보 없음';
+
+  return `<div class="rec-card" onclick="panToCard('${c.apt_seq}')">
+    <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
+    <div class="rec-card__title-row">
+      <h3 class="rec-card__title">${escHtml(c.apt_nm)}</h3>
+      <div class="rec-card__price">${priceHtml}</div>
+    </div>
+    <div class="rec-card__meta num">${meta}</div>
+    ${friendHtml}
+    <div class="rec-card__footer">
+      <span class="rec-card__transit">
+        <span class="commute-chip">${transitTxt}</span>
+        <strong class="num">${c.total_time_min}분</strong>
+      </span>
+      ${c.pick_reason?`<span class="rec-card__reason">${escHtml(c.pick_reason)}</span>`:''}
+    </div>
+  </div>`;
+}
+
+// 가격을 "5억 8,000만" → 분리된 num/unit 마크업으로
+function splitPrice(manwon){
+  if(!manwon) return '<span class="unit">-</span>';
+  const e = Math.floor(manwon/10000);
+  const m = manwon%10000;
+  if(e && m) return `<span class="num">${e}</span><span class="unit">억</span> <span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
+  if(e) return `<span class="num">${e}</span><span class="unit">억</span>`;
+  return `<span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
+}
+
+// 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
+function renderListCard(c, wpId){
+  const thisYear = new Date().getFullYear();
+  let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
+  if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
+
+  const comment = c.friend_comment || '';
+  const commentHtml = comment
+    ? `<div class="list-card__comment">${escHtml(comment)}</div>`
+    : `<div class="list-card__comment empty"><span class="spinner-mini"></span>한 줄 평 생성 중...</div>`;
+
+  return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
+    <div class="list-card__top">
+      <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__price num">${shortPrice(c.price_low)}</div>
+    </div>
+    <div class="list-card__meta">${metaParts.join(' · ')}</div>
+    <div class="list-card__row">
+      <span class="commute-chip">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>
+    </div>
+    ${commentHtml}
+  </article>`;
+}
+
+function renderCards(data){
+  panelMode='list';
+  const panel=document.getElementById('cards-panel');
+  if(!data.cards.length){
+    panel.innerHTML=`<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
+      <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
+    return;
+  }
+
+  const recommended = data.cards.filter(c=>c.is_recommended);
+  const rest        = data.cards.filter(c=>!c.is_recommended);
+  const wpId = data.wp_id;
+  const totalRest = rest.length || 1;
+
+  let html = renderStatsPanel(data);
+
+  // 추천 섹션
+  if(recommended.length){
+    html += `<div class="rec-section-head">
+      <h3>추천 ${recommended.length}곳</h3>
+      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+    </div>`;
+    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
+  }
+
+  // 버킷별 접힘 섹션
+  if(rest.length){
+    const buckets = data.buckets || [];
+    html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
+    buckets.forEach(b=>{
+      const inBucket = rest.filter(c=>c.bucket_idx===b.idx);
+      if(!inBucket.length) return;
+
+      // 집계: 가격 최저/최고/평균
+      const prices = inBucket.map(c=>c.price_low).filter(p=>p>0);
+      const minP = prices.length ? Math.min(...prices) : 0;
+      const maxP = prices.length ? Math.max(...prices) : 0;
+      const avgP = prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : 0;
+
+      // 평형별 카운트
+      const byPt = {};
+      inBucket.forEach(c=>{ byPt[c.pyeong_type]=(byPt[c.pyeong_type]||0)+1; });
+      const ptChips = Object.entries(byPt)
+        .sort((a,b)=>a[0].localeCompare(b[0],'ko'))
+        .map(([pt, cnt])=>`<span class="bucket-pt-chip">${escHtml(pt)} <strong class="num">${cnt}</strong></span>`)
+        .join('');
+
+      // 전체 대비 비율
+      const ratioPct = Math.round(inBucket.length/totalRest*100);
+
+      // 본문 (펼친 상태)
+      const byPtList = {};
+      inBucket.forEach(c=>{ (byPtList[c.pyeong_type]=byPtList[c.pyeong_type]||[]).push(c); });
+      let body = '';
+      Object.entries(byPtList).sort((a,b)=>a[0].localeCompare(b[0],'ko')).forEach(([pt, items])=>{
+        items.sort((a,b)=>a.price_low - b.price_low);
+        body += `<div class="bucket-pt-label">${escHtml(pt)} · ${items.length}곳 · 가격순</div>`;
+        body += items.map(c=>renderListCard(c, wpId)).join('');
+      });
+
+      html += `<div class="bucket-section">
+        <div class="bucket-head" onclick="toggleBucket(this)">
+          <div class="bucket-head__top">
+            <div class="bucket-head__title">
+              <span class="bucket-head__time">${escHtml(b.label)}</span>
+              <span class="bucket-head__cnt num">${inBucket.length}곳</span>
+            </div>
+            <div class="bucket-head__chev">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          ${prices.length ? `<div class="bucket-head__bottom">
+            <span class="bucket-head__price">
+              <strong class="num">${shortPrice(minP)}</strong><span class="price-sep">~</span><strong class="num">${shortPrice(maxP)}</strong>
+              <span style="color:var(--color-text-tertiary);margin-left:6px;">· 평균 <span class="num">${shortPrice(avgP)}</span></span>
+            </span>
+          </div>` : ''}
+          <div class="bucket-head__bottom">
+            <div class="bucket-head__pts">${ptChips}</div>
+          </div>
+          <div class="bucket-head__ratio"><div class="bucket-head__ratio-fill" style="width:${ratioPct}%"></div></div>
+        </div>
+        <div class="bucket-body">${body}</div>
+      </div>`;
+    });
+  }
+
+  panel.innerHTML = html;
+}
+
+function toggleBucket(headEl){
+  headEl.parentElement.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════
+//  카카오맵 — 단지 단위 핀 (클러스터러 없음)
+//  같은 단지에 여러 평형이 있어도 핀 1개. 호버 시 평형 탭으로 전환.
+// ═══════════════════════════════════════════════════════
+let aptGroupMap = {};  // apt_seq → {apt_seq, apt_nm, lat, lng, umd_nm, kaptdaCnt, build_year, top_floor, cards:[card,...]}
+
+async function initMap(data){
+  await kakaoReady;
+  const container = document.getElementById('map');
+  const wp = data.workplace;
+  kakaoMap = new kakao.maps.Map(container, {
+    center: new kakao.maps.LatLng(wp.lat, wp.lng),
+    level: zoomLevelFor(reqBody.max_minutes),
+  });
+  kakaoMap.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+
+  // 직장 핀
+  new kakao.maps.CustomOverlay({
+    position: new kakao.maps.LatLng(wp.lat, wp.lng),
+    content: '<div class="pin pin-workplace">직장</div>',
+    yAnchor: 1, zIndex: 100,
+  }).setMap(kakaoMap);
+
+  // ── 단지별 그룹화 (apt_seq 단위) ──────────────────────
+  aptGroupMap = {};
+  data.cards.forEach(c=>{
+    if(!c.lat||!c.lng) return;
+    if(!aptGroupMap[c.apt_seq]){
+      aptGroupMap[c.apt_seq] = {
+        apt_seq: c.apt_seq, apt_nm: c.apt_nm, lat: c.lat, lng: c.lng,
+        umd_nm: c.umd_nm, kaptdaCnt: c.kaptdaCnt,
+        build_year: c.build_year, top_floor: c.top_floor,
+        any_recommended: false,
+        cards: [],
+      };
+    }
+    aptGroupMap[c.apt_seq].cards.push(c);
+    if(c.is_recommended) aptGroupMap[c.apt_seq].any_recommended = true;
+  });
+
+  // ── 단지별 핀 생성 (클러스터 없음) ───────────────────
+  Object.values(aptGroupMap).forEach(group=>{
+    const pos = new kakao.maps.LatLng(group.lat, group.lng);
+    // 핀 표시: 최저가 카드 기준, 평형 갯수 표시
+    group.cards.sort((a,b)=>a.price_low - b.price_low);
+    const main = group.cards[0];
+    const ptCount = group.cards.length;
+    const cls = group.any_recommended ? 'pin-best' : '';
+    const z = group.any_recommended ? 50 : 5;
+    const multiMark = ptCount > 1 ? `<span class="pin-multi-mark">${ptCount}</span>` : '';
+    const pinText = `${escHtml(main.pyeong_type||'')} ${shortPrice(main.price_low)} ${main.total_time_min}분`;
+    const overlay = new kakao.maps.CustomOverlay({
+      position: pos,
+      content: `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${pinText}${multiMark}</div>`,
+      yAnchor: 1,
+      zIndex: z,
+    });
+    overlay.setMap(kakaoMap);
+    overlays.push(overlay);
+  });
+
+  // ── 핀 이벤트 ───────────────────────────────────────
+  //  호버 = 툴팁만 (미리보기)
+  //  클릭 = 상세 패널 열기 (showDetail)
+  container.addEventListener('mouseover', e=>{
+    const pin = e.target.closest('.pin[data-apt-seq]');
+    if(pin) showTooltip(pin, aptGroupMap[pin.dataset.aptSeq], data.wp_id);
+  });
+  container.addEventListener('mouseout', e=>{
+    const pin = e.target.closest('.pin[data-apt-seq]');
+    if(pin && !pin.contains(e.relatedTarget)) scheduleHideTooltip();
+  });
+  container.addEventListener('click', e=>{
+    const pin = e.target.closest('.pin[data-apt-seq]');
+    if(pin){
+      e.stopPropagation();
+      hideTooltip();
+      showDetail(pin.dataset.aptSeq, data.wp_id);
+    }
+  });
+}
+
+function zoomLevelFor(min){
+  if(min<=20) return 6; if(min<=30) return 7; if(min<=45) return 7; return 8;
+}
+
+// ═══════════════════════════════════════════════════════
+//  호버 툴팁
+// ═══════════════════════════════════════════════════════
+const tooltip = document.getElementById('pin-tooltip');
+let tooltipTimer = null;
+let tooltipCurrentSeq = null;
+
+// 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
+let _ttGroup = null;
+let _ttActivePtIdx = 0;
+
+function showTooltip(pinEl, group, wpId){
+  if(!group || !group.cards.length) return;
+  clearTimeout(tooltipTimer);
+  _ttGroup = group;
+  _ttActivePtIdx = 0;
+  _tooltipWpId = wpId;
+  tooltipCurrentSeq = group.apt_seq;
+
+  // 상단: 단지명 + 배지
+  document.getElementById('tt-apt-nm').textContent = group.apt_nm;
+  const badge = document.getElementById('tt-badge');
+  badge.style.display = group.any_recommended ? '' : 'none';
+
+  // 메타
+  const thisYear = new Date().getFullYear();
+  let metaParts = [group.umd_nm, `${group.kaptdaCnt.toLocaleString()}세대`];
+  if(group.build_year) metaParts.push(`${group.build_year}년 (${thisYear-group.build_year}년차)`);
+  document.getElementById('tt-meta').textContent = metaParts.join(' · ');
+
+  // 평형 탭 (밑줄형)
+  const tabsEl = document.getElementById('tt-pt-tabs');
+  if(group.cards.length > 1){
+    tabsEl.style.display = 'flex';
+    tabsEl.innerHTML = group.cards.map((c, i)=>
+      `<div class="pin-tooltip__tab ${i===0?'active':''}" data-pt-idx="${i}"
+            onclick="event.stopPropagation();switchTooltipPt(${i})">${escHtml(c.pyeong_type||'')}</div>`
+    ).join('');
+  } else {
+    tabsEl.style.display = 'none';
+  }
+
+  // 첫 평형 정보 렌더
+  renderTooltipPt(0);
+
+  // 위치
+  tooltip.classList.remove('hidden');
+  const pinRect = pinEl.getBoundingClientRect();
+  const ttW = tooltip.offsetWidth||296;
+  const ttH = tooltip.offsetHeight||280;
+  let left = pinRect.left + pinRect.width/2 - ttW/2;
+  let top  = pinRect.top - ttH - 10;
+  left = Math.max(8, Math.min(left, window.innerWidth - ttW - 8));
+  if(top < 60) top = pinRect.bottom + 8;
+  tooltip.style.left = left+'px';
+  tooltip.style.top  = top+'px';
+}
+
+function switchTooltipPt(idx){
+  if(!_ttGroup || idx === _ttActivePtIdx) return;
+  _ttActivePtIdx = idx;
+  document.querySelectorAll('.tt-pt-tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
+  renderTooltipPt(idx);
+}
+
+function renderTooltipPt(idx){
+  if(!_ttGroup) return;
+  const c = _ttGroup.cards[idx];
+  if(!c) return;
+
+  // 통근 메트릭
+  document.getElementById('tt-transit-val').innerHTML = `<span class="num">${c.total_time_min}</span><span class="unit">분</span>`;
+  document.getElementById('tt-transit-sub').textContent = c.transit_summary || '경로 정보 없음';
+
+  // 가격/거래 메트릭
+  const lt = (c.recent_trades||[])[0];
+  const priceLabel = document.getElementById('tt-price-label');
+  const priceVal = document.getElementById('tt-price-val');
+  const priceSub = document.getElementById('tt-price-sub');
+  if(lt){
+    priceLabel.textContent = '최근 거래';
+    priceVal.innerHTML = `<span class="num">${shortPrice(lt.amount).replace('억','')}</span><span class="unit">억</span>`;
+    priceSub.innerHTML = `<span class="num">${lt.date}</span> · ${lt.floor}층 ${escHtml(lt.gbn||'')}`;
+  } else {
+    priceLabel.textContent = '가격대';
+    priceVal.innerHTML = `<span class="num">${shortPrice(c.price_low).replace('억','')}</span><span class="unit">억</span>`;
+    priceSub.innerHTML = c.price_high && c.price_high!==c.price_low
+      ? `~<span class="num">${shortPrice(c.price_high)}</span> · <span class="num">${c.deal_count||0}</span>건`
+      : `<span class="num">${c.deal_count||0}</span>건 거래`;
+  }
+
+  // 코멘트
+  const comment = c.friend_comment||'';
+  const ttComment = document.getElementById('tt-comment');
+  if(comment){
+    ttComment.style.display = 'block';
+    ttComment.className = 'pin-tooltip__comment';
+    ttComment.textContent = comment;
+  } else {
+    ttComment.style.display = 'block';
+    ttComment.className = 'pin-tooltip__comment empty';
+    ttComment.innerHTML = '<span class="spinner-mini"></span>친구가 한마디 준비 중...';
+  }
+}
+function scheduleHideTooltip(){ tooltipTimer = setTimeout(hideTooltip, 250); }
+function hideTooltip(){ tooltip.classList.add('hidden'); tooltipCurrentSeq=null; }
+tooltip.addEventListener('mouseenter', ()=>clearTimeout(tooltipTimer));
+tooltip.addEventListener('mouseleave', ()=>scheduleHideTooltip());
+
+// ═══════════════════════════════════════════════════════
+//  상세 패널
+// ═══════════════════════════════════════════════════════
+let _tooltipWpId = null;
+function tooltipDetailClick(){
+  if(tooltipCurrentSeq && _tooltipWpId != null){
+    hideTooltip();
+    showDetail(tooltipCurrentSeq, _tooltipWpId);
+  }
+}
+
+async function showDetail(aptSeq, wpId){
+  panelMode='detail';
+  hideTooltip();
+  const panel = document.getElementById('cards-panel');
+  panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
+  panel.scrollTop=0;
+
+  // 지도 해당 아파트 위치로 이동
+  if(kakaoMap && resultData){
+    const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
+    if(card && card.lat && card.lng){
+      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+    }
+  }
+
+  try{
+    const [dRes, rRes] = await Promise.all([
+      fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
+      fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
+    ]);
+    const detail = await dRes.json();
+    const routes = (await rRes.json()).options || [];
+    currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
+    renderDetailPanel(detail, routes, wpId);
+  } catch(e){
+    panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function backToList(){
+  panelMode='list';
+  if(detailChart){ detailChart.destroy(); detailChart=null; }
+  detailChartData=null; currentTabKey=null;
+  if(resultData) renderCards(resultData);
+}
+
+function renderDetailPanel(d, routes, wpId){
+  const panel = document.getElementById('cards-panel');
+  const tier = currentDetailCard?.tier || d.tier || '';
+  const cardRef = currentDetailCard || {};
+  const bld = d.building || {};
+  const thisYear = new Date().getFullYear();
+
+  // ── 메타 한 줄
+  const metaParts = [escHtml(d.umd_nm), `${(d.kaptdaCnt||0).toLocaleString()}세대`];
+  if(bld.build_year) metaParts.push(`${bld.build_year}년 (${thisYear-bld.build_year}년차)`);
+  if(bld.top_floor) metaParts.push(`최고 ${bld.top_floor}층`);
+
+  // ── 친구 한마디 (HERO)
+  const friend = d.friend_comment || '';
+  const friendHtml = friend
+    ? `<div class="dp__friend">
+        <div class="dp__friend-avatar">친구</div>
+        <div class="dp__friend-body">
+          <div class="dp__friend-label">한마디</div>
+          <div class="dp__friend-text">${escHtml(friend)}</div>
+        </div>
+      </div>`
+    : `<div class="dp__friend empty">
+        <div class="dp__friend-avatar">···</div>
+        <div class="dp__friend-body">
+          <div class="dp__friend-label">한마디 (생성 중)</div>
+          <div class="dp__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+        </div>
+      </div>`;
+
+  // ── 통근 요약
+  const transitChip = cardRef.transit_summary
+    ? `<div class="dp__commute">${escHtml(cardRef.transit_summary)} · 총 <span class="num">${cardRef.total_time_min}</span>분</div>`
+    : '';
+
+  // ── 섹션 프리뷰 한 줄 만들기
+  const routePreview = routes.length
+    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
+    : '경로 정보 없음';
+
+  const ps = d.price_summary || {};
+  const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
+    ? [
+        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#C0392B':ps.change_6m_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
+        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#C0392B':ps.vs_dong_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
+      ].filter(Boolean).join(' · ')
+    : '시세 데이터 없음';
+
+  const trades = d.trades || [];
+  const tradePreview = trades.length
+    ? `최근 3년 · <span class="num">${trades.length}</span>건 · 최근 <span class="num">${trades[0].date}</span>`
+    : '거래 내역 없음';
+
+  const poi = d.poi || [];
+  const subwayPoi = poi.find(p=>p.category==='B') || null;
+  const schoolCnt = poi.filter(p=>p.category==='C').length;
+  const poiPreview = poi.length
+    ? [
+        subwayPoi ? `지하철 도보 <span class="num">${subwayPoi.walking_min}</span>분` : null,
+        schoolCnt ? `학교 <span class="num">${schoolCnt}</span>곳` : null,
+      ].filter(Boolean).join(' · ') || `<span class="num">${poi.length}</span>곳 인근`
+    : '시설 데이터 없음';
+
+  const bldPreviewParts = [];
+  if(bld.builder) bldPreviewParts.push(`시공 ${escHtml(bld.builder)}`);
+  if(bld.parking) bldPreviewParts.push(`주차 <span class="num">${bld.parking.toLocaleString()}</span>대`);
+  if(bld.heat_type) bldPreviewParts.push(`난방 ${escHtml(bld.heat_type)}`);
+  const bldPreview = bldPreviewParts.length ? bldPreviewParts.slice(0,3).join(' · ') : '건물 정보 없음';
+
+  // SVG 아이콘들
+  const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>';
+  const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>';
+  const ICON_TABLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+  const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+  const ICON_BUILDING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"></rect><line x1="8" y1="8" x2="8" y2="8.01"></line><line x1="12" y1="8" x2="12" y2="8.01"></line><line x1="16" y1="8" x2="16" y2="8.01"></line><line x1="8" y1="12" x2="8" y2="12.01"></line><line x1="12" y1="12" x2="12" y2="12.01"></line><line x1="16" y1="12" x2="16" y2="12.01"></line></svg>';
+  const ICON_CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  panel.innerHTML = `
+    <!-- 헤더 -->
+    <div class="dp__header">
+      <button class="dp__back" onclick="backToList()">← 목록</button>
+      <span class="dp__name">${escHtml(d.apt_nm)}</span>
+      ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
+    </div>
+
+    <!-- HERO -->
+    <div class="dp__hero">
+      <div class="dp__meta">${metaParts.join(' · ')}</div>
+      ${transitChip}
+      ${friendHtml}
+    </div>
+
+    <!-- 통근 경로 (펼침) -->
+    <div class="dp__section open">
+      <div class="dp__section-head" onclick="toggleSection(this)">
+        <div class="dp__section-icon">${ICON_CLOCK}</div>
+        <div class="dp__section-titlebox">
+          <span class="dp__section-title">통근 경로</span>
+          <span class="dp__section-preview">${routePreview}</span>
+        </div>
+        <div class="dp__section-chev">${ICON_CHEV}</div>
+      </div>
+      <div class="dp__section-body">${renderRoutesHTML(routes)}</div>
+    </div>
+
+    <!-- 시세 분석 (펼침) -->
+    <div class="dp__section open">
+      <div class="dp__section-head" onclick="toggleSection(this)">
+        <div class="dp__section-icon">${ICON_CHART}</div>
+        <div class="dp__section-titlebox">
+          <span class="dp__section-title">시세 분석</span>
+          <span class="dp__section-preview">${pricePreview}</span>
+        </div>
+        <div class="dp__section-chev">${ICON_CHEV}</div>
+      </div>
+      <div class="dp__section-body">
+        ${renderKPIHTML(d.price_summary)}
+        <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
+        <div class="dp-chart-legend" style="margin-top:6px">
+          <span><i class="dp-legend-dot" style="background:#A82E1B"></i>${escHtml(d.apt_nm)}</span>
+          <span><i class="dp-legend-dot" style="background:#2471A3;opacity:.7"></i>${escHtml(d.umd_nm)} 동평균</span>
+        </div>
+        <div class="dp-chart-wrap"><canvas id="dp-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 실거래 (접힘) -->
+    <div class="dp__section">
+      <div class="dp__section-head" onclick="toggleSection(this)">
+        <div class="dp__section-icon">${ICON_TABLE}</div>
+        <div class="dp__section-titlebox">
+          <span class="dp__section-title">실거래 내역</span>
+          <span class="dp__section-preview">${tradePreview}</span>
+        </div>
+        <div class="dp__section-chev">${ICON_CHEV}</div>
+      </div>
+      <div class="dp__section-body">${renderTradesHTML(d.trades)}</div>
+    </div>
+
+    <!-- 도보 시설 (접힘) -->
+    <div class="dp__section">
+      <div class="dp__section-head" onclick="toggleSection(this)">
+        <div class="dp__section-icon">${ICON_PIN}</div>
+        <div class="dp__section-titlebox">
+          <span class="dp__section-title">도보 주요 시설</span>
+          <span class="dp__section-preview">${poiPreview}</span>
+        </div>
+        <div class="dp__section-chev">${ICON_CHEV}</div>
+      </div>
+      <div class="dp__section-body">${renderPOIHTML(d.poi)}</div>
+    </div>
+
+    <!-- 건물 정보 (접힘) -->
+    <div class="dp__section">
+      <div class="dp__section-head" onclick="toggleSection(this)">
+        <div class="dp__section-icon">${ICON_BUILDING}</div>
+        <div class="dp__section-titlebox">
+          <span class="dp__section-title">건물 정보</span>
+          <span class="dp__section-preview">${bldPreview}</span>
+        </div>
+        <div class="dp__section-chev">${ICON_CHEV}</div>
+      </div>
+      <div class="dp__section-body"><div class="dp-building-grid">${renderBuildingGrid(bld)}</div></div>
+    </div>
+  `;
+
+  // 차트 초기화
+  detailChartData = d.chart;
+  if(d.pyeong_tabs && d.pyeong_tabs.length>0){
+    const def = d.pyeong_tabs[0];
+    const defKey = `${def.pyeong_type}_${def.pyeong}`;
+    currentTabKey = defKey;
+    document.querySelector(`[data-tab="${defKey}"]`)?.classList.add('active');
+    initDetailChart(defKey, d.apt_nm, d.umd_nm);
+  }
+}
+
+
+// ── 섹션 접기/펼치기 ──────────────────────────────────────────
+function toggleSection(headEl){
+  const section = headEl.parentElement;
+  const opened = section.classList.toggle('open');
+  // 차트 섹션 펼칠 때 차트 업데이트 (크기 계산)
+  if(opened && section.querySelector('#dp-chart') && detailChart){
+    setTimeout(()=>detailChart.resize(), 50);
+  }
+}
+
+// ── 건물 정보 그리드 ──────────────────────────────────────────
+function renderBuildingGrid(b){
+  if(!b) return '<p style="font-size:13px;color:var(--color-text-tertiary);">건물 정보 없음</p>';
+  const items = [];
+  if(b.dong_cnt)     items.push(['동수', `${b.dong_cnt}동`]);
+  if(b.base_floor)   items.push(['지하층', `B${b.base_floor}`]);
+  if(b.parking)      items.push(['주차', `${b.parking.toLocaleString()}대`]);
+  if(b.elevator_cnt) items.push(['엘리베이터', `${b.elevator_cnt}대`]);
+  if(b.heat_type)    items.push(['난방', b.heat_type]);
+  if(b.hall_type)    items.push(['배치', b.hall_type]);
+  if(b.builder)      items.push(['시공사', b.builder]);
+  if(b.ev_chargers)  items.push(['전기차충전', `${b.ev_chargers}기`]);
+  if(b.subway_line && b.subway_sta)
+    items.push(['인근 지하철', `${b.subway_line} ${b.subway_sta}${b.subway_walk?' ('+b.subway_walk+')':''}`]);
+  if(!items.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">건물 정보 없음</p>';
+  return items.map(([label,val])=>`
+    <div class="dp-bld-item">
+      <span class="dp-bld-label">${label}</span>
+      <span class="dp-bld-value">${escHtml(String(val))}</span>
+    </div>`).join('');
+}
+
+// ── 경로 아코디언 ─────────────────────────────────────────────
+function routeModeLabel(o){
+  const bc=o.bus_cnt||0, sc=o.subway_cnt||0;
+  if(sc&&!bc) return sc>1?`지하철 ${sc}회환승`:'지하철 직통';
+  if(bc&&!sc) return bc>1?`버스 ${bc}회환승`:'버스 직통';
+  return `버스${bc}+지하철${sc}`;
+}
+function renderStepHTML(s){
+  const typeKo = s.type;
+  const cls = typeKo==='도보'||typeKo==='환승도보' ? 'walk'
+             : typeKo==='버스' ? 'bus'
+             : typeKo==='지하철' ? 'subway' : '';
+  const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
+  const staHtml  = (s.from||s.to)
+    ? `<div class="dp-step-sta">${escHtml(s.from||'')} → ${escHtml(s.to||'')}</div>` : '';
+  const distHtml = s.dist_m ? `<span style="font-size:11px;color:#aaa"> ${s.dist_m.toLocaleString()}m</span>` : '';
+  return `<div class="dp-step">
+    <span class="dp-step-type ${cls}">${escHtml(typeKo)}</span>
+    <span class="dp-step-info">${lineHtml}${staHtml}</span>
+    <span class="dp-step-time">${s.time_min}분${distHtml}</span>
+  </div>`;
+}
+function renderSingleRoute(o, isFirst){
+  const steps = o.steps.map(renderStepHTML).join('');
+  const modeLabel = routeModeLabel(o);
+  return `<div class="dp-route${isFirst?' best':''}">
+    <div class="dp-route__head" onclick="toggleRoute(this)">
+      <span class="dp-route__time"><span class="num">${o.total_time_min}</span><span class="unit">분</span></span>
+      <span class="dp-route__mode">${modeLabel}</span>
+      <span class="dp-route__chev">${isFirst?'▲':'▼'}</span>
+    </div>
+    <div class="dp-route__body ${isFirst?'open':''}">${steps}</div>
+  </div>`;
+}
+function renderRoutesHTML(routes){
+  if(!routes.length) return '<p style="font-size:13px;color:#aaa;">경로 정보 없음</p>';
+  if(routes.length===1) return renderSingleRoute(routes[0], true);
+
+  const first = renderSingleRoute(routes[0], true);
+  const rest = routes.slice(1).map(o=>renderSingleRoute(o,false)).join('');
+  return `${first}
+    <button class="dp-route-more-btn" onclick="toggleMoreRoutes(this)">
+      다른 경로 보기 (${routes.length-1}개) ▼
+    </button>
+    <div id="dp-routes-extra">${rest}</div>`;
+}
+function toggleRoute(el){
+  const body = el.nextElementSibling;
+  const open = body.classList.toggle('open');
+  el.querySelector('.dp-route__chev').textContent = open?'▲':'▼';
+}
+function toggleMoreRoutes(btn){
+  const extra = document.getElementById('dp-routes-extra');
+  const open = extra.classList.toggle('open');
+  const n = btn.textContent.match(/\d+/)?.[0]||'';
+  btn.textContent = open ? `다른 경로 접기 ▲` : `다른 경로 보기 (${n}개) ▼`;
+}
+
+// ── KPI ───────────────────────────────────────────────────────
+function renderKPIHTML(ps){
+  if(!ps) return '<p style="font-size:12px;color:var(--color-text-tertiary);">데이터 없음</p>';
+  const chgCls = ps.change_6m_pct>0?'clr-up':ps.change_6m_pct<0?'clr-dn':'clr-flat';
+  const vsCls  = ps.vs_dong_pct<0?'clr-dn':ps.vs_dong_pct>0?'clr-up':'clr-flat';
+  const diffCls= ps.vs_dong_diff<0?'clr-dn':ps.vs_dong_diff>0?'clr-up':'clr-flat';
+  const diffTxt= ps.vs_dong_diff!=null
+    ? fmtPrice(Math.abs(ps.vs_dong_diff))+(ps.vs_dong_diff<0?' 저렴':' 비쌈') : '-';
+  return `<div class="dp-kpis">
+    <div class="dp-kpi">
+      <div class="dp-kpi-label">단지 6개월</div>
+      <div class="dp-kpi-value num ${chgCls}">${fmtPct(ps.change_6m_pct)}</div>
+    </div>
+    <div class="dp-kpi">
+      <div class="dp-kpi-label">동평균 대비 (${ps.pyeong}평)</div>
+      <div class="dp-kpi-value num ${vsCls}">${fmtPct(ps.vs_dong_pct)}</div>
+    </div>
+    <div class="dp-kpi">
+      <div class="dp-kpi-label">동평균 차액</div>
+      <div class="dp-kpi-value num ${diffCls}" style="font-size:13px">${diffTxt}</div>
+    </div>
+  </div>`;
+}
+
+// ── 평수 탭 ───────────────────────────────────────────────────
+function renderTabsHTML(tabs){
+  if(!tabs||!tabs.length) return '';
+  return tabs.map(t=>`
+    <button class="dp-tab" data-tab="${t.pyeong_type}_${t.pyeong}"
+      onclick="switchTab('${t.pyeong_type}_${t.pyeong}','${t.pyeong_type}')">
+      ${t.pyeong}평 <small style="opacity:.7">(${t.deal_count}건)</small>
+    </button>`).join('');
+}
+function switchTab(key, pyeongType){
+  if(key===currentTabKey) return;
+  document.querySelectorAll('.dp-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
+  currentTabKey=key;
+  updateDetailChart(key, pyeongType);
+}
+
+// ── Chart.js ──────────────────────────────────────────────────
+function getChartSeries(key){
+  const [pt] = key.split('_');  // pyeong_type
+  const complexSeries = detailChartData?.complex?.[key] || {};
+  const dongSeries    = detailChartData?.dong?.[pt] || {};
+  const allMonths = [...new Set([...Object.keys(complexSeries),...Object.keys(dongSeries)])].sort();
+  return {
+    labels: allMonths,
+    complexData: allMonths.map(m=>complexSeries[m]??null),
+    dongData:    allMonths.map(m=>dongSeries[m]??null),
+  };
+}
+function initDetailChart(key, aptNm, umdNm){
+  const canvas = document.getElementById('dp-chart');
+  if(!canvas) return;
+  if(detailChart){ detailChart.destroy(); detailChart=null; }
+  const {labels,complexData,dongData} = getChartSeries(key);
+  // 데이터 포인트가 적으면 점만, 충분하면 선+점
+  const nonNull = complexData.filter(v=>v!==null).length;
+  const sparse = nonNull < 6;
+  detailChart = new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        { label:aptNm, data:complexData, borderColor:'#A82E1B', backgroundColor:'#A82E1B25',
+          borderWidth: sparse?0:2, pointRadius: sparse?5:3,
+          pointBackgroundColor:'#A82E1B', tension:0.3, fill:false,
+          showLine:!sparse },
+        { label:`${umdNm} 동평균`, data:dongData, borderColor:'#2471A3', backgroundColor:'#2471A315',
+          borderWidth: 1.5, pointRadius:2, borderDash:[4,3], tension:0.3, fill:false },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}}
+      },
+      scales:{
+        x:{ticks:{font:{family:'Pretendard',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
+        y:{ticks:{font:{family:'Pretendard',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
+      }
+    }
+  });
+}
+function updateDetailChart(key){
+  if(!detailChart) return;
+  const {labels,complexData,dongData} = getChartSeries(key);
+  const nonNull = complexData.filter(v=>v!==null).length;
+  const sparse = nonNull < 6;
+  detailChart.data.labels = labels;
+  detailChart.data.datasets[0].data = complexData;
+  detailChart.data.datasets[0].borderWidth = sparse?0:2;
+  detailChart.data.datasets[0].pointRadius = sparse?5:3;
+  detailChart.data.datasets[0].showLine = !sparse;
+  detailChart.data.datasets[1].data = dongData;
+  detailChart.update();
+}
+
+// ── 실거래 테이블 (평형별 그룹) ──────────────────────────────
+function renderTradesHTML(trades){
+  if(!trades||!trades.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">거래 내역 없음</p>';
+  const groups = {};
+  trades.forEach(t=>{
+    const key = `${t.pyeong}평`;
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(t);
+  });
+  return Object.entries(groups).map(([py, rows])=>`
+    <div class="dp-trade-group">
+      <div class="dp-trade-group-title">${py}</div>
+      <table class="dp-trade-table">
+        <thead><tr><th>거래일</th><th>금액</th><th>층</th></tr></thead>
+        <tbody>${rows.map(t=>`
+          <tr>
+            <td>${t.date}</td>
+            <td class="dp-trade-amount">${fmtPrice(t.amount)}</td>
+            <td style="color:var(--color-text-tertiary)">${t.floor}층</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+// ── POI (카테고리별 그룹, 중요도순) ──────────────────────────
+const POI_ORDER = ['B','C','D','A','E','F','G','H'];
+const POI_CAT_NAME = {A:'편의시설',B:'교통',C:'학교/학원',D:'의료',E:'공원/녹지',F:'금융',G:'음식',H:'스포츠'};
+function renderPOIHTML(poi){
+  if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
+  const groups = {};
+  poi.slice(0,30).forEach(p=>{
+    const key = POI_ORDER.includes(p.category) ? p.category : '기타';
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(p);
+  });
+  const orderedKeys = [...POI_ORDER.filter(k=>groups[k]), ...(groups['기타']?['기타']:[])];
+  return orderedKeys.map(key=>{
+    const catName = POI_CAT_NAME[key]||'기타';
+    return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
+      <div class="dp-poi-row">
+        <div class="dp-poi-name">${escHtml(p.name)}</div>
+        <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
+      </div>`).join('')}`;
+  }).join('');
+}
+
+// ── 실행 ─────────────────────────────────────────────────────
+runSearch();
+</script>
+</body>
+</html>
