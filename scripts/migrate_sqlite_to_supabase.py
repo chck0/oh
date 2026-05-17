@@ -162,7 +162,9 @@ def main():
     print()
 
     sl = sqlite3.connect(SQLITE_PATH)
-    pg = psycopg.connect(PG_URL)
+    # prepare_threshold=None — Supabase Free의 6543 Transaction pooler 호환
+    # (5432 Direct/Session pooler면 굳이 필요 없지만 켜둬도 무해)
+    pg = psycopg.connect(PG_URL, prepare_threshold=None)
     try:
         for t in targets:
             print(f'→ {t}')
