@@ -207,6 +207,85 @@ def debug_status():
     return report
 
 
+# ── ODsay 키 직접 테스트 ────────────────────────────────────
+@app.get("/api/_test_odsay")
+def test_odsay():
+    """등록한 ODsay 키 각각에 실제 요청을 보내 응답을 그대로 반환.
+    어떤 키/Referer 조합이 막혔는지 즉시 진단."""
+    if not DEBUG_API:
+        return JSONResponse({'error': 'debug disabled'}, status_code=404)
+    try:
+        from config import cfg
+        import urllib.request, urllib.parse, json
+    except Exception as e:
+        return {'error': f'{type(e).__name__}: {e}'}
+
+    # 동작구청 → 강남역 (서울 안 흔한 경로)
+    base_params = {
+        'SX': '126.9395', 'SY': '37.5124',
+        'EX': '127.0276', 'EY': '37.4979',
+        'lang': '0', 'OPT': '0',
+    }
+
+    results = []
+    for i, k in enumerate(cfg.ODSAY_KEYS, 1):
+        params = {**base_params, 'apiKey': k['key']}
+        url = 'https://api.odsay.com/v1/api/searchPubTransPathT?' + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers={'Referer': k['referer'] or ''})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                body = r.read().decode('utf-8')
+                status = r.status
+        except Exception as e:
+            body = str(e)
+            status = -1
+        # body 너무 길면 자름 + error 키만 있는지 확인
+        try:
+            j = json.loads(body)
+            has_result = 'result' in j
+            err_code = j.get('error', {}).get('code') if isinstance(j.get('error'), dict) else None
+            err_msg  = j.get('error', {}).get('message') if isinstance(j.get('error'), dict) else None
+        except Exception:
+            has_result = False
+            err_code = err_msg = None
+        results.append({
+            'key_index': i,
+            'key_prefix': k['key'][:8] + '...',
+            'referer_sent': k['referer'] or '(empty)',
+            'http_status': status,
+            'has_result': has_result,
+            'error_code': err_code,
+            'error_msg':  err_msg,
+            'body_excerpt': body[:400],
+        })
+    return {'results': results}
+
+
+# ── Kakao 키 직접 테스트 ────────────────────────────────────
+@app.get("/api/_test_kakao")
+def test_kakao():
+    """Kakao REST 키로 주소검색 1회 호출. 200/401/403 등으로 즉시 판별."""
+    if not DEBUG_API:
+        return JSONResponse({'error': 'debug disabled'}, status_code=404)
+    try:
+        from config import cfg
+        import urllib.request, urllib.parse
+    except Exception as e:
+        return {'error': f'{type(e).__name__}: {e}'}
+    params = urllib.parse.urlencode({'query': '서울 강남구 테헤란로 504'})
+    req = urllib.request.Request(
+        f'https://dapi.kakao.com/v2/local/search/address.json?{params}',
+        headers={'Authorization': f'KakaoAK {cfg.KAKAO_REST_API_KEY}'},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return {'http_status': r.status, 'body_excerpt': r.read().decode('utf-8')[:300]}
+    except urllib.error.HTTPError as e:
+        return {'http_status': e.code, 'body_excerpt': e.read().decode('utf-8')[:300]}
+    except Exception as e:
+        return {'error': f'{type(e).__name__}: {e}'}
+
+
 # ── API 라우터 ───────────────────────────────────────────────
 if search_router is not None:
     app.include_router(search_router, prefix="/api")
