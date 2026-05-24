@@ -17,6 +17,9 @@ from app.ai import (
     build_recommendations,
     build_stats,
     _fmt_price,
+    _make_pick_reason,
+    _make_prompt_recommend,
+    _make_prompt_regular,
 )
 
 
@@ -303,3 +306,150 @@ class TestBuildStats:
         result = build_recommendations(raw, 60)
         stats = build_stats(result['cards'], result['buckets'])
         assert stats['age_breakdown']['unknown'] == 1
+
+
+# ── _make_pick_reason ─────────────────────────────────────────
+
+class TestMakePickReason:
+    def _card_with_diff(self, diff: int, bucket_label='0-30분', pt='20평대'):
+        return {
+            'bucket_label': bucket_label,
+            'pyeong_type': pt,
+            'price_diff_vs_fastest': diff,
+        }
+
+    def test_diff_zero_mentions_slot_min(self):
+        """diff=0 → 최단버킷 슬롯 최저가 문구"""
+        reason = _make_pick_reason(self._card_with_diff(0), [{}], None)
+        assert '최저가' in reason
+        assert '0-30분' in reason
+
+    def test_diff_positive_mentions_cheaper(self):
+        """diff>0 → 최단버킷보다 N억 저렴 문구"""
+        reason = _make_pick_reason(self._card_with_diff(10_000), [{}] * 3, None)
+        assert '저렴' in reason
+
+    def test_diff_negative_mentions_slot(self):
+        """diff<0 → 슬롯 최저가 문구 (거의 발생 안 하지만 브랜치 커버)"""
+        reason = _make_pick_reason(self._card_with_diff(-5_000), [{}], None)
+        assert '최저가' in reason
+
+    def test_slot_size_reflected_in_reason(self):
+        slot_items = [{}] * 5
+        reason = _make_pick_reason(self._card_with_diff(0), slot_items, None)
+        assert '5' in reason
+
+    def test_large_diff_formats_eok_cheon(self):
+        """1억 5천 → 1억 5천 형식 검증"""
+        reason = _make_pick_reason(self._card_with_diff(15_000), [{}], None)
+        assert '1억' in reason
+        assert '5천' in reason
+
+    def test_exactly_eok_no_cheon(self):
+        """정확히 1억 → '1억' (천 없음)"""
+        reason = _make_pick_reason(self._card_with_diff(10_000), [{}], None)
+        assert '1억' in reason
+
+
+# ── _make_prompt_regular ──────────────────────────────────────
+
+def _prompt_card(apt_seq='A001', pt='20평대', price=30_000,
+                 time_min=25, build_year=2010,
+                 bus=0, subway=1, transit_summary='2호선'):
+    return {
+        'apt_seq': apt_seq,
+        'apt_nm': '테스트아파트',
+        'umd_nm': '테스트동',
+        'pyeong_type': pt,
+        'price_low': price,
+        'total_time_min': time_min,
+        'build_year': build_year,
+        'bus_cnt': bus,
+        'subway_cnt': subway,
+        'transit_summary': transit_summary,
+    }
+
+
+class TestMakePromptRegular:
+    def test_returns_string(self):
+        prompt = _make_prompt_regular(_prompt_card(), {})
+        assert isinstance(prompt, str)
+
+    def test_contains_apt_name(self):
+        prompt = _make_prompt_regular(_prompt_card(), {})
+        assert '테스트아파트' in prompt
+
+    def test_contains_price(self):
+        prompt = _make_prompt_regular(_prompt_card(price=30_000), {})
+        assert '3억' in prompt
+
+    def test_contains_time(self):
+        prompt = _make_prompt_regular(_prompt_card(time_min=35), {})
+        assert '35' in prompt
+
+    def test_no_build_year_no_age_str(self):
+        card = _prompt_card(build_year=None)
+        prompt = _make_prompt_regular(card, {})
+        assert '년차' not in prompt
+
+    def test_with_build_year_shows_age(self):
+        from datetime import date
+        card = _prompt_card(build_year=date.today().year - 10)
+        prompt = _make_prompt_regular(card, {})
+        assert '10년차' in prompt
+
+    def test_direct_subway_shows_직통(self):
+        card = _prompt_card(bus=0, subway=1)
+        prompt = _make_prompt_regular(card, {})
+        assert '직통' in prompt
+
+    def test_bus_and_subway_shows_환승(self):
+        card = _prompt_card(bus=1, subway=1)
+        prompt = _make_prompt_regular(card, {})
+        assert '환승' in prompt
+
+    def test_vs_avg_shown_when_avg_exists(self):
+        card = _prompt_card(price=30_000)
+        prompt = _make_prompt_regular(card, {'20평대': 25_000})
+        assert '%' in prompt
+
+    def test_ends_with_한마디(self):
+        prompt = _make_prompt_regular(_prompt_card(), {})
+        assert '한 마디:' in prompt
+
+
+# ── _make_prompt_recommend ────────────────────────────────────
+
+class TestMakePromptRecommend:
+    def test_returns_string(self):
+        prompt = _make_prompt_recommend(_prompt_card(), {}, '강남역')
+        assert isinstance(prompt, str)
+
+    def test_contains_apt_name(self):
+        prompt = _make_prompt_recommend(_prompt_card(), {}, '강남역')
+        assert '테스트아파트' in prompt
+
+    def test_contains_price(self):
+        prompt = _make_prompt_recommend(_prompt_card(price=50_000), {}, '역삼역')
+        assert '5억' in prompt
+
+    def test_contains_commute_time(self):
+        prompt = _make_prompt_recommend(_prompt_card(time_min=42), {}, '역삼역')
+        assert '42' in prompt
+
+    def test_직통_when_one_subway(self):
+        prompt = _make_prompt_recommend(_prompt_card(bus=0, subway=1), {}, '역삼역')
+        assert '직통' in prompt
+
+    def test_환승_when_bus_and_subway(self):
+        prompt = _make_prompt_recommend(_prompt_card(bus=1, subway=1), {}, '역삼역')
+        assert '환승' in prompt
+
+    def test_build_year_included(self):
+        prompt = _make_prompt_recommend(_prompt_card(build_year=2005), {}, '역삼역')
+        assert '2005' in prompt
+
+    def test_no_build_year_no_crash(self):
+        card = _prompt_card(build_year=None)
+        prompt = _make_prompt_recommend(card, {}, '역삼역')
+        assert isinstance(prompt, str)

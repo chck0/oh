@@ -7,11 +7,14 @@ app/portable.py 순수 함수 테스트
 from datetime import date
 import pytest
 import app.portable as portable
+from unittest.mock import MagicMock
 from app.portable import (
     year_month_minus,
     year_minus,
     upsert_sql,
     insert_returning_id,
+    get_last_id,
+    list_columns,
     USE_PG,
 )
 
@@ -120,3 +123,53 @@ class TestInsertReturningId:
         monkeypatch.setattr(portable, 'USE_PG', True)
         sql = insert_returning_id('workplaces', ['x'], 'wp_id')
         assert 'workplaces' in sql
+
+
+# ── get_last_id ───────────────────────────────────────────────
+
+class TestGetLastId:
+    def test_sqlite_returns_lastrowid(self, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', False)
+        mock_cursor = MagicMock()
+        mock_cursor.lastrowid = 42
+        result = get_last_id(None, mock_cursor, 'workplaces', 'wp_id')
+        assert result == 42
+
+    def test_pg_fetchone_returns_first_column(self, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', True)
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (99,)
+        result = get_last_id(None, mock_cursor, 'workplaces', 'wp_id')
+        assert result == 99
+
+    def test_pg_fetchone_none_returns_none(self, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', True)
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        result = get_last_id(None, mock_cursor, 'workplaces', 'wp_id')
+        assert result is None
+
+
+# ── list_columns ──────────────────────────────────────────────
+
+class TestListColumns:
+    def test_sqlite_returns_list(self, mem_db, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', False)
+        cols = list_columns(mem_db, 'workplaces')
+        assert isinstance(cols, list)
+
+    def test_sqlite_contains_known_columns(self, mem_db, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', False)
+        cols = list_columns(mem_db, 'workplaces')
+        assert 'wp_id' in cols
+        assert 'address_key' in cols
+        assert 'lat' in cols
+
+    def test_pg_path_uses_information_schema(self, monkeypatch):
+        monkeypatch.setattr(portable, 'USE_PG', True)
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchall.return_value = [
+            ('col_a',), ('col_b',),
+        ]
+        cols = list_columns(mock_conn, 'test_table')
+        assert cols == ['col_a', 'col_b']
