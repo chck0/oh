@@ -161,7 +161,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     cache_inserts, route_inserts = [], []
     now = time.strftime('%Y-%m-%d %H:%M:%S')
 
-    connector = aiohttp.TCPConnector(limit=30)
+    connector = aiohttp.TCPConnector(limit=30, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
         for ri in range(rounds):
             batch = cells_to_fetch[ri*ROUND_SIZE:(ri+1)*ROUND_SIZE]
