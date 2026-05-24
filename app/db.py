@@ -102,6 +102,7 @@ _SQL_RE = re.compile(
     re.VERBOSE,
 )
 
+
 def _q_to_pg(sql: str) -> str:
     def repl(m):
         s = m.group(0)

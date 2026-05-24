@@ -55,3 +55,8 @@ ngrok.exe
 
 # ── Vercel 빌드 산출물 ───────────────────────────────────────
 .vercel/
+
+# pytest / coverage
+htmlcov/
+.coverage
+.coverage.*

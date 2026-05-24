@@ -4,9 +4,15 @@ ODsay 호출 + transit_cache/routes 적재
 
 Vercel(서버리스)에서는 raw JSON 아카이브 쓰기를 자동 스킵 (IS_SERVERLESS).
 """
-import os, asyncio, aiohttp, sqlite3, json, time, math, logging
+import os
+import asyncio
+import aiohttp
+import json
+import time
+import math
+import logging
 from config import cfg
-from app.workplaces import raw_dir, cell_file
+from app.workplaces import raw_dir
 from app.portable import upsert_sql
 
 IS_SERVERLESS = bool(os.getenv('VERCEL'))
@@ -32,12 +38,15 @@ KEYS = [{'owner': f'key{i+1}', **k} for i, k in enumerate(cfg.ODSAY_KEYS)]
 def cell_of(lat, lng):
     return f"R{int(lat/GRID):05d}C{int(lng/GRID):05d}"
 
+
 def cell_center(cell_code):
     return (int(cell_code[1:6]) + 0.5) * GRID, (int(cell_code[7:12]) + 0.5) * GRID
 
+
 def haversine(lat1, lng1, lat2, lng2):
     R = 6371
-    dlat = math.radians(lat2 - lat1); dlng = math.radians(lng2 - lng1)
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
     a = (math.sin(dlat/2)**2 +
          math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
          math.sin(dlng/2)**2)
@@ -46,13 +55,18 @@ def haversine(lat1, lng1, lat2, lng2):
 
 # ── 경로 필터 + 랭킹 ──────────────────────────────────────────
 def filter_path(p):
-    info = p['info']; bt = info['busTransitCount']; st = info['subwayTransitCount']
+    info = p['info']
+    bt = info['busTransitCount']
+    st = info['subwayTransitCount']
     subs = p['subPath']
     if bt == 0 and st == 0:
         return info['totalTime'] <= WALK_ONLY_MAX_MIN
-    if (bt, st) not in ALLOWED_COMBOS:                       return False
-    if subs[0].get('distance', 0) > FIRST_LAST_WALK_M:       return False
-    if subs[-1].get('distance', 0) > FIRST_LAST_WALK_M:      return False
+    if (bt, st) not in ALLOWED_COMBOS:
+        return False
+    if subs[0].get('distance', 0) > FIRST_LAST_WALK_M:
+        return False
+    if subs[-1].get('distance', 0) > FIRST_LAST_WALK_M:
+        return False
     for sp in subs[1:-1]:
         if sp.get('trafficType') == 3 and sp.get('distance', 0) > TRANSFER_WALK_M:
             return False
@@ -61,10 +75,13 @@ def filter_path(p):
 
 def rank_paths(paths):
     valid = [p for p in paths if filter_path(p)]
+
     def pri(p):
-        bt = p['info']['busTransitCount']; st = p['info']['subwayTransitCount']
+        bt = p['info']['busTransitCount']
+        st = p['info']['subwayTransitCount']
         cls = {(0,1):1,(1,1):2,(0,2):3,(1,0):4}.get((bt,st), 5)
         return (cls, p['info']['totalTime'])
+
     valid.sort(key=pri)
     return [(i+1, p) for i, p in enumerate(valid)]
 
@@ -72,7 +89,9 @@ def rank_paths(paths):
 def to_steps(subpath_list):
     steps = []
     for sp in subpath_list:
-        tt = sp.get('trafficType'); t = sp.get('sectionTime', 0); d = sp.get('distance', 0)
+        tt = sp.get('trafficType')
+        t = sp.get('sectionTime', 0)
+        d = sp.get('distance', 0)
         if tt == 3:
             if d == 0:
                 steps.append({'type':'환승도보','time':t,'dist':0, 'line':'','from':'','to':''})
@@ -109,8 +128,10 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
         }
         headers = {'Referer': key_info['referer']}
         try:
-            async with session.get(ODSAY_URL, params=params, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT)) as r:
+            async with session.get(
+                ODSAY_URL, params=params, headers=headers,
+                timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
+            ) as r:
                 raw  = await r.text()
                 data = json.loads(raw)
                 if 'result' not in data:
