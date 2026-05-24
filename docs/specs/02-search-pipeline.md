@@ -65,7 +65,7 @@ so that 조건에 맞는 아파트 카드 목록과 통계·추천 결과를 받
 
 ## 5. Non-functional Requirements
 
-- **성능**: Vercel Hobby 60초 이내 응답
+- **성능**: Vercel Hobby 60초 이내 응답; Kakao geocode는 `asyncio.to_thread`로 이벤트 루프 차단 방지
 - **신뢰성**: ODsay 키 실패 시 다음 키로 자동 폴백
 - **DB 호환**: SQLite(로컬) ↔ Postgres/pgBouncer(Vercel) 자동 전환
 - **보안**: SearchRequest Pydantic 검증 (workplace_address 2~200자, max_minutes 10~60, pyeong_types 허용값)

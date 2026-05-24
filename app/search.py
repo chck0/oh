@@ -49,7 +49,8 @@ MAX_FETCH_CELLS_PER_CALL = 250
 @router.post("/search")
 async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Depends(get_db)):
     # ─ 1. workplace 등록 / wp_id 확보 ─
-    wp = get_or_create(conn, req.workplace_address)
+    # get_or_create 안의 Kakao HTTP 호출이 동기 블로킹이므로 to_thread로 오프로드
+    wp = await asyncio.to_thread(get_or_create, conn, req.workplace_address)
     if not wp:
         raise HTTPException(400, f'주소 변환 실패: {req.workplace_address}')
 
