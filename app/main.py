@@ -12,7 +12,7 @@ import traceback
 from pathlib import Path
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -116,6 +116,8 @@ async def _log_and_catch(request: Request, call_next):
         dt = int((time.time() - t0) * 1000)
         log.info('<-- %s %s [%d] %dms', method, path, resp.status_code, dt)
         return resp
+    except HTTPException:
+        raise
     except Exception as e:
         tb = traceback.format_exc()
         dt = int((time.time() - t0) * 1000)
@@ -139,6 +141,8 @@ ALLOWED_ORIGINS: list[str] = (
     [o.strip() for o in _raw_origins.split(',') if o.strip()]
     or ['http://localhost:8000', 'http://localhost:3000', 'http://127.0.0.1:8000']
 )
+if IS_SERVERLESS and not _raw_origins.strip():
+    log.warning('ALLOWED_ORIGINS 미설정 — localhost fallback이 production에 적용 중. Vercel 대시보드에서 설정 필요')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
