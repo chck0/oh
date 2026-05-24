@@ -89,7 +89,7 @@ API이므로 UX 없음. result.html이 소비자.
 | max_minutes | int | 10~60 | 60 |
 | max_price | int (만원) | 1,000~2,000,000 | 50,000 |
 | pyeong_types | list[str] | 허용 6종, 1~6개 | ['10평대','20평대'] |
-| min_kaptdaCnt | int\|None | 0~100,000 | None(=100) |
+| min_kaptdaCnt | int\|None | 0~100,000 | None(내부 기본 100) — **0 전달 시 필터 없음** |
 
 **출력 (응답 JSON)**
 
@@ -134,6 +134,7 @@ GET /api/apt/{apt_seq}/comment?wp_id={wp_id}&pyeong_type={pt}
 |---|---|
 | 반경 내 단지 없음 | `cards: []`, stats 최소값 응답 |
 | 조건에 맞는 거래 없음 | `cards: []` |
+| min_kaptdaCnt=0 | `is not None` 체크로 필터 없음 처리 (0은 falsy이므로 `if val:` 사용 금지) |
 | ODsay 250셀 초과 | `meta.partial=true`, 초과분 다음 검색에서 채움 |
 | ODsay 키 전체 실패 | 경로 없는 단지 제외 (transit_routes 미등록) |
 | LLM API 실패 | `llm_pending=true` 유지, 코멘트 빈 문자열 |

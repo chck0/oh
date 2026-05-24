@@ -62,7 +62,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     # ─ 2. 후보 단지 → 셀 ─
     apt_filter = 'WHERE is_apt=1 AND recent_trade=3'
     apt_params = []
-    if req.min_kaptdaCnt:
+    if req.min_kaptdaCnt is not None:
         apt_filter += ' AND kaptdaCnt >= ?'
         apt_params.append(req.min_kaptdaCnt)
     apts = conn.execute(
@@ -114,9 +114,9 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     odsay_stats = await fetch_cells(conn, wp, to_fetch)
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
-    min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt else ''
+    min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
     cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types]
-    if req.min_kaptdaCnt:
+    if req.min_kaptdaCnt is not None:
         cards_params.append(req.min_kaptdaCnt)
 
     # 카드 = (apt_seq, pyeong_type) 단위. 평형별로 행 1개씩.
