@@ -165,29 +165,36 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
         seqs = list({c['apt_seq'] for c in cards})
         ph = ','.join('?' * len(seqs))
         threshold_ym = year_month_minus(3)  # 3개월 전 YYYY*100+MM
+        # ROW_NUMBER()로 DB에서 최대 4건만 가져옴 (전체 fetchall 후 Python 필터 방식 대비
+        # 대형 단지/활발한 지역에서 수만 행 전송을 방지)
         recent_rows = conn.execute(f"""
+            WITH ranked AS (
+                SELECT apt_seq, pyeong, pyeong_type, floor, deal_amount_int,
+                       deal_year, deal_month, deal_day, dealing_gbn,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY apt_seq, pyeong_type
+                           ORDER BY deal_year DESC, deal_month DESC, deal_day DESC
+                       ) AS rn
+                FROM trade_recent
+                WHERE apt_seq IN ({ph})
+                  AND deal_year*100 + deal_month >= ?
+            )
             SELECT apt_seq, pyeong, pyeong_type, floor, deal_amount_int,
                    deal_year, deal_month, deal_day, dealing_gbn
-            FROM trade_recent
-            WHERE apt_seq IN ({ph})
-              AND deal_year*100 + deal_month >= ?
+            FROM ranked WHERE rn <= 4
             ORDER BY apt_seq, pyeong_type,
                      deal_year DESC, deal_month DESC, deal_day DESC
         """, seqs + [threshold_ym]).fetchall()
-        # (apt_seq, pyeong_type)별 최대 4건
         recent_map: dict = {}
         for row in recent_rows:
             key = (row['apt_seq'], row['pyeong_type'])
-            if key not in recent_map:
-                recent_map[key] = []
-            if len(recent_map[key]) < 4:
-                recent_map[key].append({
-                    'pyeong': row['pyeong'],
-                    'floor': row['floor'],
-                    'amount': row['deal_amount_int'],
-                    'date': f"{row['deal_year'] % 100:02d}.{row['deal_month']:02d}.{row['deal_day']:02d}",
-                    'gbn': row['dealing_gbn'],
-                })
+            recent_map.setdefault(key, []).append({
+                'pyeong': row['pyeong'],
+                'floor': row['floor'],
+                'amount': row['deal_amount_int'],
+                'date': f"{row['deal_year'] % 100:02d}.{row['deal_month']:02d}.{row['deal_day']:02d}",
+                'gbn': row['dealing_gbn'],
+            })
     else:
         recent_map = {}
 

@@ -132,9 +132,17 @@ def _startup():
 
 
 # ── CORS ─────────────────────────────────────────────────────
+# 운영: Vercel 환경변수 ALLOWED_ORIGINS 에 쉼표 구분 도메인 등록
+# 예: https://badugi.vercel.app,https://badugi-preview.vercel.app
+# 미설정 시 로컬 dev 전용으로 localhost만 허용
+_raw_origins = os.getenv('ALLOWED_ORIGINS', '')
+ALLOWED_ORIGINS: list[str] = (
+    [o.strip() for o in _raw_origins.split(',') if o.strip()]
+    or ['http://localhost:8000', 'http://localhost:3000', 'http://127.0.0.1:8000']
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

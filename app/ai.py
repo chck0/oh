@@ -15,6 +15,7 @@ app/ai.py — 추천 로직 + 통계 + Claude Haiku 코멘트
     build_comments(recommended_cards, all_cards, wp_label) -> dict[apt_pt_key, comment]
 """
 import asyncio
+from datetime import date
 import anthropic
 from config import cfg
 
@@ -27,7 +28,7 @@ def _get_client() -> anthropic.AsyncAnthropic:
         _client = anthropic.AsyncAnthropic(api_key=cfg.ANTHROPIC_API_KEY)
     return _client
 
-THIS_YEAR = 2026  # 연차 계산 기준
+THIS_YEAR = date.today().year  # 연차 계산 기준 (호출 시점 기준)
 
 # ── 모델 분리 ────────────────────────────────────────────────
 # 추천 카드 (소수, 긴 코멘트, 균형 잡힌 시각) → Sonnet
