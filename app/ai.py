@@ -28,7 +28,6 @@ def _get_client() -> anthropic.AsyncAnthropic:
         _client = anthropic.AsyncAnthropic(api_key=cfg.ANTHROPIC_API_KEY)
     return _client
 
-THIS_YEAR = date.today().year  # 연차 계산 기준 (호출 시점 기준)
 
 # ── 모델 분리 ────────────────────────────────────────────────
 # 추천 카드 (소수, 긴 코멘트, 균형 잡힌 시각) → Sonnet
@@ -220,7 +219,7 @@ def build_stats(cards: list[dict], buckets: list[dict]) -> dict:
         if not by:
             unknown += 1
             continue
-        age = THIS_YEAR - by
+        age = date.today().year - by
         if age <= 10:
             new_10 += 1
         elif age <= 20:
@@ -273,7 +272,7 @@ def _make_prompt_recommend(card: dict, avg_price_by_pt: dict, wp_label: str) -> 
     by = card.get('build_year')
     age_str = ''
     if by:
-        age = THIS_YEAR - by
+        age = date.today().year - by
         age_str = f'{by}년 준공 ({age}년차)'
 
     # 통근
@@ -321,29 +320,36 @@ def _make_prompt_recommend(card: dict, avg_price_by_pt: dict, wp_label: str) -> 
 
 async def _call_llm(prompt: str, model: str, max_tokens: int,
                     fallback_model: str | None = None) -> str:
-    """LLM 호출. 실패 시 fallback_model로 재시도. 로그 출력."""
+    """LLM 호출. 429 rate limit 시 2초 백오프 후 1회 재시도. 실패 시 fallback_model."""
     client = _get_client()
-    try:
+
+    async def _once(m: str) -> str:
         msg = await client.messages.create(
-            model=model,
+            model=m,
             max_tokens=max_tokens,
             messages=[{'role': 'user', 'content': prompt}],
         )
         return msg.content[0].text.strip()
+
+    try:
+        return await _once(model)
+    except anthropic.RateLimitError:
+        print(f'[LLM] {model} 429 rate limit — 2초 후 재시도')
+        await asyncio.sleep(2)
+        try:
+            return await _once(model)
+        except Exception as e2:
+            print(f'[LLM] {model} 재시도도 실패: {type(e2).__name__}: {e2}')
     except Exception as e:
         print(f'[LLM] {model} 실패: {type(e).__name__}: {e}')
-        if fallback_model and fallback_model != model:
-            print(f'[LLM] {fallback_model}로 폴백 시도')
-            try:
-                msg = await client.messages.create(
-                    model=fallback_model,
-                    max_tokens=max_tokens,
-                    messages=[{'role': 'user', 'content': prompt}],
-                )
-                return msg.content[0].text.strip()
-            except Exception as e2:
-                print(f'[LLM] 폴백도 실패: {type(e2).__name__}: {e2}')
-        return f'(생성 실패)'
+
+    if fallback_model and fallback_model != model:
+        print(f'[LLM] {fallback_model}로 폴백 시도')
+        try:
+            return await _once(fallback_model)
+        except Exception as e3:
+            print(f'[LLM] 폴백도 실패: {type(e3).__name__}: {e3}')
+    return '(생성 실패)'
 
 
 # ── 일반 카드용 짧은 한마디 프롬프트 (Haiku) ────────────────
@@ -360,7 +366,7 @@ def _make_prompt_regular(card: dict, avg_price_by_pt: dict) -> str:
         vs_avg_str = f'동가격대 대비 {sign}{vs_avg}%'
 
     by = card.get('build_year')
-    age_str = f'{THIS_YEAR - by}년차' if by else ''
+    age_str = f'{date.today().year - by}년차' if by else ''
 
     transit_summary = card.get('transit_summary', '')
     bus = card.get('bus_cnt', 0) or 0
@@ -398,10 +404,10 @@ async def build_recommend_comments(
         keys.append(card_key(c))
 
     print(f'[LLM] 추천 코멘트 {len(tasks)}개 Sonnet 호출 시작')
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     print(f'[LLM] 추천 코멘트 {len(tasks)}개 완료')
     return {
-        k: {'comment': r, 'kind': 'recommend'}
+        k: {'comment': r if isinstance(r, str) else '(생성 실패)', 'kind': 'recommend'}
         for k, r in zip(keys, results)
     }
 
@@ -431,10 +437,10 @@ async def build_regular_comments(
     tasks = [_bounded_call(c) for c in regular_cards]
     keys = [card_key(c) for c in regular_cards]
     print(f'[LLM] 일반 코멘트 {len(tasks)}개 Haiku 호출 시작 (동시 {REGULAR_CONCURRENCY})')
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     print(f'[LLM] 일반 코멘트 {len(tasks)}개 완료')
     return {
-        k: {'comment': r, 'kind': 'regular'}
+        k: {'comment': r if isinstance(r, str) else '(생성 실패)', 'kind': 'regular'}
         for k, r in zip(keys, results)
     }
 

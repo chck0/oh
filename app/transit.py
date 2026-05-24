@@ -161,7 +161,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     cache_inserts, route_inserts = [], []
     now = time.strftime('%Y-%m-%d %H:%M:%S')
 
-    connector = aiohttp.TCPConnector(limit=30)
+    connector = aiohttp.TCPConnector(limit=30, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
         for ri in range(rounds):
             batch = cells_to_fetch[ri*ROUND_SIZE:(ri+1)*ROUND_SIZE]
@@ -209,10 +209,14 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
 
     # ── INSERT (이 wp의 기존 routes는 이미 있을 수 있으니 origin_cell 단위로 교체) ──
     if route_inserts:
-        # 동일 (origin_cell, wp_id)의 기존 행 삭제 (rank 재계산 위해)
-        cells_set = set((r[0], r[1]) for r in route_inserts)
-        for oc, wp in cells_set:
-            conn.execute('DELETE FROM transit_routes WHERE origin_cell=? AND wp_id=?', (oc, wp))
+        # 동일 (origin_cell, wp_id)의 기존 행 삭제 (rank 재계산 위해) — 단일 쿼리
+        # 같은 호출 내 route_inserts는 모두 동일 wp_id이므로 origin_cell IN (?) 로 처리
+        origin_cells = list(set(r[0] for r in route_inserts))
+        ph = ','.join(['?'] * len(origin_cells))
+        conn.execute(
+            f'DELETE FROM transit_routes WHERE wp_id=? AND origin_cell IN ({ph})',
+            [wp_id] + origin_cells,
+        )
 
     conn.executemany(
         upsert_sql(

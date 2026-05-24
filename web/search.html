@@ -466,6 +466,7 @@
         <input type="text" id="address" readonly required placeholder="주소 찾기 버튼을 눌러주세요">
         <button type="button" class="btn-secondary" onclick="openPostcode()">주소 찾기</button>
       </div>
+      <div class="error" id="address-error"></div>
     </section>
 
     <!-- ② 최대 금액 -->
@@ -541,6 +542,7 @@
         <label class="check-chip"><input type="checkbox" name="pyeong" value="40평대"><span class="check-chip__box"></span><span>40평대</span></label>
         <label class="check-chip"><input type="checkbox" name="pyeong" value="50평대+"><span class="check-chip__box"></span><span>50평대+</span></label>
       </div>
+      <div class="error" id="pyeong-error"></div>
     </section>
 
     <!-- ⑤ 단지 세대수 -->
@@ -640,17 +642,33 @@ document.getElementById('price-man').addEventListener('input', validatePrice);
 document.getElementById('search-form').addEventListener('submit', (e) => {
   e.preventDefault();
 
-  const address = document.getElementById('address').value.trim();
-  if (!address) { alert('직장 주소를 입력해주세요'); return; }
+  const addressEl = document.getElementById('address');
+  const addressErrEl = document.getElementById('address-error');
+  const pyeongErrEl = document.getElementById('pyeong-error');
+
+  addressErrEl.classList.remove('show');
+  pyeongErrEl.classList.remove('show');
+
+  const address = addressEl.value.trim();
+  if (!address) {
+    addressErrEl.textContent = '직장 주소를 입력해주세요';
+    addressErrEl.classList.add('show');
+    addressEl.focus();
+    return;
+  }
 
   const price = validatePrice();
-  if (price === null) { alert('금액을 확인해주세요'); return; }
+  if (price === null) return;
 
   const pyeongTypes = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(el => el.value);
-  if (pyeongTypes.length === 0) { alert('평형을 하나 이상 선택해주세요'); return; }
+  if (pyeongTypes.length === 0) {
+    pyeongErrEl.textContent = '평형을 하나 이상 선택해주세요';
+    pyeongErrEl.classList.add('show');
+    return;
+  }
 
   const chip = document.querySelector('#commute-chips .chip.active');
-  const maxMinutes = parseInt(chip.dataset.value);
+  const maxMinutes = parseInt(chip.dataset.value, 10);
 
   const mincnt = document.querySelector('input[name=mincnt]:checked').value;
 

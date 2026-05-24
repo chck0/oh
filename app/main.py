@@ -11,7 +11,8 @@ import logging
 import traceback
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -60,44 +61,13 @@ except Exception as e:
     db_connect = None
 
 
-app = FastAPI(title="real_estate", version="0.1.0")
-
-
-# ── 모든 요청/응답 로깅 + 예외 캐치 ─────────────────────────
-@app.middleware("http")
-async def _log_and_catch(request: Request, call_next):
-    t0 = time.time()
-    method, path = request.method, request.url.path
-    log.info('--> %s %s', method, path)
-    try:
-        resp = await call_next(request)
-        dt = int((time.time() - t0) * 1000)
-        log.info('<-- %s %s [%d] %dms', method, path, resp.status_code, dt)
-        return resp
-    except Exception as e:
-        tb = traceback.format_exc()
-        dt = int((time.time() - t0) * 1000)
-        log.error('!!! %s %s after %dms: %s\n%s', method, path, dt, e, tb)
-        payload = {
-            'error': f'{type(e).__name__}: {e}',
-            'path': path,
-            'method': method,
-        }
-        if DEBUG_API:
-            payload['traceback'] = tb.splitlines()
-        return JSONResponse(payload, status_code=500)
-
-
-# ── 앱 시작 시 환경 + DB 점검 ────────────────────────────────
-@app.on_event("startup")
-def _startup():
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
     log.info('=== startup === VERCEL=%s DEBUG_API=%s', IS_SERVERLESS, DEBUG_API)
     if _IMPORT_ERROR:
         log.error('startup skipped because import failed')
-        return
-
-    # SQLite(로컬)에서만 신규 테이블 자동 생성
-    if not USE_PG and db_connect is not None:
+    elif not USE_PG and db_connect is not None:
+        # SQLite(로컬)에서만 신규 테이블 자동 생성
         try:
             conn = db_connect()
             try:
@@ -129,6 +99,37 @@ def _startup():
             log.info('local sqlite schema ensured')
         except Exception as e:
             log.error('sqlite schema ensure failed: %s', e)
+    yield
+
+
+app = FastAPI(title="real_estate", version="0.1.0", lifespan=_lifespan)
+
+
+# ── 모든 요청/응답 로깅 + 예외 캐치 ─────────────────────────
+@app.middleware("http")
+async def _log_and_catch(request: Request, call_next):
+    t0 = time.time()
+    method, path = request.method, request.url.path
+    log.info('--> %s %s', method, path)
+    try:
+        resp = await call_next(request)
+        dt = int((time.time() - t0) * 1000)
+        log.info('<-- %s %s [%d] %dms', method, path, resp.status_code, dt)
+        return resp
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        dt = int((time.time() - t0) * 1000)
+        log.error('!!! %s %s after %dms: %s\n%s', method, path, dt, e, tb)
+        payload = {
+            'error': f'{type(e).__name__}: {e}',
+            'path': path,
+            'method': method,
+        }
+        if DEBUG_API:
+            payload['traceback'] = tb.splitlines()
+        return JSONResponse(payload, status_code=500)
 
 
 # ── CORS ─────────────────────────────────────────────────────
@@ -140,6 +141,8 @@ ALLOWED_ORIGINS: list[str] = (
     [o.strip() for o in _raw_origins.split(',') if o.strip()]
     or ['http://localhost:8000', 'http://localhost:3000', 'http://127.0.0.1:8000']
 )
+if IS_SERVERLESS and not _raw_origins.strip():
+    log.warning('ALLOWED_ORIGINS 미설정 — localhost fallback이 production에 적용 중. Vercel 대시보드에서 설정 필요')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

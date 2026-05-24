@@ -49,7 +49,8 @@ MAX_FETCH_CELLS_PER_CALL = 250
 @router.post("/search")
 async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Depends(get_db)):
     # ─ 1. workplace 등록 / wp_id 확보 ─
-    wp = get_or_create(conn, req.workplace_address)
+    # get_or_create 안의 Kakao HTTP 호출이 동기 블로킹이므로 to_thread로 오프로드
+    wp = await asyncio.to_thread(get_or_create, conn, req.workplace_address)
     if not wp:
         raise HTTPException(400, f'주소 변환 실패: {req.workplace_address}')
 
@@ -62,7 +63,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     # ─ 2. 후보 단지 → 셀 ─
     apt_filter = 'WHERE is_apt=1 AND recent_trade=3'
     apt_params = []
-    if req.min_kaptdaCnt:
+    if req.min_kaptdaCnt is not None:
         apt_filter += ' AND kaptdaCnt >= ?'
         apt_params.append(req.min_kaptdaCnt)
     apts = conn.execute(
@@ -114,9 +115,9 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     odsay_stats = await fetch_cells(conn, wp, to_fetch)
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
-    min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt else ''
+    min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
     cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types]
-    if req.min_kaptdaCnt:
+    if req.min_kaptdaCnt is not None:
         cards_params.append(req.min_kaptdaCnt)
 
     # 카드 = (apt_seq, pyeong_type) 단위. 평형별로 행 1개씩.
@@ -284,25 +285,27 @@ async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, w
     # DB 저장 (실패 코멘트도 저장하면 다음에 또 시도 안 함 → 성공한 것만 저장)
     try:
         conn = db_connect()
-        rows = []
-        for c in miss_cards:
-            ck = card_key(c)
-            comment = new_comments.get(ck, {}).get('comment', '')
-            # '(생성 실패)' 같은 에러 메시지는 캐시하지 않음 → 다음 검색 때 재시도
-            if comment and not comment.startswith('('):
-                rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment))
-        if rows:
-            conn.executemany(
-                upsert_sql(
-                    'apt_pt_friend_comment',
-                    ['apt_seq', 'pyeong_type', 'wp_id', 'comment'],
-                    pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
-                ),
-                rows,
-            )
-            conn.commit()
-            print(f'[bg_comments] DB 저장 완료 — {len(rows)}건')
-        conn.close()
+        try:
+            rows = []
+            for c in miss_cards:
+                ck = card_key(c)
+                comment = new_comments.get(ck, {}).get('comment', '')
+                # '(생성 실패)' 같은 에러 메시지는 캐시하지 않음 → 다음 검색 때 재시도
+                if comment and not comment.startswith('('):
+                    rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment))
+            if rows:
+                conn.executemany(
+                    upsert_sql(
+                        'apt_pt_friend_comment',
+                        ['apt_seq', 'pyeong_type', 'wp_id', 'comment'],
+                        pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
+                    ),
+                    rows,
+                )
+                conn.commit()
+                print(f'[bg_comments] DB 저장 완료 — {len(rows)}건')
+        finally:
+            conn.close()
     except Exception as e:
         print(f'[bg_comments] DB 저장 실패: {type(e).__name__}: {e}')
         print(traceback.format_exc())
@@ -325,6 +328,8 @@ def get_comments(wp_id: int, keys: str, conn=Depends(get_db)):
         pairs.append((seq.strip(), pt.strip()))
     if not pairs:
         return {}
+    if len(pairs) > 200:
+        raise HTTPException(400, 'keys 개수가 200을 초과할 수 없습니다')
     conds = ' OR '.join(['(apt_seq=? AND pyeong_type=?)'] * len(pairs))
     params = [wp_id]
     for s, p in pairs:

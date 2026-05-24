@@ -32,7 +32,9 @@ def resolve(addr_input: str) -> dict | None:
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read().decode('utf-8'))
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger('app').warning('Kakao geocode 실패 [%s]: %s', addr_input, e)
         return None
 
     docs = data.get('documents', [])
@@ -46,8 +48,8 @@ def resolve(addr_input: str) -> dict | None:
     if len(b_code) != 10 or not main_bun:
         return None
     ra = d.get('road_address') or {}
-    lat = float(ra.get('y') or d.get('y') or 0) or None
-    lng = float(ra.get('x') or d.get('x') or 0) or None
+    lat = float(ra.get('y') or d.get('y') or 0) if (ra.get('y') or d.get('y')) else None
+    lng = float(ra.get('x') or d.get('x') or 0) if (ra.get('x') or d.get('x')) else None
     return {
         'address_key':  f'{b_code}|{main_bun}|{sub_bun}',
         'address_norm': ra.get('address_name') or a.get('address_name') or addr_input,

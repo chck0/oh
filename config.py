@@ -10,12 +10,14 @@ config.py — 프로젝트 전체 설정 중앙 관리
     cfg.DB_PATH              # DB 파일 절대경로
 """
 import os
+from functools import cached_property
 from pathlib import Path
 from dotenv import load_dotenv
 
 # 이 파일 기준으로 .env 경로 고정 → 어느 디렉토리에서 실행해도 동작
+# override=False: OS 환경변수(Vercel 대시보드 설정값)가 .env보다 우선
 PROJECT_ROOT = Path(__file__).parent
-load_dotenv(PROJECT_ROOT / '.env', override=True)
+load_dotenv(PROJECT_ROOT / '.env', override=False)
 
 
 def _require(key: str) -> str:
@@ -62,7 +64,7 @@ class _Config:
     # 런타임 필수 — transit 캐시 미스 시 호출.
     # ODSAY_KEY_1 ~ ODSAY_KEY_20 까지 스캔하고 빈 번호는 건너뜀
     # (망가진 키 1개 삭제해도 뒤 번호 살릴 수 있게 gap 허용)
-    @property
+    @cached_property
     def ODSAY_KEYS(self) -> list[dict]:
         keys = []
         for i in range(1, 21):

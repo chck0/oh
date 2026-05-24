@@ -47,6 +47,15 @@
 
     .num { font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; }
 
+    .partial-banner {
+      margin: 12px 0; padding: 10px 14px;
+      background: var(--color-warning-bg, #fff8e1);
+      border-left: 3px solid var(--color-warning, #f59e0b);
+      border-radius: 4px;
+      font-size: 13px; color: var(--color-warning-text, #78350f);
+      line-height: 1.5;
+    }
+
     /* ════════════════════════════════════════════════════════
        [5] 로딩 오버레이 — 3단계 진행 표시
        ════════════════════════════════════════════════════════ */
@@ -1590,21 +1599,20 @@ function escHtml(s){
 // ═══════════════════════════════════════════════════════
 //  검색 실행
 // ═══════════════════════════════════════════════════════
+const THIS_YEAR = THIS_YEAR;
 let kakaoReady = new Promise(resolve => { kakao.maps.load(resolve); });
 
-// 카카오맵 프리로드 — API 응답 기다리는 동안 SDK 초기화 시작
-kakaoReady.then(()=>{
-  // 미리 container에 지도 생성 시작 (wp 좌표는 나중에 pan)
-  // 아직 container가 display:none이라 실제 렌더는 showResults()에서 initMap()이 담당
-});
-
 async function runSearch(){
+  const ctrl = new AbortController();
+  const _tid = setTimeout(() => ctrl.abort(), 70000);
   try{
     const res = await fetch('/api/search',{
       method:'POST',
       headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
       body: JSON.stringify(reqBody),
+      signal: ctrl.signal,
     });
+    clearTimeout(_tid);
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
     onSearchDone();
@@ -1614,10 +1622,12 @@ async function runSearch(){
       setTimeout(pollComments, 2000);  // 첫 폴링까지 2초 (백그라운드 시작 시간 여유)
     }
   } catch(err){
+    clearTimeout(_tid);
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('main').style.display='flex';
+    const msg = err.name === 'AbortError' ? '검색 시간이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요.' : err.message;
     document.getElementById('cards-panel').innerHTML=`
-      <div class="error-box"><h2>분석 중 오류</h2><p>${err.message}</p>
+      <div class="error-box"><h2>분석 중 오류</h2><p>${msg}</p>
       <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
   }
 }
@@ -1625,14 +1635,14 @@ async function runSearch(){
 // LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
 // 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
 let _pollCount = 0;
-const MAX_POLL = 72; // 최대 ~6분 (5s×60 + 실패 10s×6) 후 자동 종료
+const MAX_POLL = 72; // 최대 ~6분 후 자동 종료
 async function pollComments(){
   if(!resultData || _pollCount >= MAX_POLL) return;
-  _pollCount++;
-  // 백그라운드 탭에서는 폴링 간격 늘려 불필요한 요청 줄임
+  // 백그라운드 탭에서는 카운트 증가 없이 간격만 늘림
   if(document.hidden){ setTimeout(pollComments, 15000); return; }
+  _pollCount++;
   try{
-    const pendingCards = resultData.cards.filter(c=>!c.friend_comment);
+    const pendingCards = resultData.cards.filter(c=>c.friend_comment == null || c.friend_comment === '');
     if(!pendingCards.length) return;
     // URL 길이 한계 대비: 최대 80개씩 끊어서 보냄
     const CHUNK = 80;
@@ -1642,13 +1652,13 @@ async function pollComments(){
       const keys = slice.map(c=>`${c.apt_seq}:${c.pyeong_type||''}`).join(',');
       const res = await fetch(`/api/comments?wp_id=${resultData.wp_id}&keys=${encodeURIComponent(keys)}`,
         {headers:{'ngrok-skip-browser-warning':'1'}});
-      Object.assign(allComments, await res.json());
+      if(res.ok) Object.assign(allComments, await res.json());
     }
 
     let updated = false;
     resultData.cards.forEach(c=>{
       const ck = `${c.apt_seq}:${c.pyeong_type||''}`;
-      if(allComments[ck] && !c.friend_comment){
+      if(allComments[ck] && (c.friend_comment == null || c.friend_comment === '')){
         c.friend_comment = allComments[ck].comment;
         updated = true;
       }
@@ -1686,6 +1696,7 @@ function onSearchDone(){
   setTimeout(showResults, 1200);
 }
 function showResults(){
+  if(document.getElementById('loading').classList.contains('hidden')) return;
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('main').style.display='flex';
   vCurr.pause(); vNext.pause();
@@ -1826,7 +1837,7 @@ function panToCard(aptSeq){
 
 // 추천 카드 (긴 코멘트형)
 function renderRecCard(c, wpId){
-  const thisYear = new Date().getFullYear();
+  const thisYear = THIS_YEAR;
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
   if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
   if(c.top_floor) metaParts.push(`최고 ${c.top_floor}층`);
@@ -1884,7 +1895,7 @@ function splitPrice(manwon){
 
 // 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
 function renderListCard(c, wpId){
-  const thisYear = new Date().getFullYear();
+  const thisYear = THIS_YEAR;
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
   if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
 
@@ -1922,10 +1933,7 @@ function renderCards(data){
 
   // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
   const partialBanner = data.meta?.partial
-    ? `<div style="margin:12px 0;padding:10px 14px;background:#fff8e1;border-left:3px solid #f59e0b;
-                  border-radius:4px;font-size:13px;color:#78350f;line-height:1.5;">
-        ⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.
-       </div>`
+    ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
   let html = partialBanner + renderStatsPanel(data);
@@ -2119,7 +2127,7 @@ function showTooltip(pinEl, group, wpId){
   badge.style.display = group.any_recommended ? '' : 'none';
 
   // 메타
-  const thisYear = new Date().getFullYear();
+  const thisYear = THIS_YEAR;
   let metaParts = [group.umd_nm, `${group.kaptdaCnt.toLocaleString()}세대`];
   if(group.build_year) metaParts.push(`${group.build_year}년 (${thisYear-group.build_year}년차)`);
   document.getElementById('tt-meta').textContent = metaParts.join(' · ');
@@ -2155,7 +2163,7 @@ function showTooltip(pinEl, group, wpId){
 function switchTooltipPt(idx){
   if(!_ttGroup || idx === _ttActivePtIdx) return;
   _ttActivePtIdx = idx;
-  document.querySelectorAll('.tt-pt-tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.pin-tooltip__tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
   renderTooltipPt(idx);
 }
 
@@ -2255,7 +2263,7 @@ function renderDetailPanel(d, routes, wpId){
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
   const bld = d.building || {};
-  const thisYear = new Date().getFullYear();
+  const thisYear = THIS_YEAR;
 
   // ── 메타 한 줄
   const metaParts = [escHtml(d.umd_nm), `${(d.kaptdaCnt||0).toLocaleString()}세대`];
