@@ -67,3 +67,97 @@ class TestNotFound:
     def test_unknown_path_returns_404(self, client):
         response = client.get('/api/nonexistent_route_xyz')
         assert response.status_code == 404
+
+
+class TestDebugEnabled:
+    """DEBUG_API=True 로 패치했을 때 /api/_debug 완전 응답 검증"""
+
+    def test_has_env_field(self, client, monkeypatch):
+        import app.main as m
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+        data = client.get('/api/_debug').json()
+        assert 'env' in data
+
+    def test_has_db_field(self, client, monkeypatch):
+        import app.main as m
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+        data = client.get('/api/_debug').json()
+        assert 'db' in data
+
+    def test_db_status_is_ok_or_err(self, client, monkeypatch):
+        import app.main as m
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+        data = client.get('/api/_debug').json()
+        assert 'status' in data['db']
+
+    def test_env_contains_key_markers(self, client, monkeypatch):
+        import app.main as m
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+        data = client.get('/api/_debug').json()
+        # 주요 환경변수 키가 env 필드에 모두 있어야 함
+        for key in ['DATABASE_URL', 'KAKAO_REST_API_KEY', 'ANTHROPIC_API_KEY']:
+            assert key in data['env']
+
+    def test_import_error_field_present(self, client, monkeypatch):
+        import app.main as m
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+        data = client.get('/api/_debug').json()
+        assert 'import_error' in data
+
+
+class TestOdsayTestEndpoint:
+    """GET /api/_test_odsay — DEBUG_API=True 일 때 응답 검증"""
+
+    def test_disabled_returns_404(self, client):
+        resp = client.get('/api/_test_odsay')
+        assert resp.status_code == 404
+
+    def test_enabled_returns_results_list(self, client, monkeypatch):
+        import app.main as m
+        import urllib.request
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+
+        # urllib.urlopen 을 모킹해서 외부 호출 차단
+        fake_body = b'{"result": {"path": []}}'
+
+        class _FakeResp:
+            status = 200
+            def read(self):
+                return fake_body
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                pass
+
+        monkeypatch.setattr(urllib.request, 'urlopen', lambda *a, **kw: _FakeResp())
+        data = client.get('/api/_test_odsay').json()
+        assert 'results' in data
+        assert isinstance(data['results'], list)
+
+
+class TestKakaoTestEndpoint:
+    """GET /api/_test_kakao — DEBUG_API=True 일 때 응답 검증"""
+
+    def test_disabled_returns_404(self, client):
+        resp = client.get('/api/_test_kakao')
+        assert resp.status_code == 404
+
+    def test_enabled_returns_http_status(self, client, monkeypatch):
+        import app.main as m
+        import urllib.request
+        monkeypatch.setattr(m, 'DEBUG_API', True)
+
+        fake_body = b'{"documents": []}'
+
+        class _FakeResp:
+            status = 200
+            def read(self):
+                return fake_body
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                pass
+
+        monkeypatch.setattr(urllib.request, 'urlopen', lambda *a, **kw: _FakeResp())
+        data = client.get('/api/_test_kakao').json()
+        assert 'http_status' in data or 'body_excerpt' in data
