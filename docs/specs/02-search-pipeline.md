@@ -122,8 +122,9 @@ Response: 200 OK (JSON) | 400 주소 변환 실패 | 422 검증 실패 | 500 서
 폴링 엔드포인트:
 
 ```
-GET /api/apt/{apt_seq}/comment?wp_id={wp_id}&pyeong_type={pt}
-→ LLM 코멘트 완료 여부 + comment 반환
+GET /api/comments?wp_id={wp_id}&keys={apt_seq:pyeong_type,...}
+→ { "apt_seq:pyeong_type": { "comment": "..." } }
+- keys 최대 200개 초과 시 400 에러
 ```
 
 ---
@@ -138,6 +139,7 @@ GET /api/apt/{apt_seq}/comment?wp_id={wp_id}&pyeong_type={pt}
 | ODsay 250셀 초과 | `meta.partial=true`, 초과분 다음 검색에서 채움 |
 | ODsay 키 전체 실패 | 경로 없는 단지 제외 (transit_routes 미등록) |
 | LLM API 실패 | `llm_pending=true` 유지, 코멘트 빈 문자열 |
+| BG 태스크 DB 저장 중 예외 | `conn.close()` 반드시 finally에서 호출 (커넥션 누수 방지) |
 | pgBouncer Transaction mode | `prepare_threshold=None` 자동 설정 |
 
 ---

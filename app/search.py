@@ -284,25 +284,27 @@ async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, w
     # DB 저장 (실패 코멘트도 저장하면 다음에 또 시도 안 함 → 성공한 것만 저장)
     try:
         conn = db_connect()
-        rows = []
-        for c in miss_cards:
-            ck = card_key(c)
-            comment = new_comments.get(ck, {}).get('comment', '')
-            # '(생성 실패)' 같은 에러 메시지는 캐시하지 않음 → 다음 검색 때 재시도
-            if comment and not comment.startswith('('):
-                rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment))
-        if rows:
-            conn.executemany(
-                upsert_sql(
-                    'apt_pt_friend_comment',
-                    ['apt_seq', 'pyeong_type', 'wp_id', 'comment'],
-                    pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
-                ),
-                rows,
-            )
-            conn.commit()
-            print(f'[bg_comments] DB 저장 완료 — {len(rows)}건')
-        conn.close()
+        try:
+            rows = []
+            for c in miss_cards:
+                ck = card_key(c)
+                comment = new_comments.get(ck, {}).get('comment', '')
+                # '(생성 실패)' 같은 에러 메시지는 캐시하지 않음 → 다음 검색 때 재시도
+                if comment and not comment.startswith('('):
+                    rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment))
+            if rows:
+                conn.executemany(
+                    upsert_sql(
+                        'apt_pt_friend_comment',
+                        ['apt_seq', 'pyeong_type', 'wp_id', 'comment'],
+                        pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
+                    ),
+                    rows,
+                )
+                conn.commit()
+                print(f'[bg_comments] DB 저장 완료 — {len(rows)}건')
+        finally:
+            conn.close()
     except Exception as e:
         print(f'[bg_comments] DB 저장 실패: {type(e).__name__}: {e}')
         print(traceback.format_exc())
@@ -325,6 +327,8 @@ def get_comments(wp_id: int, keys: str, conn=Depends(get_db)):
         pairs.append((seq.strip(), pt.strip()))
     if not pairs:
         return {}
+    if len(pairs) > 200:
+        raise HTTPException(400, 'keys 개수가 200을 초과할 수 없습니다')
     conds = ' OR '.join(['(apt_seq=? AND pyeong_type=?)'] * len(pairs))
     params = [wp_id]
     for s, p in pairs:
