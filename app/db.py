@@ -25,7 +25,7 @@ DATABASE_URL = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or ''
 USE_PG = bool(DATABASE_URL)
 
 # pgBouncer 트랜잭션 모드(6543 포트)에서는 prepared statement 비활성 필수
-_PG_KWARGS = {'prepare_threshold': None}
+_PG_KWARGS = {'prepare_threshold': None, 'connect_timeout': 5}
 
 
 # ── sqlite3.Row 호환 행 프록시 (Postgres / libSQL 공통) ───────
