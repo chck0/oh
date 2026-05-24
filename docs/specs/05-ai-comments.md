@@ -130,6 +130,7 @@ Response: { "comment": "...", "done": true/false }
 | 캐시 있음 | LLM 미호출, 즉시 반환 |
 | 카드 0개 | 빈 dict 반환, 호출 없음 |
 | rate limit 초과 | 동시 8개 Semaphore가 줄 세움 |
+| 카드 1개 프롬프트 생성 예외 | `return_exceptions=True`로 해당 카드만 실패, 나머지 정상 반환 |
 
 ---
 

@@ -130,6 +130,7 @@ stats = build_stats(cards: list[dict], buckets: list[dict]) -> dict
 - [x] 같은 apt_seq는 하나의 슬롯에서만 추천
 - [x] pick_reason에 슬롯명과 차액 포함
 - [x] build_stats 버킷별 commute_curve 반환
+- [x] 연차 계산은 `date.today().year` 인라인 (모듈 상수 금지 — 장기 인스턴스 오류 방지)
 - [x] 연식 분포 4구간 반환
 
 ---

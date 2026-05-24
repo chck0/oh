@@ -28,7 +28,6 @@ def _get_client() -> anthropic.AsyncAnthropic:
         _client = anthropic.AsyncAnthropic(api_key=cfg.ANTHROPIC_API_KEY)
     return _client
 
-THIS_YEAR = date.today().year  # 연차 계산 기준 (호출 시점 기준)
 
 # ── 모델 분리 ────────────────────────────────────────────────
 # 추천 카드 (소수, 긴 코멘트, 균형 잡힌 시각) → Sonnet
@@ -220,7 +219,7 @@ def build_stats(cards: list[dict], buckets: list[dict]) -> dict:
         if not by:
             unknown += 1
             continue
-        age = THIS_YEAR - by
+        age = date.today().year - by
         if age <= 10:
             new_10 += 1
         elif age <= 20:
@@ -273,7 +272,7 @@ def _make_prompt_recommend(card: dict, avg_price_by_pt: dict, wp_label: str) -> 
     by = card.get('build_year')
     age_str = ''
     if by:
-        age = THIS_YEAR - by
+        age = date.today().year - by
         age_str = f'{by}년 준공 ({age}년차)'
 
     # 통근
@@ -360,7 +359,7 @@ def _make_prompt_regular(card: dict, avg_price_by_pt: dict) -> str:
         vs_avg_str = f'동가격대 대비 {sign}{vs_avg}%'
 
     by = card.get('build_year')
-    age_str = f'{THIS_YEAR - by}년차' if by else ''
+    age_str = f'{date.today().year - by}년차' if by else ''
 
     transit_summary = card.get('transit_summary', '')
     bus = card.get('bus_cnt', 0) or 0
@@ -398,10 +397,10 @@ async def build_recommend_comments(
         keys.append(card_key(c))
 
     print(f'[LLM] 추천 코멘트 {len(tasks)}개 Sonnet 호출 시작')
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     print(f'[LLM] 추천 코멘트 {len(tasks)}개 완료')
     return {
-        k: {'comment': r, 'kind': 'recommend'}
+        k: {'comment': r if isinstance(r, str) else '(생성 실패)', 'kind': 'recommend'}
         for k, r in zip(keys, results)
     }
 
@@ -431,10 +430,10 @@ async def build_regular_comments(
     tasks = [_bounded_call(c) for c in regular_cards]
     keys = [card_key(c) for c in regular_cards]
     print(f'[LLM] 일반 코멘트 {len(tasks)}개 Haiku 호출 시작 (동시 {REGULAR_CONCURRENCY})')
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     print(f'[LLM] 일반 코멘트 {len(tasks)}개 완료')
     return {
-        k: {'comment': r, 'kind': 'regular'}
+        k: {'comment': r if isinstance(r, str) else '(생성 실패)', 'kind': 'regular'}
         for k, r in zip(keys, results)
     }
 
