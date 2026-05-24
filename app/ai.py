@@ -320,29 +320,36 @@ def _make_prompt_recommend(card: dict, avg_price_by_pt: dict, wp_label: str) -> 
 
 async def _call_llm(prompt: str, model: str, max_tokens: int,
                     fallback_model: str | None = None) -> str:
-    """LLM 호출. 실패 시 fallback_model로 재시도. 로그 출력."""
+    """LLM 호출. 429 rate limit 시 2초 백오프 후 1회 재시도. 실패 시 fallback_model."""
     client = _get_client()
-    try:
+
+    async def _once(m: str) -> str:
         msg = await client.messages.create(
-            model=model,
+            model=m,
             max_tokens=max_tokens,
             messages=[{'role': 'user', 'content': prompt}],
         )
         return msg.content[0].text.strip()
+
+    try:
+        return await _once(model)
+    except anthropic.RateLimitError:
+        print(f'[LLM] {model} 429 rate limit — 2초 후 재시도')
+        await asyncio.sleep(2)
+        try:
+            return await _once(model)
+        except Exception as e2:
+            print(f'[LLM] {model} 재시도도 실패: {type(e2).__name__}: {e2}')
     except Exception as e:
         print(f'[LLM] {model} 실패: {type(e).__name__}: {e}')
-        if fallback_model and fallback_model != model:
-            print(f'[LLM] {fallback_model}로 폴백 시도')
-            try:
-                msg = await client.messages.create(
-                    model=fallback_model,
-                    max_tokens=max_tokens,
-                    messages=[{'role': 'user', 'content': prompt}],
-                )
-                return msg.content[0].text.strip()
-            except Exception as e2:
-                print(f'[LLM] 폴백도 실패: {type(e2).__name__}: {e2}')
-        return f'(생성 실패)'
+
+    if fallback_model and fallback_model != model:
+        print(f'[LLM] {fallback_model}로 폴백 시도')
+        try:
+            return await _once(fallback_model)
+        except Exception as e3:
+            print(f'[LLM] 폴백도 실패: {type(e3).__name__}: {e3}')
+    return '(생성 실패)'
 
 
 # ── 일반 카드용 짧은 한마디 프롬프트 (Haiku) ────────────────
