@@ -7,7 +7,7 @@ GET  /api/apt/{seq}/routes : 단지 상세 경로 옵션 (rank 1~N)
 import asyncio
 import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.db import get_db, connect as db_connect
 from app.workplaces import get_or_create
 from app.transit import fetch_cells, haversine, cell_center
@@ -18,12 +18,22 @@ router = APIRouter()
 
 
 # ── 요청 스키마 ──────────────────────────────────────────────
+_ALLOWED_PYEONG = {'10평미만', '10평대', '20평대', '30평대', '40평대', '50평대+'}
+
 class SearchRequest(BaseModel):
-    workplace_address: str = Field(..., description="직장 도로명/지번 주소")
+    workplace_address: str = Field(..., min_length=2, max_length=200, description="직장 도로명/지번 주소")
     max_minutes:  int = Field(60, ge=10, le=60, description="사용자 선택값. 내부적으로 10분 여유 차감")
-    max_price:    int = Field(50000, description="만원 단위, 예: 50000=5억")
-    pyeong_types: list[str] = Field(default_factory=lambda: ['10평대','20평대'])
-    min_kaptdaCnt: int | None = Field(None, description="최소 단지 세대수 (선택). 미지정=100")
+    max_price:    int = Field(50000, ge=1000, le=2_000_000, description="만원 단위, 예: 50000=5억")
+    pyeong_types: list[str] = Field(default_factory=lambda: ['10평대','20평대'], min_length=1, max_length=6)
+    min_kaptdaCnt: int | None = Field(None, ge=0, le=100_000, description="최소 단지 세대수 (선택). 미지정=100")
+
+    @field_validator('pyeong_types')
+    @classmethod
+    def _check_pyeong_types(cls, v: list[str]) -> list[str]:
+        invalid = [p for p in v if p not in _ALLOWED_PYEONG]
+        if invalid:
+            raise ValueError(f'허용되지 않는 평형: {invalid}')
+        return v
 
 # 통근시간 여유분 (사용자 선택값에서 차감)
 # 10→15: 60분 입력 시 effective 45분, 반경 16.7→15km, 셀 ~19%↓
