@@ -4,9 +4,9 @@ ODsay 호출 + transit_cache/routes 적재
 
 Vercel(서버리스)에서는 raw JSON 아카이브 쓰기를 자동 스킵 (IS_SERVERLESS).
 """
-import os, asyncio, aiohttp, sqlite3, json, time, math, logging
+import os, asyncio, aiohttp, json, time, math, logging
 from config import cfg
-from app.workplaces import raw_dir, cell_file
+from app.workplaces import raw_dir
 from app.portable import upsert_sql
 
 IS_SERVERLESS = bool(os.getenv('VERCEL'))

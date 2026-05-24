@@ -17,6 +17,7 @@ app/ai.py — 추천 로직 + 통계 + Claude Haiku 코멘트
 import asyncio
 from datetime import date
 import anthropic
+from anthropic.types import TextBlock
 from config import cfg
 
 # ── Anthropic 클라이언트 ─────────────────────────────────────
@@ -283,18 +284,8 @@ def _make_prompt_recommend(card: dict, avg_price_by_pt: dict, wp_label: str) -> 
     transfer_str = '직통' if transfer == 0 else f'{transfer}회 환승'
 
     # 단지 정보
-    top_floor = card.get('top_floor', '')
     kapt_cnt = card.get('kaptdaCnt', 0)
     deal_cnt = card.get('deal_count', 0)
-
-    # 추천 슬롯 / 차액
-    bl = card.get('bucket_label', '')
-    diff = card.get('price_diff_vs_fastest', 0)
-    diff_note = ''
-    if diff > 0:
-        diff_note = f'(같은 평형 최단권 최저가보다 {_fmt_price(diff)} 더 비쌈)'
-    elif diff < 0:
-        diff_note = f'(같은 평형 최단권 대비 {_fmt_price(abs(diff))} 저렴)'
 
     return f"""부동산 잘 아는 친구가 카톡으로 한마디 던지는 톤으로 평가해줘.
 
@@ -329,7 +320,10 @@ async def _call_llm(prompt: str, model: str, max_tokens: int,
             max_tokens=max_tokens,
             messages=[{'role': 'user', 'content': prompt}],
         )
-        return msg.content[0].text.strip()
+        block = msg.content[0]
+        if not isinstance(block, TextBlock):
+            raise ValueError(f'LLM이 텍스트가 아닌 블록을 반환: {type(block).__name__}')
+        return block.text.strip()
 
     try:
         return await _once(model)
@@ -340,6 +334,14 @@ async def _call_llm(prompt: str, model: str, max_tokens: int,
             return await _once(model)
         except Exception as e2:
             print(f'[LLM] {model} 재시도도 실패: {type(e2).__name__}: {e2}')
+    except (anthropic.APIConnectionError, anthropic.APITimeoutError) as e:
+        # 소켓 끊김 / 타임아웃 → 3초 후 1회 재시도
+        print(f'[LLM] {model} 연결 오류 — 3초 후 재시도: {type(e).__name__}')
+        await asyncio.sleep(3)
+        try:
+            return await _once(model)
+        except Exception as e2:
+            print(f'[LLM] {model} 연결 재시도도 실패: {type(e2).__name__}: {e2}')
     except Exception as e:
         print(f'[LLM] {model} 실패: {type(e).__name__}: {e}')
 

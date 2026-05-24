@@ -331,7 +331,7 @@ def get_comments(wp_id: int, keys: str, conn=Depends(get_db)):
     if len(pairs) > 200:
         raise HTTPException(400, 'keys 개수가 200을 초과할 수 없습니다')
     conds = ' OR '.join(['(apt_seq=? AND pyeong_type=?)'] * len(pairs))
-    params = [wp_id]
+    params: list = [wp_id]
     for s, p in pairs:
         params.extend([s, p])
     rows = conn.execute(
@@ -513,8 +513,10 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
 
     # 주차대수: kaptdPcnt(지하) + kaptdPcntu(지상)
     def _to_int(v):
-        try: return int(v or 0)
-        except: return 0
+        try:
+            return int(v or 0)
+        except (ValueError, TypeError):
+            return 0
     parking_underground = _to_int(apt['kaptdCccnt'])
     parking_ground = _to_int(apt['kaptdPcntu'])
     parking_total = parking_underground + parking_ground if (parking_underground or parking_ground) else None

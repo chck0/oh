@@ -36,8 +36,8 @@ log = logging.getLogger('app')
 
 # Python stdout 버퍼링 해제 (Vercel은 자동 unbuffered지만 한 번 더 보장)
 try:
-    sys.stdout.reconfigure(line_buffering=True)
-    sys.stderr.reconfigure(line_buffering=True)
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
+    sys.stderr.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 except Exception:
     pass
 
@@ -57,8 +57,8 @@ except Exception as e:
     _IMPORT_ERROR = f'{type(e).__name__}: {e}\n{traceback.format_exc()}'
     log.error('IMPORT FAILED: %s', _IMPORT_ERROR)
     USE_PG = False
-    search_router = None
-    db_connect = None
+    search_router = None  # type: ignore[assignment]
+    db_connect = None     # type: ignore[assignment]
 
 
 @asynccontextmanager
@@ -122,7 +122,7 @@ async def _log_and_catch(request: Request, call_next):
         tb = traceback.format_exc()
         dt = int((time.time() - t0) * 1000)
         log.error('!!! %s %s after %dms: %s\n%s', method, path, dt, e, tb)
-        payload = {
+        payload: dict = {
             'error': f'{type(e).__name__}: {e}',
             'path': path,
             'method': method,
@@ -226,7 +226,6 @@ def test_odsay():
     if not DEBUG_API:
         return JSONResponse({'error': 'debug disabled'}, status_code=404)
     try:
-        from config import cfg
         import urllib.request, urllib.parse, json
     except Exception as e:
         return {'error': f'{type(e).__name__}: {e}'}
@@ -279,7 +278,6 @@ def test_kakao():
     if not DEBUG_API:
         return JSONResponse({'error': 'debug disabled'}, status_code=404)
     try:
-        from config import cfg
         import urllib.request, urllib.parse
     except Exception as e:
         return {'error': f'{type(e).__name__}: {e}'}

@@ -96,7 +96,7 @@ cfg = _Config()
 # ── 직접 실행 시 로드 상태 확인 ──────────────────────────────
 if __name__ == '__main__':
     import sys
-    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[union-attr]
     print('=== config 로드 확인 ===')
     print(f'PROJECT_ROOT       : {cfg.PROJECT_ROOT}')
     print(f'DB_PATH            : {cfg.DB_PATH}')
