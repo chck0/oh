@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 IS_SERVERLESS = bool(os.getenv('VERCEL'))
 # DEBUG_API=1 로 켜면 /api/_debug 노출 + 500 응답에 traceback 포함
 # 운영 안정화되면 Vercel에서 이 env var 제거하면 됨
-DEBUG_API = os.getenv('DEBUG_API', '1') == '1'
+DEBUG_API = os.getenv('DEBUG_API', '0') == '1'
 
 # ── 로깅 ─────────────────────────────────────────────────────
 # Vercel은 stdout/stderr를 Runtime Logs로 캡쳐. force=True로 기존 핸들러 덮어쓰기
