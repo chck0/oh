@@ -6,7 +6,13 @@
 생성은 자동 스킵 (IS_SERVERLESS).
 DB 어댑터는 app/db.py 에서 Supabase/SQLite 자동 분기.
 """
-import os, pathlib, re, time, json, urllib.parse, urllib.request
+import os
+import pathlib
+import re
+import time
+import json
+import urllib.parse
+import urllib.request
 from config import cfg
 from app.portable import insert_returning_id, get_last_id, list_columns
 

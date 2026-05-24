@@ -226,7 +226,9 @@ def test_odsay():
     if not DEBUG_API:
         return JSONResponse({'error': 'debug disabled'}, status_code=404)
     try:
-        import urllib.request, urllib.parse, json
+        import urllib.request
+        import urllib.parse
+        import json
     except Exception as e:
         return {'error': f'{type(e).__name__}: {e}'}
 
@@ -253,8 +255,9 @@ def test_odsay():
         try:
             j = json.loads(body)
             has_result = 'result' in j
-            err_code = j.get('error', {}).get('code') if isinstance(j.get('error'), dict) else None
-            err_msg  = j.get('error', {}).get('message') if isinstance(j.get('error'), dict) else None
+            err = j.get('error')
+            err_code = err.get('code') if isinstance(err, dict) else None
+            err_msg  = err.get('message') if isinstance(err, dict) else None
         except Exception:
             has_result = False
             err_code = err_msg = None
@@ -278,7 +281,8 @@ def test_kakao():
     if not DEBUG_API:
         return JSONResponse({'error': 'debug disabled'}, status_code=404)
     try:
-        import urllib.request, urllib.parse
+        import urllib.request
+        import urllib.parse
     except Exception as e:
         return {'error': f'{type(e).__name__}: {e}'}
     params = urllib.parse.urlencode({'query': '서울 강남구 테헤란로 504'})

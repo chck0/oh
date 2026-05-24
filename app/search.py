@@ -20,12 +20,17 @@ router = APIRouter()
 # ── 요청 스키마 ──────────────────────────────────────────────
 _ALLOWED_PYEONG = {'10평미만', '10평대', '20평대', '30평대', '40평대', '50평대+'}
 
+
 class SearchRequest(BaseModel):
     workplace_address: str = Field(..., min_length=2, max_length=200, description="직장 도로명/지번 주소")
     max_minutes:  int = Field(60, ge=10, le=60, description="사용자 선택값. 내부적으로 10분 여유 차감")
     max_price:    int = Field(50000, ge=1000, le=2_000_000, description="만원 단위, 예: 50000=5억")
-    pyeong_types: list[str] = Field(default_factory=lambda: ['10평대','20평대'], min_length=1, max_length=6)
-    min_kaptdaCnt: int | None = Field(None, ge=0, le=100_000, description="최소 단지 세대수 (선택). 미지정=100")
+    pyeong_types: list[str] = Field(
+        default_factory=lambda: ['10평대', '20평대'], min_length=1, max_length=6,
+    )
+    min_kaptdaCnt: int | None = Field(
+        None, ge=0, le=100_000, description="최소 단지 세대수 (선택). 미지정=100",
+    )
 
     @field_validator('pyeong_types')
     @classmethod
@@ -34,6 +39,7 @@ class SearchRequest(BaseModel):
         if invalid:
             raise ValueError(f'허용되지 않는 평형: {invalid}')
         return v
+
 
 # 통근시간 여유분 (사용자 선택값에서 차감)
 # 10→15: 60분 입력 시 effective 45분, 반경 16.7→15km, 셀 ~19%↓
@@ -193,7 +199,10 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 'pyeong': row['pyeong'],
                 'floor': row['floor'],
                 'amount': row['deal_amount_int'],
-                'date': f"{row['deal_year'] % 100:02d}.{row['deal_month']:02d}.{row['deal_day']:02d}",
+                'date': (
+                    f"{row['deal_year'] % 100:02d}"
+                    f".{row['deal_month']:02d}.{row['deal_day']:02d}"
+                ),
                 'gbn': row['dealing_gbn'],
             })
     else:
@@ -267,7 +276,8 @@ async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, w
     miss_cards: 코멘트 생성 대상 (추천 카드 중 캐시 미스)
     all_cards : 전체 카드 (평형별 평균가 등 컨텍스트 계산용)
     """
-    import time, traceback
+    import time
+    import traceback
     t0 = time.time()
     rec_n = sum(1 for c in miss_cards if c.get('is_recommended'))
     reg_n = len(miss_cards) - rec_n
@@ -462,7 +472,8 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         for i in range(5):
             off = 4 + i*6   # 각 step당 6개 컬럼 (type, time_min, dist_m, 노선, 출발, 도착)
             t = r[off]
-            if not t: continue
+            if not t:
+                continue
             steps.append({
                 'type': t,
                 'time_min': r[off+1],
@@ -519,7 +530,10 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
             return 0
     parking_underground = _to_int(apt['kaptdCccnt'])
     parking_ground = _to_int(apt['kaptdPcntu'])
-    parking_total = parking_underground + parking_ground if (parking_underground or parking_ground) else None
+    parking_total = (
+        parking_underground + parking_ground
+        if (parking_underground or parking_ground) else None
+    )
 
     # 준공연도
     use_date = apt['kaptUsedate'] or ''
@@ -582,7 +596,8 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         }
         for r in pyeong_tabs
     ]
-    timings['pyeong_tabs'] = round((time.time()-t1)*1000); t1 = time.time()
+    timings['pyeong_tabs'] = round((time.time()-t1)*1000)
+    t1 = time.time()
 
     # ── 시세 차트 — 단지 월별 평균 (3년치, 평수별 전체금액) ──────
     # ym 문자열은 SELECT 시 deal_year/deal_month만 가져와서 Python에서 포맷
@@ -609,7 +624,8 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         GROUP BY pyeong_type, deal_year, deal_month
         ORDER BY pyeong_type, deal_year, deal_month
     """, [umd_nm, threshold_year]).fetchall()
-    timings['chart_rows+dong_avg'] = round((time.time()-t1)*1000); t1 = time.time()
+    timings['chart_rows+dong_avg'] = round((time.time()-t1)*1000)
+    t1 = time.time()
 
     # dict 구조로 변환 {pyeong_type: {ym: avg_amount}}
     complex_chart: dict = {}
@@ -643,7 +659,8 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         }
         for r in trade_rows
     ]
-    timings['trades'] = round((time.time()-t1)*1000); t1 = time.time()
+    timings['trades'] = round((time.time()-t1)*1000)
+    t1 = time.time()
 
     # ── 도보 POI ───────────────────────────────────────────────
     poi_rows = conn.execute("""
@@ -687,10 +704,14 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         dong_months  = sorted(dong_series.keys())
         dong_recent  = dong_series.get(dong_months[-1]) if dong_months else None
         apt_recent   = series.get(months_sorted[-1]) if months_sorted else None
-        vs_dong_pct  = round((apt_recent - dong_recent) / dong_recent * 100, 1) \
-                       if (apt_recent and dong_recent) else None
-        vs_dong_diff = int(apt_recent - dong_recent) \
-                       if (apt_recent and dong_recent) else None
+        vs_dong_pct = (
+            round((apt_recent - dong_recent) / dong_recent * 100, 1)
+            if (apt_recent and dong_recent) else None
+        )
+        vs_dong_diff = (
+            int(apt_recent - dong_recent)
+            if (apt_recent and dong_recent) else None
+        )
 
         price_summary = {
             'pyeong_type': top_pyeong_type,

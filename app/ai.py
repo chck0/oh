@@ -23,6 +23,7 @@ from config import cfg
 # ── Anthropic 클라이언트 ─────────────────────────────────────
 _client: anthropic.AsyncAnthropic | None = None
 
+
 def _get_client() -> anthropic.AsyncAnthropic:
     global _client
     if _client is None:
@@ -376,8 +377,14 @@ def _make_prompt_regular(card: dict, avg_price_by_pt: dict) -> str:
     transfer = max(bus + sub - 1, 0)
     transfer_str = '직통' if transfer == 0 else f'{transfer}회 환승'
 
+    apt_line = (
+        f"{card['apt_nm']} ({card['umd_nm']}, {pt}"
+        f"{f', {age_str}' if age_str else ''}) "
+        f"| {transit_summary} {card['total_time_min']}분 "
+        f"{transfer_str} | {price_str} {vs_avg_str}"
+    )
     return f"""부동산 잘 아는 친구처럼 이 아파트 한 줄 평. 이모지 X, 반말, 40자 이내. 형식적 표현 반복 X.
-{card['apt_nm']} ({card['umd_nm']}, {pt}{f', {age_str}' if age_str else ''}) | {transit_summary} {card['total_time_min']}분 {transfer_str} | {price_str} {vs_avg_str}
+{apt_line}
 한 마디:"""
 
 
