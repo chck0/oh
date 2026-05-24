@@ -1537,13 +1537,18 @@ playVideo(0);
 //  검색 파라미터 + 전역 상태
 // ═══════════════════════════════════════════════════════
 const params = new URLSearchParams(location.search);
+// 필수 파라미터 누락 시 검색 폼으로 redirect
+if(!params.get('workplace_address') || !params.get('pyeong_types')){
+  location.replace('/search.html');
+  throw new Error('redirect');
+}
 const reqBody = {
   workplace_address: params.get('workplace_address'),
-  max_price: parseInt(params.get('max_price')),
-  max_minutes: parseInt(params.get('max_minutes')),
+  max_price: parseInt(params.get('max_price'), 10),
+  max_minutes: parseInt(params.get('max_minutes'), 10),
   pyeong_types: params.get('pyeong_types').split(','),
 };
-if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'));
+if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'), 10);
 
 let resultData = null;
 let kakaoMap = null;
@@ -1619,8 +1624,13 @@ async function runSearch(){
 
 // LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
 // 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
+let _pollCount = 0;
+const MAX_POLL = 72; // 최대 ~6분 (5s×60 + 실패 10s×6) 후 자동 종료
 async function pollComments(){
-  if(!resultData) return;
+  if(!resultData || _pollCount >= MAX_POLL) return;
+  _pollCount++;
+  // 백그라운드 탭에서는 폴링 간격 늘려 불필요한 요청 줄임
+  if(document.hidden){ setTimeout(pollComments, 15000); return; }
   try{
     const pendingCards = resultData.cards.filter(c=>!c.friend_comment);
     if(!pendingCards.length) return;
@@ -1910,7 +1920,15 @@ function renderCards(data){
   const wpId = data.wp_id;
   const totalRest = rest.length || 1;
 
-  let html = renderStatsPanel(data);
+  // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
+  const partialBanner = data.meta?.partial
+    ? `<div style="margin:12px 0;padding:10px 14px;background:#fff8e1;border-left:3px solid #f59e0b;
+                  border-radius:4px;font-size:13px;color:#78350f;line-height:1.5;">
+        ⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.
+       </div>`
+    : '';
+
+  let html = partialBanner + renderStatsPanel(data);
 
   // 추천 섹션
   if(recommended.length){
