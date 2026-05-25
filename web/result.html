@@ -1612,6 +1612,7 @@ const reqBody = {
 };
 if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'), 10);
 if(params.get('build_year_min')) reqBody.build_year_min=parseInt(params.get('build_year_min'), 10);
+if(params.get('min_price')) reqBody.min_price=parseInt(params.get('min_price'), 10);
 
 let resultData = null;
 let kakaoMap = null;
@@ -1763,7 +1764,7 @@ function renderSummary(data){
   document.getElementById('summary').innerHTML=`
     <strong>${escHtml(data.workplace.address_norm)}</strong>
     <span class="sep">|</span>
-    <span>${fmtPrice(reqBody.max_price)} 이하</span>
+    <span>${reqBody.min_price ? fmtPrice(reqBody.min_price)+'~'+fmtPrice(reqBody.max_price) : fmtPrice(reqBody.max_price)+' 이하'}</span>
     <span class="sep">·</span>
     <span>${reqBody.max_minutes}분 이내</span>
     <span class="sep">·</span>

@@ -34,6 +34,19 @@ class SearchRequest(BaseModel):
     build_year_min: int | None = Field(
         None, ge=1960, le=2030, description="최소 준공연도 (예: 2010 → 2010년 이후 준공 단지만)",
     )
+    min_price: int | None = Field(
+        None, ge=1000, le=2_000_000,
+        description="최소 가격 (만원). 예: 30000=3억. 미지정=하한 없음.",
+    )
+
+    @field_validator('min_price')
+    @classmethod
+    def _check_min_price(cls, v, info):
+        if v is not None:
+            max_p = info.data.get('max_price')
+            if max_p is not None and v >= max_p:
+                raise ValueError('min_price는 max_price보다 작아야 합니다')
+        return v
 
     @field_validator('pyeong_types')
     @classmethod
@@ -96,10 +109,15 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
 
     ph = ','.join('?'*len(near_keys))
     pt = ','.join('?'*len(req.pyeong_types))
+    min_price_clause = ' AND deal_amount_int>=?' if req.min_price is not None else ''
+    matched_params = near_keys + req.pyeong_types + [req.max_price]
+    if req.min_price is not None:
+        matched_params.append(req.min_price)
     matched_rows = conn.execute(
         f'SELECT DISTINCT apt_seq FROM trade_recent '
-        f'WHERE apt_seq IN ({ph}) AND pyeong_type IN ({pt}) AND deal_amount_int<=?',
-        near_keys + req.pyeong_types + [req.max_price]
+        f'WHERE apt_seq IN ({ph}) AND pyeong_type IN ({pt}) AND deal_amount_int<=?'
+        f'{min_price_clause}',
+        matched_params
     ).fetchall()
     matched_keys = [r['apt_seq'] for r in matched_rows]
 
@@ -163,13 +181,16 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
         }
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
-    min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
+    min_cnt_clause   = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
     build_year_clause = ' AND a.build_year >= ?' if req.build_year_min is not None else ''
+    min_price_card_clause = ' AND t.deal_amount_int >= ?' if req.min_price is not None else ''
     cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types]
     if req.min_kaptdaCnt is not None:
         cards_params.append(req.min_kaptdaCnt)
     if req.build_year_min is not None:
         cards_params.append(req.build_year_min)
+    if req.min_price is not None:
+        cards_params.append(req.min_price)
 
     # 카드 = (apt_seq, pyeong_type) 단위. 평형별로 행 1개씩.
     cards = conn.execute(f"""
@@ -199,6 +220,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
           AND t.pyeong_type IN ({pt})
           {min_cnt_clause}
           {build_year_clause}
+          {min_price_card_clause}
         GROUP BY
             a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
             a.kaptCode,

@@ -419,3 +419,63 @@ class TestSearchBuildYearFilter:
         data = self._post(full_client, {'build_year_min': 1960}).json()
         seqs = [c['apt_seq'] for c in data['cards']]
         assert 'APT002' in seqs
+
+
+# ── min_price 필터 케이스 ───────────────────────────────────────
+
+class TestMinPriceFilter:
+    """min_price 파라미터 필터링 검증 (spec-09).
+
+    시드 데이터: APT001, deal_amount_int=30000 (3억).
+    """
+
+    def _post(self, client, extra=None):
+        payload = {
+            'workplace_address': '강남역',
+            'max_minutes': 60,
+            'max_price': 100000,
+            'pyeong_types': ['20평대'],
+        }
+        if extra:
+            payload.update(extra)
+        with (
+            patch('app.search.get_or_create', return_value=_FAKE_WP),
+            patch('app.search._generate_comments_bg', new=AsyncMock()),
+        ):
+            return client.post('/api/search', json=payload)
+
+    # ── AC1 ────────────────────────────────────────────────────
+
+    def test_min_price_excludes_cheaper_cards(self, full_client):
+        """AC1: min_price=35000 (3.5억) → seed 거래가 30000 제외 → cards 빈 배열."""
+        data = self._post(full_client, {'min_price': 35000}).json()
+        assert data['cards'] == []
+
+    def test_min_price_inclusive_boundary(self, full_client):
+        """min_price == 거래가(30000) 이면 포함 (>= 이므로)."""
+        data = self._post(full_client, {'min_price': 30000}).json()
+        assert len(data['cards']) >= 1
+
+    def test_min_price_below_trade_includes(self, full_client):
+        """min_price < 거래가 → 포함됨."""
+        data = self._post(full_client, {'min_price': 25000}).json()
+        assert len(data['cards']) >= 1
+
+    # ── AC2 (회귀) ─────────────────────────────────────────────
+
+    def test_min_price_none_no_regression(self, full_client):
+        """AC2: min_price 미지정 → 기존 동작 유지 (카드 존재)."""
+        data = self._post(full_client).json()
+        assert len(data['cards']) >= 1
+
+    # ── AC3 ────────────────────────────────────────────────────
+
+    def test_min_price_equal_to_max_returns_422(self, full_client):
+        """AC3: min_price == max_price → 422."""
+        r = self._post(full_client, {'min_price': 100000, 'max_price': 100000})
+        assert r.status_code == 422
+
+    def test_min_price_greater_than_max_returns_422(self, full_client):
+        """AC3 변형: min_price > max_price → 422."""
+        r = self._post(full_client, {'min_price': 110000, 'max_price': 100000})
+        assert r.status_code == 422
