@@ -51,7 +51,11 @@ COMMUTE_BUFFER_MIN = 15
 # Vercel Hobby maxDuration 60s 안에 끝내기 위한 ODsay 호출 셀 상한.
 # 신규 워크플레이스 첫 검색에서 초과분은 다음 검색에 캐시 채워짐 (자연 점진 완성).
 # 4키 × 4동시 × ~1.2s/round × 100ms sleep → ~250셀이 ~25s 안에 처리됨.
-MAX_FETCH_CELLS_PER_CALL = 250
+MAX_FETCH_CELLS_PER_CALL = 200   # 4키×4동시×1.2s×round → ~200셀이 ~20s, 여유 확보
+
+# Vercel Hobby maxDuration 60s 안에 안전하게 끝내기 위한 ODsay 호출 하드 타임아웃.
+# DB쿼리·카드변환 여유분(~15s) 제외. 초과 시 캐시된 셀 결과만으로 partial 반환.
+ODSAY_HARD_TIMEOUT_S = 42
 
 
 # ── POST /api/search ─────────────────────────────────────────
@@ -124,7 +128,18 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     to_fetch = to_fetch_sorted[:MAX_FETCH_CELLS_PER_CALL]
     deferred_cells = len(to_fetch_all) - len(to_fetch)
 
-    odsay_stats = await fetch_cells(conn, wp, to_fetch)
+    # 하드 타임아웃: Vercel 60s 제약 안에 반드시 응답 반환.
+    # TimeoutError 시 이미 캐시된 셀 결과로만 카드 생성 → partial=True.
+    try:
+        odsay_stats = await asyncio.wait_for(
+            fetch_cells(conn, wp, to_fetch),
+            timeout=ODSAY_HARD_TIMEOUT_S,
+        )
+    except asyncio.TimeoutError:
+        print(f'[search] ODsay {ODSAY_HARD_TIMEOUT_S}s 타임아웃 — 캐시 결과로만 응답 (셀 {len(to_fetch)}개 미완)')
+        odsay_stats = {'fetched': 0, 'passed': 0, 'failed': 0,
+                       'elapsed_ms': ODSAY_HARD_TIMEOUT_S * 1000}
+        deferred_cells += len(to_fetch)  # 미처리 셀 전부 deferred로 표시
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
     min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
