@@ -121,6 +121,16 @@ CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (
     created_at  TEXT,
     PRIMARY KEY (apt_seq, pyeong_type, wp_id)
 );
+
+CREATE TABLE IF NOT EXISTS trade_tags (
+    apt_seq     TEXT,
+    pyeong_type TEXT,
+    tag_type    TEXT,
+    label       TEXT,
+    detail      TEXT,
+    calc_date   TEXT,
+    PRIMARY KEY (apt_seq, pyeong_type, tag_type)
+);
 """
 
 # wp_id=1 직장 — Kakao 호출 없이 바로 반환할 딕셔너리
@@ -167,6 +177,11 @@ def _seed_db(conn):
         "INSERT INTO trade_recent "
         "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day) "
         "VALUES ('APT001', '20평대', 27.5, 10, 30000, 2026, 4, 15)"
+    )
+    # trade_tags: 1층 태그 사전 삽입
+    conn.execute(
+        "INSERT INTO trade_tags (apt_seq, pyeong_type, tag_type, label, detail) "
+        "VALUES ('APT001', '20평대', 'floor', '1층 매물', NULL)"
     )
     conn.commit()
 
@@ -325,3 +340,17 @@ class TestSearchEndpointSuccess:
     def test_workplace_address_norm(self, full_client):
         data = self._post(full_client).json()
         assert data['workplace']['address_norm'] == '서울 강남구 테헤란로 504'
+
+    def test_card_has_why_tags_field(self, full_client):
+        data = self._post(full_client).json()
+        assert 'why_tags' in data['cards'][0]
+
+    def test_why_tags_is_list(self, full_client):
+        data = self._post(full_client).json()
+        assert isinstance(data['cards'][0]['why_tags'], list)
+
+    def test_why_tags_has_seeded_label(self, full_client):
+        """_seed_db 에 삽입한 '1층 매물' 태그가 카드에 포함돼야 함."""
+        data = self._post(full_client).json()
+        labels = [t['label'] for t in data['cards'][0]['why_tags']]
+        assert '1층 매물' in labels

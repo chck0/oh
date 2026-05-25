@@ -101,6 +101,16 @@ CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (
     kind       TEXT,
     created_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS trade_tags (
+    apt_seq     TEXT,
+    pyeong_type TEXT,
+    tag_type    TEXT,
+    label       TEXT,
+    detail      TEXT,
+    calc_date   TEXT,
+    PRIMARY KEY (apt_seq, pyeong_type, tag_type)
+);
 """
 
 

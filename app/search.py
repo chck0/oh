@@ -208,8 +208,30 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     else:
         recent_map = {}
 
+    # ─ 4c. why_tags 배치 조회 ─
+    # trade_tags 테이블이 없거나 비어 있으면 graceful degradation → why_tags: []
+    tag_map: dict = {}
+    if cards:
+        seqs = list({c['apt_seq'] for c in cards})
+        ph = ','.join('?' * len(seqs))
+        try:
+            tag_rows = conn.execute(
+                f'SELECT apt_seq, pyeong_type, tag_type, label, detail '
+                f'FROM trade_tags WHERE apt_seq IN ({ph})',
+                seqs,
+            ).fetchall()
+            for row in tag_rows:
+                key = (row['apt_seq'], row['pyeong_type'])
+                tag_map.setdefault(key, []).append({
+                    'type':   row['tag_type'],
+                    'label':  row['label'],
+                    'detail': row['detail'],
+                })
+        except Exception:
+            pass  # trade_tags 미존재 시 빈 tag_map 유지
+
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map) for c in cards]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
@@ -371,7 +393,7 @@ def _empty_response(wp, _cards):
     }
 
 
-def _card_to_dict(r, recent_map: dict | None = None):
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None):
     bc, sc = r['bus_cnt'], r['subway_cnt']
 
     # 대중교통 요약 (지하철 호선 + 환승 + 도보)
@@ -439,6 +461,7 @@ def _card_to_dict(r, recent_map: dict | None = None):
         'pyeong_price_avg': pyeong_price,
         'deal_count': r['deal_count'],
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
+        'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
     }
 
 

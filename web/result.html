@@ -592,6 +592,15 @@
       margin-right: 6px; vertical-align: -1px;
     }
 
+    .why-tags {
+      font-size: 11px;
+      color: #888;
+      margin-top: 3px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .rec-card__footer {
       display: flex; align-items: center; justify-content: space-between;
       gap: 12px; flex-wrap: wrap;
@@ -1872,6 +1881,7 @@ function renderRecCard(c, wpId){
       <div class="rec-card__price">${priceHtml}</div>
     </div>
     <div class="rec-card__meta num">${meta}</div>
+    ${_whyTagsHtml(c.why_tags)}
     ${friendHtml}
     <div class="rec-card__footer">
       <span class="rec-card__transit">
@@ -1881,6 +1891,13 @@ function renderRecCard(c, wpId){
       ${c.pick_reason?`<span class="rec-card__reason">${escHtml(c.pick_reason)}</span>`:''}
     </div>
   </div>`;
+}
+
+// "저가 근거" 태그 HTML (태그 없으면 빈 문자열)
+function _whyTagsHtml(tags){
+  if(!tags || !tags.length) return '';
+  const labels = tags.slice(0,2).map(t=>escHtml(t.label)).join(' · ');
+  return `<div class="why-tags">저가 근거: ${labels}</div>`;
 }
 
 // 가격을 "5억 8,000만" → 분리된 num/unit 마크업으로
@@ -1910,6 +1927,7 @@ function renderListCard(c, wpId){
       <div class="list-card__price num">${shortPrice(c.price_low)}</div>
     </div>
     <div class="list-card__meta">${metaParts.join(' · ')}</div>
+    ${_whyTagsHtml(c.why_tags)}
     <div class="list-card__row">
       <span class="commute-chip">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>
     </div>

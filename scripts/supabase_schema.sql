@@ -359,3 +359,14 @@ CREATE TABLE IF NOT EXISTS building_register_log (
     row_count    INTEGER,
     fetched_at   TEXT
 );
+
+-- ── trade_tags — 추천 카드 "저가 근거" 사전 계산 태그 ───────────
+CREATE TABLE IF NOT EXISTS trade_tags (
+    apt_seq     TEXT,
+    pyeong_type TEXT,
+    tag_type    TEXT,   -- 'floor' | 'price_chg'
+    label       TEXT,   -- UI 표시 문구 (12자 이내)
+    detail      TEXT,   -- 툴팁용 보조 설명 (nullable)
+    calc_date   TEXT,   -- ISO 8601
+    PRIMARY KEY (apt_seq, pyeong_type, tag_type)
+);
