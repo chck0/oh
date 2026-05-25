@@ -140,17 +140,38 @@ Spec 완성 전 확인:
 - [ ] Acceptance Criteria가 체크리스트 형태로 작성됨
 - [ ] Vercel 60초 제약 / Supabase pgBouncer 제약 반영됨
 - [ ] 모바일 UX 고려 여부 명시됨
+- [ ] **result.html에 새 HTML 요소 추가 시** `.result-layout` grid 자식 구조 영향 확인
+- [ ] **검색 범위 변경 시** ODsay 호출 셀 수 증가 → 504 타임아웃 위험 검토
+- [ ] **Supabase 신규 테이블** → `ALTER TABLE` or `CREATE TABLE` Supabase SQL Editor 실행 메모
+
+---
+
+## 알려진 함정 (Lessons Learned)
+
+구현 과정에서 발견된 반복 실수 목록입니다. Spec 작성 시 사전 확인하세요.
+
+| 발견일 | 함정 | 원인 | 대응 |
+|--------|------|------|------|
+| 2026-05-25 | `result-layout` grid 깨짐 | 새 div를 grid 직접 자식에 추가 → 열 순서 밀림 | 요소에 `grid-column`/`grid-row` 명시 |
+| 2026-05-25 | `InFailedSqlTransaction` 500 | pgBouncer Transaction mode에서 쿼리 실패 후 rollback 없이 다음 쿼리 | `except` 블록에 `conn.rollback()` 추가 |
+| 2026-05-25 | 신규 컬럼 `UndefinedColumn` | `supabase_schema.sql` 업데이트했지만 Supabase에 `ALTER TABLE` 미실행 | Spec 구현 메모에 수동 마이그레이션 명시 |
+| 2026-05-25 | 504 Timeout (max_price=10억) | 가격 범위 넓음 → 매칭 단지 폭증 → ODsay 셀 수 급증 | Step 2/4 양쪽에 `min_price` 필터 + 범위 경고 UI |
+| 2026-05-25 | `trade_tags` 미존재 → 500 연쇄 | `SELECT FROM trade_tags` 실패 후 rollback 없이 트랜잭션 오염 | graceful degradation + rollback 필수 |
 
 ---
 
 ## 기존 Specs
 
-| 파일 | 기능 | 상태 |
-|---|---|---|
-| [01-search-input.md](01-search-input.md) | 검색 조건 입력 화면 (search.html) | Implemented |
-| [02-search-pipeline.md](02-search-pipeline.md) | 검색 파이프라인 (POST /api/search) | Implemented |
-| [03-recommendation-engine.md](03-recommendation-engine.md) | 추천 엔진 (통근버킷 × 평형 매트릭스) | Implemented |
-| [04-result-page.md](04-result-page.md) | 검색 결과 화면 (result.html) | Implemented |
-| [05-ai-comments.md](05-ai-comments.md) | AI 코멘트 생성 (Claude LLM) | Implemented |
+| 번호 | 파일 | 기능 | 상태 |
+|------|------|------|------|
+| 01 | [01-search-input.md](01-search-input.md) | 검색 조건 입력 화면 (search.html) | ✅ Implemented |
+| 02 | [02-search-pipeline.md](02-search-pipeline.md) | 검색 파이프라인 (POST /api/search) | ✅ Implemented |
+| 03 | [03-recommendation-engine.md](03-recommendation-engine.md) | 추천 엔진 (통근버킷 × 평형 매트릭스) | ✅ Implemented |
+| 04 | [04-result-page.md](04-result-page.md) | 검색 결과 화면 (result.html) | ✅ Implemented |
+| 05 | [05-ai-comments.md](05-ai-comments.md) | AI 코멘트 생성 (Claude LLM) | ✅ Implemented |
+| 06 | [06-why-price-tag.md](06-why-price-tag.md) | Why-tagged 추천 카드 (저가 근거 자동 태깅) | ✅ Implemented |
+| 07 | [07-build-year-filter.md](07-build-year-filter.md) | 준공연도 필터 (build_year_min) | ✅ Implemented |
+| 08 | [08-favorites.md](08-favorites.md) | 관심 단지 ♥ 즐겨찾기 (localStorage) | ✅ Implemented |
+| 09 | [09-price-range.md](09-price-range.md) | 가격 범위 필터 (min_price) + 범위 경고 UI | ✅ Implemented |
 
-새 Spec 추가 시 이 표를 업데이트하세요.
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **10**
