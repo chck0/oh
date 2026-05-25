@@ -2493,8 +2493,8 @@ function renderDetailPanel(d, routes, wpId){
     : '거래 내역 없음';
 
   const poi = d.poi || [];
-  const subwayPoi = poi.find(p=>p.category==='B') || null;
-  const schoolCnt = poi.filter(p=>p.category==='C').length;
+  const subwayPoi = poi.find(p=>p.category==='D' && p.sub_category==='D01') || null;
+  const schoolCnt = poi.filter(p=>p.category==='A').length;
   const poiPreview = poi.length
     ? [
         subwayPoi ? `지하철 도보 <span class="num">${subwayPoi.walking_min}</span>분` : null,
@@ -2834,8 +2834,17 @@ function renderTradesHTML(trades){
 }
 
 // ── POI (카테고리별 그룹, 중요도순) ──────────────────────────
-const POI_ORDER = ['B','C','D','A','E','F','G','H'];
-const POI_CAT_NAME = {A:'편의시설',B:'교통',C:'학교/학원',D:'의료',E:'공원/녹지',F:'금융',G:'음식',H:'스포츠'};
+// poi_lclas_cd 실제 코드 (Supabase apt_walking_poi 확인 2026-05-25):
+// A=학교(중고등), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
+// E=쇼핑/편의(백화점·마트·편의점), F=의료(병원·약국),
+// G=음식점, H=공공기관(구청·경찰·소방), I=공원/녹지,
+// J=문화/여가(영화관·박물관·도서관), K=스포츠(헬스장·수영장), L=금융(은행·ATM)
+const POI_ORDER = ['D','A','B','C','F','E','I','K','J','H','L','G'];
+const POI_CAT_NAME = {
+  A:'학교', B:'어린이집/유치원', C:'학원', D:'교통',
+  E:'쇼핑/편의', F:'의료', G:'음식', H:'공공기관',
+  I:'공원/녹지', J:'문화/여가', K:'스포츠', L:'금융',
+};
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
