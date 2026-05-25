@@ -572,6 +572,32 @@
       </div>
     </section>
 
+    <!-- ⑥ 준공연도 -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num num">6</span>
+        <span class="section-title">준공연도 이후 <span class="optional">선택</span></span>
+        <span class="info-wrap">
+          <button type="button" class="info-btn" aria-label="안내">i</button>
+          <div class="info-popover">
+            <strong>노후 단지를 제외하고 싶을 때 설정하세요.</strong>
+            <ul>
+              <li><strong>2000년대 이후</strong> — 지하 주차장 기본 갖춤.</li>
+              <li><strong>2010년대 이후</strong> — 에너지 효율 등급 적용 단지.</li>
+              <li><strong>2020년대 이후</strong> — 스마트홈·커뮤니티시설 신축.</li>
+            </ul>
+          </div>
+        </span>
+      </div>
+      <div class="radio-list">
+        <label class="radio-item"><input type="radio" name="build_year_min" value="" checked><span class="radio-item__dot"></span><span class="radio-item__label">제한 없음</span></label>
+        <label class="radio-item"><input type="radio" name="build_year_min" value="2000"><span class="radio-item__dot"></span><span class="radio-item__label num">2000년 이후</span></label>
+        <label class="radio-item"><input type="radio" name="build_year_min" value="2010"><span class="radio-item__dot"></span><span class="radio-item__label num">2010년 이후</span></label>
+        <label class="radio-item"><input type="radio" name="build_year_min" value="2015"><span class="radio-item__dot"></span><span class="radio-item__label num">2015년 이후</span></label>
+        <label class="radio-item"><input type="radio" name="build_year_min" value="2020"><span class="radio-item__dot"></span><span class="radio-item__label num">2020년 이후</span></label>
+      </div>
+    </section>
+
     <div class="submit-zone">
       <p class="submit-note">분석에 약 <strong style="color:var(--color-text-secondary);font-weight:600;" class="num">30초~1분</strong> 정도 걸려요</p>
       <button type="submit" class="submit-btn" id="submit-btn">
@@ -671,6 +697,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
   const maxMinutes = parseInt(chip.dataset.value, 10);
 
   const mincnt = document.querySelector('input[name=mincnt]:checked').value;
+  const buildYearMin = document.querySelector('input[name=build_year_min]:checked').value;
 
   const params = new URLSearchParams({
     workplace_address: address,
@@ -679,6 +706,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     pyeong_types: pyeongTypes.join(','),
   });
   if (mincnt) params.set('min_kaptdaCnt', mincnt);
+  if (buildYearMin) params.set('build_year_min', buildYearMin);
 
   window.location.href = '/result.html?' + params.toString();
 });

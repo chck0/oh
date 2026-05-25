@@ -249,6 +249,22 @@ class TestSearchEndpointErrors:
         })
         assert resp.status_code == 422
 
+    def test_build_year_min_too_low_returns_422(self, full_client):
+        """build_year_min ge=1960 미만 → 422. (AC3)"""
+        resp = full_client.post('/api/search', json={
+            'workplace_address': '강남역',
+            'build_year_min': 1900,
+        })
+        assert resp.status_code == 422
+
+    def test_build_year_min_too_high_returns_422(self, full_client):
+        """build_year_min le=2030 초과 → 422."""
+        resp = full_client.post('/api/search', json={
+            'workplace_address': '강남역',
+            'build_year_min': 2099,
+        })
+        assert resp.status_code == 422
+
     def test_no_near_apts_returns_200(self, full_client):
         """반경 밖 직장 → 빈 응답이지만 200."""
         far_wp = dict(_FAKE_WP, lat=35.0, lng=129.0)
@@ -354,3 +370,52 @@ class TestSearchEndpointSuccess:
         data = self._post(full_client).json()
         labels = [t['label'] for t in data['cards'][0]['why_tags']]
         assert '1층 매물' in labels
+
+
+# ── 준공연도 필터 케이스 ────────────────────────────────────────
+
+class TestSearchBuildYearFilter:
+    """build_year_min 파라미터 필터링 검증 (spec-07)."""
+
+    def _post(self, client, extra=None):
+        payload = {
+            'workplace_address': '강남역',
+            'max_minutes': 60,
+            'max_price': 50000,
+            'pyeong_types': ['20평대'],
+        }
+        if extra:
+            payload.update(extra)
+        with (
+            patch('app.search.get_or_create', return_value=_FAKE_WP),
+            patch('app.search._generate_comments_bg', new=AsyncMock()),
+        ):
+            return client.post('/api/search', json=payload)
+
+    def test_null_build_year_excluded_when_filter_set(self, full_client):
+        """시드 아파트는 build_year=NULL → build_year_min 지정 시 cards 빈 배열. (AC4)"""
+        data = self._post(full_client, {'build_year_min': 2015}).json()
+        assert data['cards'] == []
+
+    def test_no_filter_returns_card(self, full_client):
+        """build_year_min 미지정 → 기존대로 카드 반환. (AC2 회귀 없음)"""
+        data = self._post(full_client).json()
+        assert len(data['cards']) >= 1
+
+    def test_build_year_min_1960_with_matching_apt(self, full_client, full_db):
+        """build_year=1980 단지 삽입 후 build_year_min=1960 → 포함됨. (AC1)"""
+        full_db.execute(
+            "INSERT INTO apartments "
+            "(apt_seq, apt_nm, umd_nm, lat, lng, grid_key, kaptCode, kaptdaCnt, recent_trade, is_apt, build_year) "
+            "VALUES ('APT002', '구형아파트', '역삼동', 37.495, 127.025,"
+            " 'R08333C28422', 'K001', 300.0, 3, 1, 1980)"
+        )
+        full_db.execute(
+            "INSERT INTO trade_recent "
+            "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day) "
+            "VALUES ('APT002', '20평대', 25.0, 5, 20000, 2026, 4, 10)"
+        )
+        full_db.commit()
+        data = self._post(full_client, {'build_year_min': 1960}).json()
+        seqs = [c['apt_seq'] for c in data['cards']]
+        assert 'APT002' in seqs

@@ -31,6 +31,9 @@ class SearchRequest(BaseModel):
     min_kaptdaCnt: int | None = Field(
         None, ge=0, le=100_000, description="최소 단지 세대수 (선택). 미지정=100",
     )
+    build_year_min: int | None = Field(
+        None, ge=1960, le=2030, description="최소 준공연도 (예: 2010 → 2010년 이후 준공 단지만)",
+    )
 
     @field_validator('pyeong_types')
     @classmethod
@@ -72,6 +75,9 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     if req.min_kaptdaCnt is not None:
         apt_filter += ' AND kaptdaCnt >= ?'
         apt_params.append(req.min_kaptdaCnt)
+    if req.build_year_min is not None:
+        apt_filter += ' AND build_year >= ?'
+        apt_params.append(req.build_year_min)
     apts = conn.execute(
         f'SELECT apt_seq, lat, lng FROM apartments {apt_filter}', apt_params
     ).fetchall()
@@ -122,9 +128,12 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
     min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
+    build_year_clause = ' AND a.build_year >= ?' if req.build_year_min is not None else ''
     cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types]
     if req.min_kaptdaCnt is not None:
         cards_params.append(req.min_kaptdaCnt)
+    if req.build_year_min is not None:
+        cards_params.append(req.build_year_min)
 
     # 카드 = (apt_seq, pyeong_type) 단위. 평형별로 행 1개씩.
     cards = conn.execute(f"""
@@ -153,6 +162,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
           AND t.deal_amount_int<=?
           AND t.pyeong_type IN ({pt})
           {min_cnt_clause}
+          {build_year_clause}
         GROUP BY
             a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
             a.kaptCode,

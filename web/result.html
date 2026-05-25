@@ -1567,6 +1567,7 @@ const reqBody = {
   pyeong_types: params.get('pyeong_types').split(','),
 };
 if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'), 10);
+if(params.get('build_year_min')) reqBody.build_year_min=parseInt(params.get('build_year_min'), 10);
 
 let resultData = null;
 let kakaoMap = null;
@@ -1723,6 +1724,7 @@ function renderSummary(data){
     <span class="sep">·</span>
     <span>${reqBody.pyeong_types.join(', ')}</span>
     ${reqBody.min_kaptdaCnt?`<span class="sep">·</span><span>${reqBody.min_kaptdaCnt.toLocaleString()}세대 이상</span>`:''}
+    ${reqBody.build_year_min?`<span class="sep">·</span><span>${reqBody.build_year_min}년 이후</span>`:''}
     <span class="stats">총 ${(data.stats.total||0).toLocaleString()}개 (평형 분리)</span>`;
 }
 
