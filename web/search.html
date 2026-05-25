@@ -249,6 +249,33 @@
       font-size: 15px; font-weight: 500;
       color: var(--color-text-secondary);
     }
+    .price-range-row {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .price-range-row input { width: 96px; text-align: right; }
+    .price-range-row .unit {
+      font-size: 15px; font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+    /* 가격 범위 너무 넓음 경고 */
+    .price-warn {
+      display: none;
+      padding: 10px 14px;
+      background: #FFF8E1;
+      border: 1px solid #FFB300;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #5D4037;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .price-warn.show { display: block; }
+    .price-warn strong { color: #E65100; font-weight: 600; }
+    .price-label {
+      font-size: 13px; font-weight: 600; width: 28px;
+      color: var(--color-text-secondary);
+    }
 
     /* ─── 칩 그룹 ──────────────────────────────────────────── */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -469,11 +496,11 @@
       <div class="error" id="address-error"></div>
     </section>
 
-    <!-- ② 최대 금액 -->
+    <!-- ② 가격 범위 -->
     <section class="section">
       <div class="section-head">
         <span class="section-num num">2</span>
-        <span class="section-title">최대 금액</span>
+        <span class="section-title">가격 범위</span>
         <span class="info-wrap">
           <button type="button" class="info-btn" aria-label="안내">i</button>
           <div class="info-popover">
@@ -482,14 +509,26 @@
           </div>
         </span>
       </div>
-      <div class="price-row">
+      <div class="price-range-row">
+        <span class="price-label">최소</span>
+        <input type="number" id="min-price-eok" min="0" step="1" placeholder="제한없음">
+        <span class="unit">억</span>
+        <input type="number" id="min-price-man" min="0" max="9000" step="1000" placeholder="0">
+        <span class="unit">만원</span>
+      </div>
+      <div class="price-range-row">
+        <span class="price-label">최대</span>
         <input type="number" id="price-eok" value="5" min="0" step="1" required>
         <span class="unit">억</span>
         <input type="number" id="price-man" value="0" min="0" max="9000" step="1000" required>
         <span class="unit">만원</span>
       </div>
-      <div class="hint">최소 1억 이상 · 만원 칸은 천만 단위 (0, 1000, 2000, …, 9000)</div>
+      <div class="hint">만원 칸은 천만 단위 (0, 1000, 2000, …, 9000) · 최소 < 최대</div>
       <div class="error" id="price-error"></div>
+      <div class="price-warn" id="price-warn">
+        ⚠️ 가격 범위가 <strong>5억 이상</strong> 차이 나면 검색 타임아웃이 발생할 수 있어요.<br>
+        최소 금액을 입력하거나 최대 금액을 줄여서 범위를 좁혀주세요.
+      </div>
     </section>
 
     <!-- ③ 최대 통근시간 -->
@@ -628,41 +667,60 @@ function openPostcode() {
 }
 
 // ── 가격 검증 ─────────────────────────────────────────────
+// 반환값: { maxPrice, minPrice } | null
 function validatePrice() {
-  const eokEl = document.getElementById('price-eok');
-  const manEl = document.getElementById('price-man');
-  const errorEl = document.getElementById('price-error');
-  const eok = parseInt(eokEl.value) || 0;
-  const man = parseInt(manEl.value) || 0;
+  const maxEokEl = document.getElementById('price-eok');
+  const maxManEl = document.getElementById('price-man');
+  const minEokEl = document.getElementById('min-price-eok');
+  const minManEl = document.getElementById('min-price-man');
+  const errorEl  = document.getElementById('price-error');
 
-  eokEl.classList.remove('invalid');
-  manEl.classList.remove('invalid');
+  [maxEokEl, maxManEl, minEokEl, minManEl].forEach(el => el.classList.remove('invalid'));
   errorEl.classList.remove('show');
 
-  if (eok < 0 || man < 0) {
-    errorEl.textContent = '0 이상 입력해주세요';
-    errorEl.classList.add('show');
-    if (eok < 0) eokEl.classList.add('invalid');
-    if (man < 0) manEl.classList.add('invalid');
-    return null;
-  }
-  if (man % 1000 !== 0) {
+  // 최대 금액 검증
+  const maxEok = parseInt(maxEokEl.value) || 0;
+  const maxMan = parseInt(maxManEl.value) || 0;
+  if (maxMan % 1000 !== 0) {
     errorEl.textContent = '만원 칸은 천만 단위로 입력해주세요 (0, 1000, 2000, …)';
-    errorEl.classList.add('show');
-    manEl.classList.add('invalid');
-    return null;
+    errorEl.classList.add('show'); maxManEl.classList.add('invalid'); return null;
   }
-  const total = eok * 10000 + man;
-  if (total < 10000) {
-    errorEl.textContent = '최소 1억 이상 입력해주세요';
-    errorEl.classList.add('show');
-    eokEl.classList.add('invalid');
-    return null;
+  const maxPrice = maxEok * 10000 + maxMan;
+  if (maxPrice < 10000) {
+    errorEl.textContent = '최대 금액은 최소 1억 이상 입력해주세요';
+    errorEl.classList.add('show'); maxEokEl.classList.add('invalid'); return null;
   }
-  return total;
+
+  // 최소 금액 검증 (선택 입력)
+  const minEokVal = minEokEl.value.trim();
+  const minManVal = minManEl.value.trim();
+  let minPrice = null;
+  if (minEokVal !== '' || minManVal !== '') {
+    const minEok = parseInt(minEokVal) || 0;
+    const minMan = parseInt(minManVal) || 0;
+    if (minMan % 1000 !== 0) {
+      errorEl.textContent = '최소 금액 만원 칸은 천만 단위로 입력해주세요';
+      errorEl.classList.add('show'); minManEl.classList.add('invalid'); return null;
+    }
+    minPrice = minEok * 10000 + minMan;
+    if (minPrice >= maxPrice) {
+      errorEl.textContent = '최소 금액은 최대 금액보다 작아야 합니다';
+      errorEl.classList.add('show');
+      minEokEl.classList.add('invalid'); return null;
+    }
+  }
+
+  // 가격 범위 너무 넓음 경고 (실시간)
+  const warnEl = document.getElementById('price-warn');
+  const gap = maxPrice - (minPrice || 0);
+  if (gap > 50000) warnEl.classList.add('show');
+  else             warnEl.classList.remove('show');
+
+  return { maxPrice, minPrice };
 }
-document.getElementById('price-eok').addEventListener('input', validatePrice);
-document.getElementById('price-man').addEventListener('input', validatePrice);
+['price-eok','price-man','min-price-eok','min-price-man'].forEach(id => {
+  document.getElementById(id).addEventListener('input', validatePrice);
+});
 
 // ── 폼 제출 ────────────────────────────────────────────────
 document.getElementById('search-form').addEventListener('submit', (e) => {
@@ -683,8 +741,15 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     return;
   }
 
-  const price = validatePrice();
-  if (price === null) return;
+  const priceResult = validatePrice();
+  if (priceResult === null) return;
+  const { maxPrice, minPrice } = priceResult;
+
+  // 가격 범위 너무 넓으면 제출 차단 (타임아웃 방지)
+  if ((maxPrice - (minPrice || 0)) > 50000) {
+    document.getElementById('price-warn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   const pyeongTypes = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(el => el.value);
   if (pyeongTypes.length === 0) {
@@ -701,10 +766,11 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
 
   const params = new URLSearchParams({
     workplace_address: address,
-    max_price: String(price),
+    max_price: String(maxPrice),
     max_minutes: String(maxMinutes),
     pyeong_types: pyeongTypes.join(','),
   });
+  if (minPrice !== null) params.set('min_price', String(minPrice));
   if (mincnt) params.set('min_kaptdaCnt', mincnt);
   if (buildYearMin) params.set('build_year_min', buildYearMin);
 
