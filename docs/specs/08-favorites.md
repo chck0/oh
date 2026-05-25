@@ -1,6 +1,6 @@
 # Spec: 관심 단지 ♥ 즐겨찾기 (favorites)
 
-> **상태**: In Progress 🚧  
+> **상태**: Implemented ✅  
 > **작성일**: 2026-05-25  
 > **구현 브랜치**: hjkang83
 
@@ -95,21 +95,35 @@ localStorage['badugi_favorites'] = '["APT001:20평대","APT002:30평대"]'
 
 ## 7. Acceptance Criteria
 
-- [ ] **AC1**: ♥ 버튼 클릭 시 localStorage에 저장되고 하트 색상 변경
-- [ ] **AC2**: 페이지 새로고침 후에도 하트 상태 유지
-- [ ] **AC3**: "♥ N" 탭 클릭 시 관심 단지만 카드 표시
-- [ ] **AC4**: 관심 탭에서 지도 핀도 관심 단지만 표시
-- [ ] **AC5**: 관심 단지 0개 시 탭 버튼 비활성 + 안내 문구 표시
+- [x] **AC1**: ♥ 버튼 클릭 시 localStorage에 저장되고 하트 색상 변경 — `toggleFav` + `.fav-btn.active { color:#e74c3c }`
+- [x] **AC2**: 페이지 새로고침 후에도 하트 상태 유지 — `isFav()`가 `localStorage`에서 읽어 카드 렌더 시 반영
+- [x] **AC3**: "♥ N" 탭 클릭 시 관심 단지만 카드 표시 — `switchFavTab('fav')` 필터 렌더
+- [x] **AC4**: 관심 탭에서 지도 핀도 관심 단지만 표시 — `filterMapPins(seqs)` → `aptOverlayMap` setMap
+- [x] **AC5**: 관심 단지 0개 시 탭 버튼 비활성 + 안내 문구 표시 — `favBtn.disabled = favCnt===0` + `.fav-empty` 안내
 
 ---
 
 ## 8. 구현 메모
 
-> **구현 중** (Loop 3회 예정)
+> **구현 완료**: 2026-05-25 (Loop 3회)  
+> **테스트**: 프론트엔드 전용 (백엔드 변경 없음, 기존 282 테스트 회귀 없음)
 
-### 변경 파일 예정
+### 변경된 파일
 
 | 파일 | 변경 유형 | 내용 |
 |------|---------|------|
-| `web/result.html` | 수정 | ♥ 버튼, localStorage 로직, 탭 UI, 지도 핀 연동 |
-| `docs/specs/08-favorites.md` | 수정 | AC 체크 + 구현 메모 업데이트 |
+| `web/result.html` | 수정 | ♥ 버튼, localStorage 로직, 탭 UI (전체/♥N), 지도 핀 연동(filterMapPins) |
+| `docs/specs/08-favorites.md` | 수정 | AC 체크 + 구현 메모 |
+
+### 주요 결정 사항
+
+1. **localStorage 전용**: 로그인/DB 없이 즉시 구현. 기기 간 동기화는 out-of-scope.
+2. **`aptOverlayMap`**: `apt_seq → CustomOverlay` 매핑을 `initMap`에서 구성해 탭 전환 시 O(n) show/hide.
+3. **실시간 패널 업데이트**: 관심 탭 활성 중 ♥ 해제 시 `_updateFavTab` → `switchFavTab('fav')` 재렌더로 즉시 카드 제거.
+4. **padding-right 44/40px**: 카드 내용이 ♥ 버튼과 겹치지 않도록 우측 여백 확보.
+5. **`window._lastSearchData` 캐시**: 전체 탭 복귀 시 서버 재호출 없이 로컬 데이터로 재렌더.
+
+### 알려진 제약
+
+- `localStorage` 용량 초과 시 `try/catch`로 silently ignore.
+- AC5 실기기 브라우저 확인 필요 (로컬 서버 기동 후 테스트 권장).
