@@ -8,6 +8,15 @@
 
 ## 작업 방식
 
+### 0. Spec First, Then Code (절대 원칙)
+
+- **어떤 기능이든 코드보다 spec 문서를 먼저 작성한다.**
+- Spec 파일 위치: `docs/specs/NN-feature-name.md` (번호 순)
+- Spec 최소 구성: Why(왜), Scope(범위), Functional Requirements, Data Model, Acceptance Criteria
+- Spec 초안을 사용자에게 보여주고 승인받은 뒤 구현에 들어간다.
+- 코드 구현 후 spec 섹션 "구현 메모"와 AC 체크박스를 업데이트한다.
+- **예외 없음**: 한 줄짜리 수정도 관련 spec이 없으면 먼저 spec부터 만든다.
+
 ### 1. Forest First, Then Trees
 
 - 새 작업을 시작할 때 **전체 그림(목표, 범위, 영향받는 파일)을 먼저 파악**한 뒤 세부 구현에 들어간다.
