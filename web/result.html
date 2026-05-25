@@ -1609,7 +1609,7 @@ function escHtml(s){
 // ═══════════════════════════════════════════════════════
 //  검색 실행
 // ═══════════════════════════════════════════════════════
-const THIS_YEAR = THIS_YEAR;
+const THIS_YEAR = new Date().getFullYear();
 let kakaoReady = new Promise(resolve => { kakao.maps.load(resolve); });
 
 async function runSearch(){
