@@ -479,6 +479,7 @@
        [1] 추천 카드 — AI 친구 코멘트 HERO
        ════════════════════════════════════════════════════════ */
     .rec-card {
+      position: relative;
       background: white;
       border-radius: var(--radius-lg);
       border: 1px solid var(--color-border-strong);
@@ -601,6 +602,44 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    /* ── 관심 단지 ♥ ───────────────────────────────────────── */
+    .fav-btn {
+      position: absolute; top: 10px; right: 12px;
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; line-height: 1; color: #ddd;
+      padding: 4px; border-radius: 50%;
+      transition: color 0.15s, transform 0.12s;
+      z-index: 2;
+    }
+    .fav-btn:hover { transform: scale(1.25); color: #e74c3c; }
+    .fav-btn.active { color: #e74c3c; }
+
+    /* 탭 (전체 / ♥ 관심) */
+    .fav-tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+      background: white;
+      position: sticky; top: 0; z-index: 10;
+      margin-bottom: 12px;
+    }
+    .fav-tab-btn {
+      flex: 1; padding: 9px 0; border: none; background: none;
+      border-bottom: 2px solid transparent;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      color: var(--color-text-secondary);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .fav-tab-btn.active {
+      color: var(--color-brand-primary);
+      border-bottom-color: var(--color-brand-primary);
+    }
+    .fav-tab-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    .fav-empty {
+      padding: 40px 20px; text-align: center;
+      color: var(--color-text-secondary); font-size: 14px; line-height: 1.8;
+    }
+
     .rec-card__footer {
       display: flex; align-items: center; justify-content: space-between;
       gap: 12px; flex-wrap: wrap;
@@ -742,6 +781,7 @@
 
     /* 일반 list-card (버킷 안) */
     .list-card {
+      position: relative;
       background: white;
       border: 1px solid var(--color-border-strong);
       border-radius: 10px;
@@ -1466,6 +1506,10 @@
 <main id="main" style="display:none;">
   <div class="summary-bar" id="summary"></div>
   <div class="result-layout">
+    <div id="fav-tabs" class="fav-tabs" style="display:none">
+      <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
+      <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+    </div>
     <div class="cards-panel" id="cards-panel"></div>
     <div class="map-panel">
       <div id="map"></div>
@@ -1572,6 +1616,7 @@ if(params.get('build_year_min')) reqBody.build_year_min=parseInt(params.get('bui
 let resultData = null;
 let kakaoMap = null;
 let overlays = [];
+let aptOverlayMap = {};   // apt_seq → CustomOverlay (핀 show/hide용)
 let panelMode = 'list';   // 'list' | 'detail'
 let detailChart = null;
 let detailChartData = null;
@@ -1837,6 +1882,16 @@ function renderCardRecentTrades(trades){
 // 카드 키 (apt_seq + pyeong_type)
 function cardKey(c){ return `${c.apt_seq}:${c.pyeong_type||''}`; }
 
+// 관심 단지 탭 전환 시 지도 핀 show/hide
+// seqs: apt_seq 배열 (null이면 전체 표시)
+window.filterMapPins = function(seqs) {
+  if(!kakaoMap) return;
+  const seqSet = seqs ? new Set(seqs) : null;
+  Object.entries(aptOverlayMap).forEach(([seq, overlay]) => {
+    overlay.setMap(!seqSet || seqSet.has(seq) ? kakaoMap : null);
+  });
+};
+
 // 카드 클릭: 지도만 pan (상세 패널은 핀 클릭으로 열림)
 function panToCard(aptSeq){
   if(!kakaoMap || !resultData) return;
@@ -1847,6 +1902,72 @@ function panToCard(aptSeq){
 }
 
 // 추천 카드 (긴 코멘트형)
+// ── 관심 단지 ♥ localStorage 헬퍼 ────────────────────────────
+const FAV_KEY = 'badugi_favorites';
+let _currentFavTab = 'all';
+window._lastCards = [];
+
+function loadFavs() {
+  try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); }
+  catch(e) { return new Set(); }
+}
+function saveFavs(s) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...s])); } catch(e) {}
+}
+function favId(seq, pt) { return `${seq}:${pt}`; }
+function isFav(seq, pt) { return loadFavs().has(favId(seq, pt)); }
+
+function toggleFav(seq, pt, btn, ev) {
+  if(ev) ev.stopPropagation();
+  const favs = loadFavs();
+  const id = favId(seq, pt);
+  if(favs.has(id)) { favs.delete(id); btn.classList.remove('active'); }
+  else             { favs.add(id);    btn.classList.add('active'); }
+  saveFavs(favs);
+  _updateFavTab();
+}
+
+function _updateFavTab() {
+  const favCnt = window._lastCards.filter(c => isFav(c.apt_seq, c.pyeong_type)).length;
+  const allCnt = window._lastCards.length;
+  const cntEl  = document.getElementById('fav-tab-cnt');
+  const allEl  = document.getElementById('fav-tab-all-cnt');
+  const favBtn = document.getElementById('fav-tab-fav');
+  if(cntEl)  cntEl.textContent  = favCnt;
+  if(allEl)  allEl.textContent  = `(${allCnt})`;
+  if(favBtn) favBtn.disabled    = favCnt === 0;
+}
+
+function switchFavTab(tab) {
+  _currentFavTab = tab;
+  document.getElementById('fav-tab-all').classList.toggle('active', tab === 'all');
+  document.getElementById('fav-tab-fav').classList.toggle('active', tab === 'fav');
+
+  const panel = document.getElementById('cards-panel');
+  const favs  = loadFavs();
+
+  if(tab === 'all') {
+    // 전체 카드 다시 렌더 + 전체 핀 복원
+    filterMapPins(null);
+    if(window._lastSearchData) renderCards(window._lastSearchData);
+  } else {
+    // 관심 단지만 필터 렌더
+    const cards = window._lastCards.filter(c => favs.has(favId(c.apt_seq, c.pyeong_type)));
+    if(!cards.length) {
+      panel.innerHTML = `<div class="fav-empty">❤️‍🔥 아직 관심 단지가 없어요<br><span style="font-size:12px;color:#aaa">카드의 ♥ 버튼을 눌러 저장해보세요</span></div>`;
+      return;
+    }
+    let html = '';
+    cards.forEach(c => {
+      if(c.is_recommended) html += renderRecCard(c, window._lastWpId);
+      else                  html += renderListCard(c, window._lastWpId);
+    });
+    panel.innerHTML = html;
+    // 지도 핀 동기화
+    if(window.filterMapPins) window.filterMapPins(cards.map(c => c.apt_seq));
+  }
+}
+
 function renderRecCard(c, wpId){
   const thisYear = THIS_YEAR;
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
@@ -1875,8 +1996,11 @@ function renderRecCard(c, wpId){
       </div>`;
 
   const transitTxt = c.transit_summary ? escHtml(c.transit_summary) : '경로 정보 없음';
+  const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
+  const favTitle   = favActive ? '관심 해제' : '관심 추가';
 
   return `<div class="rec-card" onclick="panToCard('${c.apt_seq}')">
+    <button class="fav-btn${favActive}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitle}">♥</button>
     <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
     <div class="rec-card__title-row">
       <h3 class="rec-card__title">${escHtml(c.apt_nm)}</h3>
@@ -1923,7 +2047,11 @@ function renderListCard(c, wpId){
     ? `<div class="list-card__comment">${escHtml(comment)}</div>`
     : `<div class="list-card__comment empty"><span class="spinner-mini"></span>한 줄 평 생성 중...</div>`;
 
+  const favActiveL = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
+  const favTitleL  = favActiveL ? '관심 해제' : '관심 추가';
+
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
+    <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
       <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
       <div class="list-card__price num">${shortPrice(c.price_low)}</div>
@@ -1940,6 +2068,22 @@ function renderListCard(c, wpId){
 function renderCards(data){
   panelMode='list';
   const panel=document.getElementById('cards-panel');
+
+  // 전역 상태 저장 (탭 전환 / 재렌더 시 참조)
+  window._lastSearchData = data;
+  window._lastCards      = data.cards || [];
+  window._lastWpId       = data.wp_id;
+
+  // 탭 패널 표시 + 카운트 초기화
+  const tabsEl = document.getElementById('fav-tabs');
+  if(tabsEl && data.cards.length) {
+    tabsEl.style.display = 'flex';
+    _currentFavTab = 'all';
+    document.getElementById('fav-tab-all').classList.add('active');
+    document.getElementById('fav-tab-fav').classList.remove('active');
+    _updateFavTab();
+  }
+
   if(!data.cards.length){
     panel.innerHTML=`<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
       <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
@@ -2095,6 +2239,7 @@ async function initMap(data){
     });
     overlay.setMap(kakaoMap);
     overlays.push(overlay);
+    aptOverlayMap[group.apt_seq] = overlay;  // 핀 필터링용
   });
 
   // ── 핀 이벤트 ───────────────────────────────────────
