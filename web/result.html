@@ -2838,17 +2838,28 @@ function renderTradesHTML(trades){
 // A=학교(중고등), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
 // E=쇼핑/편의(백화점·마트·편의점), F=의료(병원·약국),
 // G=음식점, H=공공기관(구청·경찰·소방), I=공원/녹지,
-// J=문화/여가(영화관·박물관·도서관), K=스포츠(헬스장·수영장), L=금융(은행·ATM)
+// J=문화/여가(영화관·박물관·도서관·J01~J04), K=스포츠(헬스장·수영장), L=금융(은행·ATM)
+// L 서브카테고리: L01=은행, L02=ATM, L03=주유소, L04/L05=아파트단지(오분류), L06=기타서비스
 const POI_ORDER = ['D','A','B','C','F','E','I','K','J','H','L','G'];
 const POI_CAT_NAME = {
   A:'학교', B:'어린이집/유치원', C:'학원', D:'교통',
   E:'쇼핑/편의', F:'의료', G:'음식', H:'공공기관',
   I:'공원/녹지', J:'문화/여가', K:'스포츠', L:'금융',
 };
+// 카테고리별 허용 서브카테고리 — 없으면 전체 허용
+// L: 은행(L01)·ATM(L02)만 표시. L03(주유소)·L04·L05(아파트단지)·L06(기타) 제외
+// J: 영화관(J01)·박물관(J02)·공연장(J03)·도서관(J04)만 표시
+const POI_ALLOWED_SUBS = {
+  L: new Set(['L01','L02']),
+  J: new Set(['J01','J02','J03','J04']),
+};
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
   poi.slice(0,30).forEach(p=>{
+    // 카테고리별 서브카테고리 필터 (데이터 품질 이슈 제거)
+    const allowedSubs = POI_ALLOWED_SUBS[p.category];
+    if(allowedSubs && !allowedSubs.has(p.sub_category)) return;
     const key = POI_ORDER.includes(p.category) ? p.category : '기타';
     if(!groups[key]) groups[key]=[];
     groups[key].push(p);
