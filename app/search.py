@@ -53,14 +53,17 @@ COMMUTE_BUFFER_MIN = 15
 # 4키 × 4동시 × ~1.2s/round × 100ms sleep → ~250셀이 ~25s 안에 처리됨.
 MAX_FETCH_CELLS_PER_CALL = 200   # 4키×4동시×1.2s×round → ~200셀이 ~20s, 여유 확보
 
-# Vercel Hobby maxDuration 60s 안에 안전하게 끝내기 위한 ODsay 호출 하드 타임아웃.
-# DB쿼리·카드변환 여유분(~15s) 제외. 초과 시 캐시된 셀 결과만으로 partial 반환.
-ODSAY_HARD_TIMEOUT_S = 42
+# Vercel Hobby maxDuration 60s 제약 관련 상수
+ODSAY_HARD_TIMEOUT_S = 30   # ODsay 호출 하드컷 (30s) — 이후 DB쿼리·처리에 ~20s 확보
+WALL_CLOCK_BUDGET_S  = 50   # 함수 전체 예산. 초과 시 cards 쿼리 스킵, partial 즉시 반환
 
 
 # ── POST /api/search ─────────────────────────────────────────
 @router.post("/search")
 async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Depends(get_db)):
+    import time as _time
+    _t0 = _time.monotonic()   # 벽시계 타이머 시작 (Vercel 60s 예산 추적용)
+
     # ─ 1. workplace 등록 / wp_id 확보 ─
     # get_or_create 안의 Kakao HTTP 호출이 동기 블로킹이므로 to_thread로 오프로드
     wp = await asyncio.to_thread(get_or_create, conn, req.workplace_address)
@@ -140,6 +143,24 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
         odsay_stats = {'fetched': 0, 'passed': 0, 'failed': 0,
                        'elapsed_ms': ODSAY_HARD_TIMEOUT_S * 1000}
         deferred_cells += len(to_fetch)  # 미처리 셀 전부 deferred로 표시
+
+    # ── 벽시계 잔여 예산 체크 ────────────────────────────────────
+    # ODsay 이후 cards 쿼리·추천 로직에 최소 10s 필요.
+    # 예산 초과 시 cards 쿼리 없이 즉시 partial 반환 → 504 방지.
+    _elapsed = _time.monotonic() - _t0
+    if _elapsed > WALL_CLOCK_BUDGET_S - 10:
+        print(f'[search] 벽시계 예산 초과 ({_elapsed:.1f}s) — cards 쿼리 생략, partial 반환')
+        return {
+            'wp_id': wp_id, 'llm_pending': False,
+            'workplace': {'address_input': wp['address_input'],
+                          'address_norm': wp['address_norm'],
+                          'lat': wp['lat'], 'lng': wp['lng']},
+            'stats': {'total': 0}, 'buckets': [], 'cards': [],
+            'meta': {'partial': True,
+                     'deferred_cells': deferred_cells + len(cells),
+                     'total_cells': len(cells),
+                     'odsay_elapsed_ms': int(_elapsed * 1000)},
+        }
 
     # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
     min_cnt_clause = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
