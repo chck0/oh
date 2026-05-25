@@ -157,6 +157,12 @@ class _PgConn:
     def commit(self):
         return self._c.commit()
 
+    def rollback(self):
+        try:
+            return self._c.rollback()
+        except Exception:
+            pass
+
     def close(self):
         try:
             return self._c.close()

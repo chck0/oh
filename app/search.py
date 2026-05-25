@@ -238,7 +238,14 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                     'detail': row['detail'],
                 })
         except Exception:
-            pass  # trade_tags 미존재 시 빈 tag_map 유지
+            # trade_tags 미존재 시 빈 tag_map 유지.
+            # ⚠️ Postgres(pgBouncer) 에서는 쿼리 실패 후 트랜잭션이 aborted 상태로 남는다.
+            # rollback() 없이 다음 쿼리를 시도하면 InFailedSqlTransaction 500 이 발생하므로
+            # 여기서 반드시 롤백하여 커넥션 상태를 복구한다.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
     raw_cards = [_card_to_dict(c, recent_map, tag_map) for c in cards]
