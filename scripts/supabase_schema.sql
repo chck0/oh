@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS apartments (
     recent_trade             INTEGER,
     "codeAptNm"              TEXT,
     is_apt                   INTEGER NOT NULL DEFAULT 0,
-    building_type            TEXT
+    building_type            TEXT,
+    build_year               INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_apt_seq      ON apartments(apt_seq);
 CREATE INDEX IF NOT EXISTS idx_apt_kapt     ON apartments("kaptCode");
