@@ -300,10 +300,27 @@
     }
 
     /* result-layout: 정확히 2개의 자식(left-panel, map-panel)만 갖는 grid */
+    /* spec-11: 유연형 — 큰 화면일수록 LLM 분석면 자연 확대 (minmax 440~32%) */
     .result-layout {
       flex: 1; display: grid;
-      grid-template-columns: 400px 1fr;
+      grid-template-columns: minmax(440px, 32%) 1fr;
       min-height: 0;
+    }
+    /* 태블릿: 지도 가시 영역 보장 위해 400px 고정 */
+    @media (max-width: 1100px) {
+      .result-layout { grid-template-columns: 400px 1fr; }
+    }
+    /* 모바일 세로 분할: 카드 위 / 지도 아래 50vh */
+    @media (max-width: 767px) {
+      .result-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 50vh;
+      }
+      .left-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border-strong);
+      }
+      .map-panel { min-height: 50vh; }
     }
     /* 좌측 패널 — fav-tabs(상단) + cards-panel(스크롤) 세로 배치 */
     .left-panel {
@@ -545,6 +562,25 @@
       background: currentColor; opacity: 0.5;
       margin: 0 6px; vertical-align: middle;
     }
+
+    /* spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral) — 친구 코멘트 위 단독 행 */
+    .rec-card__reasons {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin: 10px 0 12px;
+    }
+    .reason-chip {
+      display: inline-flex; align-items: center;
+      padding: 5px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 12.5px; font-weight: 600;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.005em;
+      white-space: nowrap;
+    }
+    .reason-chip--info    { background: var(--blue-100);              color: var(--blue-700); }
+    /* Brand 칩 — 카드 1장당 1개만 (디자인 시스템 §2.2 빨강 5% 이하 원칙) */
+    .reason-chip--brand   { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); }
+    .reason-chip--neutral { background: var(--color-bg-subtle);       color: var(--color-text-secondary); border: 1px solid var(--color-border-default); }
 
     /* AI 친구 한마디 — HERO */
     .rec-card__friend {
@@ -1985,14 +2021,25 @@ function switchFavTab(tab) {
 }
 
 function renderRecCard(c, wpId){
-  const thisYear = THIS_YEAR;
+  // spec-11: meta에서 build_year 제거 (칩 3으로 흡수). 동·세대·최고층만.
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
-  if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
   if(c.top_floor) metaParts.push(`최고 ${c.top_floor}층`);
   const meta = metaParts.join('<span class="dot"></span>');
 
   // 가격 분리: 억 + 만
   const priceHtml = splitPrice(c.price_low);
+
+  // spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral)
+  const chip1Text = c.transit_summary
+    ? `${escHtml(c.transit_summary)} ${c.total_time_min}분`
+    : `${c.total_time_min}분`;
+  const chip2Text = reasonChip2Text(c);
+  const chip3Text = reasonChip3Text(c);
+  const reasonsHtml = `<div class="rec-card__reasons">
+    <span class="reason-chip reason-chip--info">${chip1Text}</span>
+    <span class="reason-chip reason-chip--brand">${escHtml(chip2Text)}</span>
+    ${chip3Text ? `<span class="reason-chip reason-chip--neutral">${escHtml(chip3Text)}</span>` : ''}
+  </div>`;
 
   const comment = c.friend_comment || '';
   const friendHtml = comment
@@ -2011,10 +2058,10 @@ function renderRecCard(c, wpId){
         </div>
       </div>`;
 
-  const transitTxt = c.transit_summary ? escHtml(c.transit_summary) : '경로 정보 없음';
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
 
+  // spec-11: footer 완전 제거 — commute/pick_reason 정보가 칩 1·2로 흡수됨
   return `<div class="rec-card" onclick="panToCard('${c.apt_seq}')">
     <button class="fav-btn${favActive}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitle}">♥</button>
     <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
@@ -2024,14 +2071,8 @@ function renderRecCard(c, wpId){
     </div>
     <div class="rec-card__meta num">${meta}</div>
     ${_whyTagsHtml(c.why_tags)}
+    ${reasonsHtml}
     ${friendHtml}
-    <div class="rec-card__footer">
-      <span class="rec-card__transit">
-        <span class="commute-chip">${transitTxt}</span>
-        <strong class="num">${c.total_time_min}분</strong>
-      </span>
-      ${c.pick_reason?`<span class="rec-card__reason">${escHtml(c.pick_reason)}</span>`:''}
-    </div>
   </div>`;
 }
 
@@ -2040,6 +2081,34 @@ function _whyTagsHtml(tags){
   if(!tags || !tags.length) return '';
   const labels = tags.slice(0,2).map(t=>escHtml(t.label)).join(' · ');
   return `<div class="why-tags">저가 근거: ${labels}</div>`;
+}
+
+// spec-11: 추천 카드 칩 2 (Brand 칩) — 추천 이유 압축
+//  우선순위: 1) 최단권 대비 차액  2) 슬롯 내 비교(N곳 중 최소)  3) fallback
+function reasonChip2Text(c){
+  const diff = c.price_diff_vs_fastest;
+  if(diff && diff > 0){
+    const eok = Math.floor(diff/10000);
+    const chon = Math.round((diff%10000)/1000);
+    const diffStr = chon===0 ? `${eok}억` : `${eok}억 ${chon}천`;
+    return `최단권보다 ${diffStr} 저렴`;
+  }
+  if(c.pick_reason && /\d+곳 중/.test(c.pick_reason)){
+    return `${c.pyeong_type||''} 중 최소가`;
+  }
+  return '슬롯 최소가';
+}
+
+// spec-11: 추천 카드 칩 3 (Neutral) — 연식 우선, 없으면 평단가
+function reasonChip3Text(c){
+  if(c.build_year){
+    const age = THIS_YEAR - c.build_year;
+    return `${c.build_year}년 (${age}년차)`;
+  }
+  if(c.pyeong_price_avg){
+    return `평단 ${c.pyeong_price_avg.toLocaleString()}만`;
+  }
+  return null;  // 데이터 없으면 칩 미표시 → 2개 칩만
 }
 
 // 가격을 "5억 8,000만" → 분리된 num/unit 마크업으로
