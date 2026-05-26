@@ -174,5 +174,6 @@ Spec 완성 전 확인:
 | 08 | [08-favorites.md](08-favorites.md) | 관심 단지 ♥ 즐겨찾기 (localStorage) | ✅ Implemented |
 | 09 | [09-price-range.md](09-price-range.md) | 가격 범위 필터 (min_price) + 범위 경고 UI | ✅ Implemented |
 | 10 | [10-test-coverage.md](10-test-coverage.md) | 테스트 커버리지 강화 (search.py 79%, ai.py 96%, total 83%) | ✅ Implemented |
+| 11 | [11-rec-card-emphasis.md](11-rec-card-emphasis.md) | 추천 카드 이유 강조 (이유 칩 3개) + 좌측 패널 유연형 확대 | ✅ Implemented |
 
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **11**
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **12**
