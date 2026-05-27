@@ -995,6 +995,57 @@
       display: flex; align-items: flex-end; justify-content: center;
     }
     .detail-overlay.hidden { display: none; }
+
+    /* spec-18: 경로 상세 팝업 */
+    .route-overlay {
+      position: fixed; inset: 0; z-index: 700;
+      background: rgba(0,0,0,0.48);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .route-overlay.hidden { display: none; }
+    .route-panel {
+      background: white; border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 640px;
+      max-height: 70vh; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .route-panel__drag {
+      width: 40px; height: 4px; background: #ddd; border-radius: 2px;
+      margin: 10px auto 6px; flex-shrink: 0;
+    }
+    .route-panel__header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 16px 10px; flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .route-panel__title {
+      flex: 1; font-size: 15px; font-weight: 700;
+      color: var(--color-text-primary); margin: 0;
+    }
+    .route-panel__close {
+      background: none; border: none; cursor: pointer;
+      font-size: 18px; color: var(--color-text-secondary);
+      padding: 4px 8px; line-height: 1;
+    }
+    .route-panel__body {
+      flex: 1; overflow-y: auto; padding: 12px 16px 28px;
+    }
+    .route-panel__wp-tabs {
+      display: flex; gap: 8px; margin-bottom: 12px;
+    }
+    .route-panel__wp-tab {
+      padding: 5px 14px; border-radius: 16px;
+      font-size: 13px; font-weight: 600;
+      border: 1.5px solid var(--color-border-default);
+      cursor: pointer; background: white;
+      color: var(--color-text-secondary);
+      transition: background 150ms, color 150ms;
+    }
+    .route-panel__wp-tab.active {
+      background: var(--color-brand-primary); color: white;
+      border-color: var(--color-brand-primary);
+    }
+
     .detail-panel {
       background: white; border-radius: 20px 20px 0 0;
       width: 100%; max-width: 640px;
@@ -1747,6 +1798,20 @@
         <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
       </div>
     </div>
+    <!-- spec-18: 경로 상세 팝업 -->
+    <div class="route-overlay hidden" id="route-overlay" onclick="closeRouteOnBg(event)">
+      <div class="route-panel" id="route-panel">
+        <div class="route-panel__drag"></div>
+        <div class="route-panel__header">
+          <div class="route-panel__title" id="route-title">-</div>
+          <button class="route-panel__close" onclick="closeRoute()">✕</button>
+        </div>
+        <div class="route-panel__body" id="route-body">
+          <div style="padding:20px;color:var(--color-text-secondary);text-align:center;">불러오는 중...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- spec-17: 단지 상세 모달 -->
     <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
       <div class="detail-panel" id="detail-panel">
@@ -2325,10 +2390,119 @@ function _renderDetail(d) {
 // ESC 키로 모달 닫기
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (!document.getElementById('route-overlay').classList.contains('hidden')) { closeRoute(); return; }
     if (!document.getElementById('detail-overlay').classList.contains('hidden')) closeDetail();
     if (!document.getElementById('compare-overlay').classList.contains('hidden')) closeCompare();
   }
 });
+
+// ── spec-18: 경로 상세 팝업 ─────────────────────────────────────
+const _routeCache = {};
+
+async function openRoute(aptSeq, wpId, aptNm, event) {
+  if (event) event.stopPropagation();
+  const overlay = document.getElementById('route-overlay');
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('route-title').textContent = aptNm || aptSeq;
+  document.getElementById('route-body').innerHTML =
+    '<div style="padding:20px;color:var(--color-text-secondary);text-align:center;">불러오는 중...</div>';
+
+  const wpId2 = window._lastWpId2 || null;
+  const cacheKey  = `${aptSeq}:${wpId}`;
+  const cacheKey2 = wpId2 ? `${aptSeq}:${wpId2}` : null;
+
+  let routes1 = _routeCache[cacheKey] !== undefined ? _routeCache[cacheKey] : null;
+  let routes2 = (cacheKey2 && _routeCache[cacheKey2] !== undefined) ? _routeCache[cacheKey2] : null;
+
+  try {
+    const fetches = [];
+    if (routes1 === null) fetches.push(
+      fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`, {headers: {'ngrok-skip-browser-warning': '1'}})
+        .then(r => r.json())
+        .then(d => { routes1 = d.options || []; _routeCache[cacheKey] = routes1; })
+    );
+    if (cacheKey2 && routes2 === null) fetches.push(
+      fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`, {headers: {'ngrok-skip-browser-warning': '1'}})
+        .then(r => r.json())
+        .then(d => { routes2 = d.options || []; _routeCache[cacheKey2] = routes2; })
+    );
+    await Promise.all(fetches);
+  } catch(e) {
+    document.getElementById('route-body').innerHTML =
+      `<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+    return;
+  }
+  _renderRoutePanel(routes1, routes2);
+}
+
+function closeRoute() {
+  document.getElementById('route-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function closeRouteOnBg(event) {
+  if (event.target === document.getElementById('route-overlay')) closeRoute();
+}
+
+function _renderRoutePanel(routes1, routes2) {
+  const hasDual = dualMode && routes2 !== null;
+  let html = '';
+  if (hasDual) {
+    html += `<div class="route-panel__wp-tabs">
+      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">W1 직장</button>
+      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">W2 직장</button>
+    </div>`;
+  }
+  html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1)}</div>`;
+  if (hasDual) {
+    html += `<div id="route-wp2-pane" style="display:none">${_routeOptionsHtml(routes2)}</div>`;
+  }
+  document.getElementById('route-body').innerHTML = html;
+}
+
+function switchRouteWp(wp) {
+  document.getElementById('route-wp1-tab')?.classList.toggle('active', wp === 1);
+  document.getElementById('route-wp2-tab')?.classList.toggle('active', wp === 2);
+  const p1 = document.getElementById('route-wp1-pane');
+  const p2 = document.getElementById('route-wp2-pane');
+  if (p1) p1.style.display = wp === 1 ? '' : 'none';
+  if (p2) p2.style.display = wp === 2 ? '' : 'none';
+}
+
+function _routeOptionsHtml(options) {
+  if (!options || !options.length)
+    return '<div style="padding:16px;color:var(--color-text-secondary);text-align:center;">경로 정보가 없어요</div>';
+  const LABELS = { WALK: '도보', BUS: '버스', SUBWAY: '지하철' };
+  const ICONS  = { WALK: '🚶', BUS: '🚌', SUBWAY: '🚇' };
+  return options.map((opt, idx) => {
+    const isBest = idx === 0;
+    const modeStr = [
+      opt.subway_cnt > 0 ? `지하철 ${opt.subway_cnt}회` : null,
+      opt.bus_cnt    > 0 ? `버스 ${opt.bus_cnt}회`     : null,
+    ].filter(Boolean).join(' + ') || '도보';
+    const stepsHtml = (opt.steps || []).map(s => {
+      const tk  = (s.type || '').toUpperCase();
+      const cls = tk === 'WALK' ? 'walk' : tk === 'BUS' ? 'bus' : 'subway';
+      const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
+      const staHtml  = (s.from || s.to)
+        ? `<div class="dp-step-sta">${escHtml(s.from || '')} → ${escHtml(s.to || '')}</div>` : '';
+      return `<div class="dp-step">
+        <div class="dp-step-type ${cls}">${ICONS[tk] || '→'} ${LABELS[tk] || tk}</div>
+        <div class="dp-step-info">${lineHtml}${staHtml}</div>
+        <div class="dp-step-time">${s.time_min != null ? s.time_min + '분' : ''}</div>
+      </div>`;
+    }).join('');
+    return `<div class="dp-route${isBest ? ' best' : ''}">
+      <div class="dp-route__head" onclick="this.nextElementSibling.classList.toggle('open'); const chev=this.querySelector('.dp-route__chev'); chev.style.transform=this.nextElementSibling.classList.contains('open')?'rotate(180deg)':''">
+        <div class="dp-route__time">${opt.total_time_min}<span class="unit">분</span></div>
+        <div class="dp-route__mode">${escHtml(modeStr)}</div>
+        <span class="dp-route__chev" style="${isBest?'transform:rotate(180deg)':''}">▼</span>
+      </div>
+      <div class="dp-route__body${isBest ? ' open' : ''}">${stepsHtml}</div>
+    </div>`;
+  }).join('');
+}
 
 // 추천 카드 (긴 코멘트형)
 // ── 관심 단지 ♥ localStorage 헬퍼 ────────────────────────────
@@ -2528,7 +2702,7 @@ function renderRecCard(c, wpId, cmpMode=false){
   const chip2Text = reasonChip2Text(c);
   const chip3Text = reasonChip3Text(c);
   const reasonsHtml = `<div class="rec-card__reasons">
-    <span class="reason-chip reason-chip--info">${chip1Text}</span>
+    <span class="reason-chip reason-chip--info" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${chip1Text}</span>
     <span class="reason-chip reason-chip--brand">${escHtml(chip2Text)}</span>
     ${chip3Text ? `<span class="reason-chip reason-chip--neutral">${escHtml(chip3Text)}</span>` : ''}
   </div>`;
@@ -2656,8 +2830,8 @@ function renderListCard(c, wpId, cmpMode=false){
     ${_whyTagsHtml(c.why_tags)}
     <div class="list-card__row">
       ${dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
-        ? `<span class="commute-chip">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
-        : `<span class="commute-chip">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
+        ? `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
+        : `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
     </div>
     ${commentHtml}
   </article>`;
@@ -2671,6 +2845,7 @@ function renderCards(data){
   window._lastSearchData = data;
   window._lastCards      = data.cards || [];
   window._lastWpId       = data.wp_id;
+  window._lastWpId2      = data.workplace_2?.wp_id || null;
 
   // 탭 패널 표시 + 카운트 초기화
   const tabsEl = document.getElementById('fav-tabs');
