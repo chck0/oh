@@ -1,4 +1,4 @@
-# Spec 18 — 경로 상세 팝업 (Transit Route Detail)
+# Spec 20 — 경로 상세 팝업 (Transit Route Detail)
 
 **상태:** ✅ Implemented
 **작성일:** 2026-05-27
