@@ -939,6 +939,96 @@
       font-size: 12.5px; font-weight: 700;
       letter-spacing: 0.02em;
     }
+
+    /* ════════════════════════════════════════════════════════
+       [spec-14] 즐겨찾기 비교
+       ════════════════════════════════════════════════════════ */
+    .compare-check {
+      position: absolute; top: 8px; left: 8px; z-index: 5;
+      display: flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600;
+      color: var(--color-text-secondary);
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--color-border-default);
+      border-radius: 5px; padding: 2px 7px;
+      cursor: pointer; user-select: none;
+    }
+    .compare-check input { accent-color: var(--color-brand-primary); cursor: pointer; }
+    .compare-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: var(--color-bg-subtle);
+      border-top: 1px solid var(--color-border-strong);
+      font-size: 13px;
+    }
+    .compare-bar.hidden { display: none; }
+    .compare-bar__count { flex: 1; font-weight: 600; color: var(--color-text-primary); }
+    .compare-bar__btn {
+      padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 13px; font-weight: 700;
+    }
+    .compare-bar__btn:disabled { background: var(--color-bg-muted); color: var(--color-text-tertiary); cursor: not-allowed; }
+    .compare-bar__clear {
+      padding: 5px 10px; border-radius: 6px; border: 1px solid var(--color-border-default);
+      background: white; color: var(--color-text-secondary);
+      font-size: 12px; cursor: pointer;
+    }
+    .compare-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .compare-overlay.hidden { display: none; }
+    .compare-panel {
+      background: white; border-radius: 16px;
+      max-width: 860px; width: 100%;
+      max-height: 88vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      padding: 20px 22px 24px;
+    }
+    .compare-panel__head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .compare-panel__title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+    .compare-panel__close {
+      padding: 4px 12px; border-radius: 6px;
+      border: 1px solid var(--color-border-default);
+      background: white; cursor: pointer; font-size: 13px;
+      color: var(--color-text-secondary);
+    }
+    .compare-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .compare-table th {
+      padding: 10px 12px; text-align: center;
+      background: var(--color-bg-subtle);
+      border-bottom: 2px solid var(--color-border-strong);
+      font-size: 13px; font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td {
+      padding: 9px 12px; text-align: center;
+      border-bottom: 1px solid var(--color-border-default);
+      vertical-align: middle;
+    }
+    .compare-table td:first-child {
+      text-align: left; font-weight: 600;
+      color: var(--color-text-secondary); font-size: 12px;
+      background: var(--color-bg-subtle);
+      white-space: nowrap;
+    }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:hover td { background: var(--color-brand-bg-subtle); }
+    .compare-table tr:hover td:first-child { background: var(--color-bg-subtle); }
+    .compare-th-sub { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); }
+    .compare-best { color: var(--color-brand-primary); font-weight: 700; }
+
     .pin-multi-mark {
       display: inline-block;
       background: white; color: var(--color-text-tertiary);
@@ -1566,6 +1656,22 @@
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
+      <!-- spec-14: 비교 선택 하단 바 -->
+      <div class="compare-bar hidden" id="compare-bar">
+        <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
+        <button class="compare-bar__clear" onclick="clearCompare()">✕ 초기화</button>
+        <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
+      </div>
+    </div>
+    <!-- spec-14: 비교 오버레이 -->
+    <div class="compare-overlay hidden" id="compare-overlay" onclick="closeCompareOnBg(event)">
+      <div class="compare-panel">
+        <div class="compare-panel__head">
+          <span class="compare-panel__title">단지 비교</span>
+          <button class="compare-panel__close" onclick="closeCompare()">✕ 닫기</button>
+        </div>
+        <div id="compare-table-container"></div>
+      </div>
     </div>
     <!-- 우측: 지도 -->
     <div class="map-panel">
@@ -2015,6 +2121,7 @@ function switchFavTab(tab) {
   if(tab === 'all') {
     // 전체 카드 다시 렌더 + 전체 핀 복원
     filterMapPins(null);
+    clearCompare();  // spec-14: 탭 전환 시 비교 선택 초기화
     if(window._lastSearchData) renderCards(window._lastSearchData);
   } else {
     // 관심 단지만 필터 렌더
@@ -2025,16 +2132,114 @@ function switchFavTab(tab) {
     }
     let html = '';
     cards.forEach(c => {
-      if(c.is_recommended) html += renderRecCard(c, window._lastWpId);
-      else                  html += renderListCard(c, window._lastWpId);
+      if(c.is_recommended) html += renderRecCard(c, window._lastWpId, true);
+      else                  html += renderListCard(c, window._lastWpId, true);
     });
     panel.innerHTML = html;
     // 지도 핀 동기화
     if(window.filterMapPins) window.filterMapPins(cards.map(c => c.apt_seq));
+    // spec-14: 비교 바 표시 (이미 선택된 항목 있으면 체크 복원)
+    _updateCompareBar();
   }
 }
 
-function renderRecCard(c, wpId){
+// ═══════════════════════════════════════════════════════
+//  spec-14: 즐겨찾기 단지 비교
+// ═══════════════════════════════════════════════════════
+const compareSet = new Map();  // id → card
+const COMPARE_MAX = 3;
+
+function toggleCompare(id, cb) {
+  const card = (window._lastCards || []).find(c => favId(c.apt_seq, c.pyeong_type) === id);
+  if (!card) return;
+  if (cb.checked) {
+    if (compareSet.size >= COMPARE_MAX) { cb.checked = false; return; }
+    compareSet.set(id, card);
+  } else {
+    compareSet.delete(id);
+  }
+  _updateCompareBar();
+}
+
+function _updateCompareBar() {
+  const bar   = document.getElementById('compare-bar');
+  const cntEl = document.getElementById('compare-bar-count');
+  const btn   = document.getElementById('compare-btn');
+  if (!bar) return;
+  const n = compareSet.size;
+  if (n === 0) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  cntEl.textContent = `${n}개 선택됨`;
+  btn.disabled = n < 2;
+}
+
+function clearCompare() {
+  compareSet.clear();
+  document.querySelectorAll('.compare-check input[type=checkbox]').forEach(cb => { cb.checked = false; });
+  _updateCompareBar();
+}
+
+function openCompare() {
+  const cards = [...compareSet.values()];
+  if (cards.length < 2) return;
+  _renderCompareTable(cards);
+  document.getElementById('compare-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCompare() {
+  document.getElementById('compare-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function closeCompareOnBg(e) {
+  if (e.target === document.getElementById('compare-overlay')) closeCompare();
+}
+
+function _renderCompareTable(cards) {
+  const THIS_Y = THIS_YEAR;
+  // 각 항목별 최솟값 강조용
+  const minTime  = Math.min(...cards.map(c => c.total_time_min));
+  const minPrice = Math.min(...cards.map(c => c.price_low || Infinity));
+
+  const rows = [
+    { label: '통근시간',
+      fn: c => {
+        if (dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null)
+          return `W1 ${c.total_time_min_1}분<br>W2 ${c.total_time_min_2}분`;
+        const best = c.total_time_min === minTime;
+        return `<span class="${best?'compare-best':''}">${c.total_time_min}분</span>`;
+      }},
+    { label: '최저 실거래가',
+      fn: c => {
+        const e = Math.floor((c.price_low||0)/10000);
+        const m = (c.price_low||0) % 10000;
+        const str = e && m ? `${e}억 ${m.toLocaleString()}만` : e ? `${e}억` : `${(c.price_low||0).toLocaleString()}만`;
+        return `<span class="${c.price_low===minPrice?'compare-best':''}">${str}</span>`;
+      }},
+    { label: '세대수',    fn: c => `${(c.kaptdaCnt||0).toLocaleString()}세대` },
+    { label: '연식',      fn: c => c.build_year ? `${c.build_year}년<br>(${THIS_Y - c.build_year}년차)` : '-' },
+    { label: '최고층',    fn: c => c.top_floor  ? `${c.top_floor}층` : '-' },
+    { label: '저가 근거', fn: c => {
+      if (!c.why_tags || !c.why_tags.length) return '-';
+      return c.why_tags.slice(0,2).map(t => escHtml(t.label)).join('<br>');
+    }},
+    { label: '동네',      fn: c => escHtml(c.umd_nm || '-') },
+  ];
+
+  const thCols = cards.map(c =>
+    `<th>${escHtml(c.apt_nm)}<br><span class="compare-th-sub">${escHtml(c.pyeong_type||'')}</span></th>`
+  ).join('');
+
+  let html = `<table class="compare-table"><thead><tr><th>항목</th>${thCols}</tr></thead><tbody>`;
+  rows.forEach(row => {
+    html += `<tr><td class="compare-label">${row.label}</td>${cards.map(c => `<td>${row.fn(c)}</td>`).join('')}</tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('compare-table-container').innerHTML = html;
+}
+
+function renderRecCard(c, wpId, cmpMode=false){
   // spec-11: meta에서 build_year 제거 (칩 3으로 흡수). 동·세대·최고층만.
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
   if(c.top_floor) metaParts.push(`최고 ${c.top_floor}층`);
@@ -2080,9 +2285,14 @@ function renderRecCard(c, wpId){
 
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
+  const _rcId = favId(c.apt_seq, c.pyeong_type);
+  const _rcCmpHtml = cmpMode
+    ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_rcId)?'checked':''} onchange="toggleCompare('${_rcId}',this)"> 비교</label>`
+    : '';
 
   // spec-11: footer 완전 제거 — commute/pick_reason 정보가 칩 1·2로 흡수됨
   return `<div class="rec-card" onclick="panToCard('${c.apt_seq}')">
+    ${_rcCmpHtml}
     <button class="fav-btn${favActive}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitle}">♥</button>
     <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
     <div class="rec-card__title-row">
@@ -2142,7 +2352,7 @@ function splitPrice(manwon){
 }
 
 // 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
-function renderListCard(c, wpId){
+function renderListCard(c, wpId, cmpMode=false){
   const thisYear = THIS_YEAR;
   let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
   if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
@@ -2154,8 +2364,13 @@ function renderListCard(c, wpId){
 
   const favActiveL = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitleL  = favActiveL ? '관심 해제' : '관심 추가';
+  const _lcId = favId(c.apt_seq, c.pyeong_type);
+  const _lcCmpHtml = cmpMode
+    ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_lcId)?'checked':''} onchange="toggleCompare('${_lcId}',this)"> 비교</label>`
+    : '';
 
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
+    ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
       <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
