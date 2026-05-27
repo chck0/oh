@@ -428,6 +428,37 @@
       color: var(--color-brand-primary);
     }
 
+    /* ─── spec-15: 최근 검색 히스토리 칩 ─────────────────── */
+    .recent-searches {
+      margin-top: 10px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      min-height: 0;
+    }
+    .recent-searches:empty { display: none; }
+    .recent-label {
+      width: 100%; font-size: 11px; font-weight: 700;
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.04em; margin-bottom: 2px;
+    }
+    .recent-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 12px;
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: var(--radius-pill);
+      font-size: 12.5px; font-weight: 500;
+      color: var(--color-text-primary);
+      cursor: pointer; transition: background .15s, border-color .15s;
+      white-space: nowrap; max-width: 220px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .recent-chip:hover {
+      background: var(--color-brand-bg-subtle);
+      border-color: var(--color-brand-primary);
+      color: var(--color-brand-primary);
+    }
+    .recent-chip__icon { font-size: 11px; opacity: .6; }
+
     /* ─── 제출 ─────────────────────────────────────────────── */
     .submit-zone {
       margin-top: 24px;
@@ -516,6 +547,8 @@
         <button type="button" class="btn-secondary" onclick="openPostcode('address')">주소 찾기</button>
       </div>
       <div class="error" id="address-error"></div>
+      <!-- spec-15: 최근 검색 히스토리 칩 -->
+      <div class="recent-searches" id="recent-searches"></div>
 
       <!-- + 다른 가족 직장 추가 버튼 -->
       <button type="button" id="add-wp2-btn" class="btn-add-wp2" onclick="toggleWp2()">
@@ -695,6 +728,40 @@ document.querySelectorAll('#commute-chips .chip').forEach(chip => {
     chip.classList.add('active');
   });
 });
+
+// ── spec-15: 최근 검색 히스토리 ─────────────────────────────
+async function loadRecentSearches() {
+  const container = document.getElementById('recent-searches');
+  if (!container) return;
+  try {
+    const res = await fetch('/api/workplaces/recent?limit=5');
+    if (!res.ok) return;
+    const items = await res.json();
+    if (!items || !items.length) return;
+    let html = '<span class="recent-label">최근 검색</span>';
+    items.forEach(item => {
+      const label = (item.address_input || item.address_norm || '').trim();
+      if (!label) return;
+      const safe = label.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      html += `<button type="button" class="recent-chip"
+        onclick="fillAddress('${safe}','address')"
+        title="${label.replace(/"/g,'&quot;')}">
+        <span class="recent-chip__icon">🕐</span>${label}
+      </button>`;
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    // graceful degradation — API 오류·DB 없음 시 칩 미표시
+  }
+}
+
+function fillAddress(addr, targetId) {
+  const el = document.getElementById(targetId);
+  if (el) el.value = addr;
+}
+
+// 페이지 로드 시 자동 실행
+loadRecentSearches();
 
 // ── Daum Postcode ─────────────────────────────────────────
 function openPostcode(targetId) {
