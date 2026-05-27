@@ -159,10 +159,22 @@ def _make_pick_reason(c: dict, slot_items: list[dict], baseline_price: int | Non
     pt = c.get('pyeong_type', '')
     slot_size = len(slot_items)
 
-    # 같은 평형 최단버킷 대비 차액
+    # ── dual 모드: 두 통근 동시 만족 명시 ────────────────────────
+    t1 = c.get('total_time_min_1')
+    t2 = c.get('total_time_min_2')
+    if t1 is not None and t2 is not None:
+        max_t = max(t1, t2)
+        if max_t <= 30:
+            prefix = '두 직장 모두 30분 이내'
+        elif max_t <= 40:
+            prefix = '두 직장 모두 40분 이내'
+        else:
+            prefix = f'두 직장 모두 {max_t}분 이내'
+        return f"{prefix} · '{pt}' 슬롯 최소가 ({slot_size}곳 중)"
+
+    # ── 단일 모드 (기존 로직) ────────────────────────────────────
     diff = c.get('price_diff_vs_fastest', 0)
     if diff < 0:
-        # 더 쌈 (최단버킷 기준값보다 저렴 — 사실 이건 발생 거의 안 함)
         return f"'{bl} · {pt}' 슬롯에서 최저가 ({slot_size}곳 중)"
     elif diff > 0:
         억 = abs(diff) // 10000
@@ -170,7 +182,6 @@ def _make_pick_reason(c: dict, slot_items: list[dict], baseline_price: int | Non
         diff_str = f"{억}억" if 천 == 0 else f"{억}억 {천}천"
         return f"'{bl} · {pt}' 중 최저가. 같은 평형 최단권보다 {diff_str} 저렴"
     else:
-        # baseline 자체 (최단버킷 추천 카드)
         return f"'{bl} · {pt}' 슬롯의 최저가 ({slot_size}곳 중)"
 
 

@@ -931,6 +931,14 @@
       font-size: 12.5px; font-weight: 700;
       letter-spacing: 0.02em;
     }
+    .pin-workplace-2 {
+      background: #1a56db;
+      color: #fff;
+      border: 2px solid #1e429f;
+      padding: 6px 14px;
+      font-size: 12.5px; font-weight: 700;
+      letter-spacing: 0.02em;
+    }
     .pin-multi-mark {
       display: inline-block;
       background: white; color: var(--color-text-tertiary);
@@ -1662,6 +1670,8 @@ const reqBody = {
 if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'), 10);
 if(params.get('build_year_min')) reqBody.build_year_min=parseInt(params.get('build_year_min'), 10);
 if(params.get('min_price')) reqBody.min_price=parseInt(params.get('min_price'), 10);
+if(params.get('workplace_address_2')) reqBody.workplace_address_2 = params.get('workplace_address_2');
+const dualMode = !!reqBody.workplace_address_2;
 
 let resultData = null;
 let kakaoMap = null;
@@ -1810,8 +1820,12 @@ function showResults(){
   initMap(resultData);
 }
 function renderSummary(data){
+  const wp1Label = dualMode ? `W1 ${escHtml(data.workplace.address_norm)}` : escHtml(data.workplace.address_norm);
+  const wp2Part = (dualMode && data.workplace_2)
+    ? ` <span class="sep">+</span> <strong>W2 ${escHtml(data.workplace_2.address_norm)}</strong>`
+    : '';
   document.getElementById('summary').innerHTML=`
-    <strong>${escHtml(data.workplace.address_norm)}</strong>
+    <strong>${wp1Label}</strong>${wp2Part}
     <span class="sep">|</span>
     <span>${reqBody.min_price ? fmtPrice(reqBody.min_price)+'~'+fmtPrice(reqBody.max_price) : fmtPrice(reqBody.max_price)+' 이하'}</span>
     <span class="sep">·</span>
@@ -2030,9 +2044,15 @@ function renderRecCard(c, wpId){
   const priceHtml = splitPrice(c.price_low);
 
   // spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral)
-  const chip1Text = c.transit_summary
-    ? `${escHtml(c.transit_summary)} ${c.total_time_min}분`
-    : `${c.total_time_min}분`;
+  // spec-13: dual 모드 → "W1 25분 · W2 32분"
+  let chip1Text;
+  if(dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null){
+    chip1Text = `W1 ${c.total_time_min_1}분 · W2 ${c.total_time_min_2}분`;
+  } else {
+    chip1Text = c.transit_summary
+      ? `${escHtml(c.transit_summary)} ${c.total_time_min}분`
+      : `${c.total_time_min}분`;
+  }
   const chip2Text = reasonChip2Text(c);
   const chip3Text = reasonChip3Text(c);
   const reasonsHtml = `<div class="rec-card__reasons">
@@ -2144,7 +2164,9 @@ function renderListCard(c, wpId){
     <div class="list-card__meta">${metaParts.join(' · ')}</div>
     ${_whyTagsHtml(c.why_tags)}
     <div class="list-card__row">
-      <span class="commute-chip">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>
+      ${dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
+        ? `<span class="commute-chip">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
+        : `<span class="commute-chip">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
     </div>
     ${commentHtml}
   </article>`;
@@ -2170,8 +2192,17 @@ function renderCards(data){
   }
 
   if(!data.cards.length){
-    panel.innerHTML=`<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
-      <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
+    const emptyMsg = dualMode
+      ? `<div class="error-box">
+           <h2>두 직장 반경 교집합에 매물이 없어요 😅</h2>
+           <p style="margin-top:12px">두 직장 사이 거리가 멀거나 반경이 좁을 때 생겨요.<br>
+             반경(최대 통근시간)을 늘리거나, 한 직장만 검색해 보세요.</p>
+           <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p>
+         </div>`
+      : `<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
+           <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p>
+         </div>`;
+    panel.innerHTML = emptyMsg;
     return;
   }
 
@@ -2281,12 +2312,21 @@ async function initMap(data){
   });
   kakaoMap.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-  // 직장 핀
+  // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: '<div class="pin pin-workplace">직장</div>',
+    content: `<div class="pin pin-workplace">${dualMode ? 'W1 직장' : '직장'}</div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
+
+  // spec-13: W2 직장 핀 (파란색)
+  if(dualMode && data.workplace_2 && data.workplace_2.lat){
+    new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
+      content: '<div class="pin pin-workplace-2">W2 직장</div>',
+      yAnchor: 1, zIndex: 100,
+    }).setMap(kakaoMap);
+  }
 
   // ── 단지별 그룹화 (apt_seq 단위) ──────────────────────
   aptGroupMap = {};

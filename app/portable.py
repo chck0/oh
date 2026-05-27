@@ -67,6 +67,19 @@ def get_last_id(conn, cursor, table: str, id_col: str):
     return cursor.lastrowid
 
 
+# ── GREATEST 헬퍼 (dual workplace 정렬용) ────────────────────
+def greatest(*cols: str) -> str:
+    """portable GREATEST(col1, col2, ...).
+
+    Postgres: GREATEST(col1, col2)  — 내장 지원
+    SQLite  : MAX(col1, col2)       — 가변 인수 MAX (SQLite 3.1+)
+    """
+    joined = ', '.join(cols)
+    if USE_PG:
+        return f'GREATEST({joined})'
+    return f'MAX({joined})'
+
+
 # ── 컬럼 목록 조회 (PRAGMA table_info 대체) ──────────────────
 def list_columns(conn, table: str) -> list[str]:
     if USE_PG:
