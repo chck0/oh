@@ -638,6 +638,19 @@
       margin-right: 6px; vertical-align: -1px;
     }
 
+    .price-chg-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: -0.3px;
+    }
+    .price-chg-badge--up   { background: #fff0f0; color: #e53e3e; }
+    .price-chg-badge--down { background: #ebf8ff; color: #2b6cb0; }
+
     .why-tags {
       font-size: 11px;
       color: #888;
@@ -2224,6 +2237,14 @@ function _renderCompareTable(cards) {
       if (!c.why_tags || !c.why_tags.length) return '-';
       return c.why_tags.slice(0,2).map(t => escHtml(t.label)).join('<br>');
     }},
+    { label: '6개월 변동', fn: c => {
+      const pct = c.price_chg_6m_pct;
+      if (pct == null) return '-';
+      const cls  = pct > 0 ? 'up' : 'down';
+      const sign  = pct > 0 ? '+' : '';
+      const arrow = pct > 0 ? '▲' : '▼';
+      return `<span class="price-chg-badge price-chg-badge--${cls}">${arrow}${sign}${pct}%</span>`;
+    }},
     { label: '동네',      fn: c => escHtml(c.umd_nm || '-') },
   ];
 
@@ -2297,7 +2318,7 @@ function renderRecCard(c, wpId, cmpMode=false){
     <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
     <div class="rec-card__title-row">
       <h3 class="rec-card__title">${escHtml(c.apt_nm)}</h3>
-      <div class="rec-card__price">${priceHtml}</div>
+      <div class="rec-card__price">${priceHtml}${_priceChgBadge(c.price_chg_6m_pct)}</div>
     </div>
     <div class="rec-card__meta num">${meta}</div>
     ${_whyTagsHtml(c.why_tags)}
@@ -2311,6 +2332,15 @@ function _whyTagsHtml(tags){
   if(!tags || !tags.length) return '';
   const labels = tags.slice(0,2).map(t=>escHtml(t.label)).join(' · ');
   return `<div class="why-tags">저가 근거: ${labels}</div>`;
+}
+
+// spec-16: 가격 변동률 배지 (6개월 비교)
+function _priceChgBadge(pct){
+  if(pct == null) return '';
+  const cls  = pct > 0 ? 'up' : 'down';
+  const arrow = pct > 0 ? '▲' : '▼';
+  const sign  = pct > 0 ? '+' : '';
+  return `<span class="price-chg-badge price-chg-badge--${cls}" title="최근 3개월 vs 이전 6개월 평균 실거래가 비교">${arrow}${sign}${pct}%</span>`;
 }
 
 // spec-11: 추천 카드 칩 2 (Brand 칩) — 추천 이유 압축
@@ -2374,7 +2404,7 @@ function renderListCard(c, wpId, cmpMode=false){
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
       <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
-      <div class="list-card__price num">${shortPrice(c.price_low)}</div>
+      <div class="list-card__price num">${shortPrice(c.price_low)}${_priceChgBadge(c.price_chg_6m_pct)}</div>
     </div>
     <div class="list-card__meta">${metaParts.join(' · ')}</div>
     ${_whyTagsHtml(c.why_tags)}
