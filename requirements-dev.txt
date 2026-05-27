@@ -1,0 +1,7 @@
+# ── 로컬 개발 전용 (Vercel 배포에는 포함 안 됨) ──────────────
+-r requirements.txt
+
+# 린트 / 타입 체크
+pylint>=4.0
+astroid>=4.0
+mypy>=1.0

@@ -332,10 +332,9 @@ async def _call_llm(prompt: str, model: str, max_tokens: int,
             max_tokens=max_tokens,
             messages=[{'role': 'user', 'content': prompt}],
         )
-        block = msg.content[0]
-        if not isinstance(block, TextBlock):
-            raise ValueError(f'LLM이 텍스트가 아닌 블록을 반환: {type(block).__name__}')
-        return block.text.strip()
+        # ThinkingBlock / ToolUseBlock 등 비텍스트 블록 안전 처리
+        text = next((b.text for b in msg.content if isinstance(b, TextBlock)), "")
+        return text.strip()
 
     try:
         return await _once(model)
