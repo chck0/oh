@@ -563,6 +563,8 @@
           <button type="button" class="btn-secondary" onclick="openPostcode('address2')">주소 찾기</button>
           <button type="button" class="btn-remove-wp2" onclick="removeWp2()" aria-label="W2 직장 제거">×</button>
         </div>
+        <!-- spec-15 확장: W2도 최근 검색 히스토리 칩 -->
+        <div class="recent-searches" id="recent-searches-2"></div>
         <div class="hint" style="margin-top:6px;font-size:13px;color:var(--color-text-secondary);">두 직장 모두 통근 가능한 단지를 찾아드려요.</div>
         <div class="error" id="address2-error"></div>
       </div>
@@ -729,27 +731,35 @@ document.querySelectorAll('#commute-chips .chip').forEach(chip => {
   });
 });
 
-// ── spec-15: 최근 검색 히스토리 ─────────────────────────────
+// ── spec-15 + 확장: 최근 검색 히스토리 칩 (W1/W2 공용) ──────
+function _buildChipsHtml(items, targetId) {
+  let html = '<span class="recent-label">최근 검색</span>';
+  items.forEach(item => {
+    const label = (item.address_input || item.address_norm || '').trim();
+    if (!label) return;
+    const safe = label.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    html += `<button type="button" class="recent-chip"
+      onclick="fillAddress('${safe}','${targetId}')"
+      title="${label.replace(/"/g,'&quot;')}">
+      <span class="recent-chip__icon">🕐</span>${label}
+    </button>`;
+  });
+  return html;
+}
+
 async function loadRecentSearches() {
-  const container = document.getElementById('recent-searches');
-  if (!container) return;
+  const c1 = document.getElementById('recent-searches');
+  const c2 = document.getElementById('recent-searches-2');
+  if (!c1 && !c2) return;
   try {
     const res = await fetch('/api/workplaces/recent?limit=5');
     if (!res.ok) return;
     const items = await res.json();
     if (!items || !items.length) return;
-    let html = '<span class="recent-label">최근 검색</span>';
-    items.forEach(item => {
-      const label = (item.address_input || item.address_norm || '').trim();
-      if (!label) return;
-      const safe = label.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      html += `<button type="button" class="recent-chip"
-        onclick="fillAddress('${safe}','address')"
-        title="${label.replace(/"/g,'&quot;')}">
-        <span class="recent-chip__icon">🕐</span>${label}
-      </button>`;
-    });
-    container.innerHTML = html;
+    const html = _buildChipsHtml(items, 'address');
+    if (c1) c1.innerHTML = html;
+    // W2 칩: 같은 히스토리, 클릭 시 address2 입력란에 채움
+    if (c2) c2.innerHTML = _buildChipsHtml(items, 'address2');
   } catch(e) {
     // graceful degradation — API 오류·DB 없음 시 칩 미표시
   }
