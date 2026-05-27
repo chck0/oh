@@ -180,10 +180,8 @@ Spec 완성 전 확인:
 | 15 | [15-search-history.md](15-search-history.md) | 최근 검색 직장 히스토리 칩 (1클릭 재검색) | ✅ Implemented | hjkang83 |
 | 16 | [16-price-change-badge.md](16-price-change-badge.md) | 가격 변동률 배지 (최근 3개월 vs 이전 6개월) | ✅ Implemented | hjkang83 |
 | 17 | [17-apt-detail-modal.md](17-apt-detail-modal.md) | 단지 상세 모달 (바텀시트 3탭) + W2 히스토리 칩 버그픽스 | ✅ Implemented | hjkang83 |
-| 18 | [18-transit-route-detail.md](18-transit-route-detail.md) | 경로 상세 팝업 — 통근시간 칩 클릭 → step-by-step 경로 | ✅ Implemented | hjkang83 |
-| 18† | [18-code-health-baseline.md](18-code-health-baseline.md) | 코드 헬스 베이스라인 — pylint 복구 + Claude 응답 타입 안전 처리 | ✅ Implemented | xihuan27 |
+| 18 | [18-code-health-baseline.md](18-code-health-baseline.md) | 코드 헬스 베이스라인 — pylint 복구 + Claude 응답 타입 안전 처리 | ✅ Implemented | xihuan27 |
 | 19 | [19-panel-resize-poi-map-marker.md](19-panel-resize-poi-map-marker.md) | 패널 드래그 리사이저 + 도보 시설 POI 지도 마커 | ✅ Implemented | xihuan27 |
+| 20 | [20-transit-route-detail.md](20-transit-route-detail.md) | 경로 상세 팝업 — 통근시간 칩 클릭 → step-by-step 경로 | ✅ Implemented | hjkang83 |
 
-> † 18번 중복: `18-transit-route-detail`(hjkang83, PR #80)과 `18-code-health-baseline`(xihuan27, PR #82)이 동시에 18번을 사용. 다음 신규 spec부터 **20번**부터 시작합니다.
-
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **20**
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **21**
