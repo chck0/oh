@@ -2353,22 +2353,31 @@ function _renderDetail(d) {
       </div>
     </div>`;
 
-  // ── 시세·거래 탭 ───────────────────────────────────────────
+  // ── 시세·거래 탭 (평형대별 그룹) ──────────────────────────
   const trades = d.trades || [];
   let tradeHtml = '';
   if (trades.length) {
-    tradeHtml = `<div style="display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:4px 8px;
-      font-size:11px;font-weight:700;color:#aaa;padding-bottom:6px;border-bottom:2px solid #eee;">
-      <span>날짜</span><span>금액</span><span>평형</span><span style="text-align:right">층</span></div>`;
-    trades.slice(0,15).forEach(t => {
-      const e = Math.floor((t.amount||0)/10000), m = (t.amount||0)%10000;
-      const amtStr = e && m ? `${e}억 ${m.toLocaleString()}만` : e ? `${e}억` : `${(t.amount||0).toLocaleString()}만`;
-      tradeHtml += `<div class="detail-trade-row">
-        <span class="detail-trade-date">${escHtml(t.date||'-')}</span>
-        <span class="detail-trade-amount">${amtStr}</span>
-        <span>${escHtml(t.pyeong_type||'-')}</span>
-        <span class="detail-trade-floor">${t.floor||'-'}층</span>
-      </div>`;
+    const tradeGroups = {};
+    const tradeOrder = [];
+    trades.forEach(t => {
+      const key = t.pyeong_type || '기타';
+      if (!tradeGroups[key]) { tradeGroups[key] = []; tradeOrder.push(key); }
+      tradeGroups[key].push(t);
+    });
+    tradeOrder.forEach(key => {
+      tradeHtml += `<div class="dp-poi-category">${escHtml(key)}</div>`;
+      tradeHtml += `<div style="display:grid;grid-template-columns:90px 1fr 40px;gap:4px 8px;
+        font-size:11px;font-weight:700;color:#aaa;padding-bottom:4px;">
+        <span>날짜</span><span>금액</span><span style="text-align:right">층</span></div>`;
+      tradeGroups[key].slice(0,8).forEach(t => {
+        const e = Math.floor((t.amount||0)/10000), m = (t.amount||0)%10000;
+        const amtStr = e && m ? `${e}억 ${m.toLocaleString()}만` : e ? `${e}억` : `${(t.amount||0).toLocaleString()}만`;
+        tradeHtml += `<div class="detail-trade-row" style="grid-template-columns:90px 1fr 40px;">
+          <span class="detail-trade-date">${escHtml(t.date||'-')}</span>
+          <span class="detail-trade-amount">${amtStr}</span>
+          <span class="detail-trade-floor">${t.floor||'-'}층</span>
+        </div>`;
+      });
     });
   } else {
     tradeHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">최근 거래 내역이 없습니다.</div>';
@@ -2376,29 +2385,39 @@ function _renderDetail(d) {
   document.getElementById('detail-tab-price').innerHTML =
     `<div class="detail-section"><div class="detail-section__title">최근 실거래 내역</div>${tradeHtml}</div>`;
 
-  // ── 주변시설 탭 ────────────────────────────────────────────
-  const POI_LABEL = {
-    'A':'공원','B':'버스정류장','C':'어린이집','D':'초등학교','E':'중학교',
-    'F':'고등학교','G':'마트/편의점','H':'병원/약국','I':'은행','J':'문화/여가',
-    'K':'도서관','L':'카페/식당'
-  };
+  // ── 주변시설 탭 (카테고리별 그룹) ─────────────────────────
+  // POI_ORDER / POI_CAT_NAME / POI_ALLOWED_SUBS 는 스크립트 하단에 정의됨 (런타임 호출 시 접근 가능)
   const pois = d.poi || [];
   let poiHtml = '';
   if (pois.length) {
-    pois.slice(0,20).forEach(p => {
-      const cat = POI_LABEL[p.category] || p.category || '기타';
-      const dist = p.distance_m < 1000 ? `${Math.round(p.distance_m)}m` : `${(p.distance_m/1000).toFixed(1)}km`;
-      const walk = p.walking_min ? ` · 도보 ${p.walking_min}분` : '';
-      poiHtml += `<div class="detail-poi-row"
-        data-poi-name="${escHtml(p.name||'')}"
-        data-walk-min="${p.walking_min||0}"
-        data-dist-m="${Math.round(p.distance_m)||0}"
-        onclick="togglePoiMarker(this)">
-        <span style="color:#aaa;font-size:11px;min-width:56px;">${escHtml(cat)}</span>
-        <span>${escHtml(p.name||'-')}</span>
-        <span class="detail-poi-dist">${dist}${walk}</span>
-      </div>`;
+    const poiGroups = {};
+    pois.forEach(p => {
+      const allowedSubs = POI_ALLOWED_SUBS[p.category];
+      if (allowedSubs && !allowedSubs.has(p.sub_category)) return;
+      const key = POI_ORDER.includes(p.category) ? p.category : '기타';
+      if (!poiGroups[key]) poiGroups[key] = [];
+      if (poiGroups[key].length < 5) poiGroups[key].push(p);
     });
+    const orderedKeys = [...POI_ORDER.filter(k => poiGroups[k]), ...(poiGroups['기타'] ? ['기타'] : [])];
+    if (orderedKeys.length) {
+      orderedKeys.forEach(key => {
+        const catName = POI_CAT_NAME[key] || '기타';
+        poiHtml += `<div class="dp-poi-category">${catName}</div>`;
+        poiGroups[key].forEach(p => {
+          const dist = p.distance_m < 1000 ? `${Math.round(p.distance_m)}m` : `${(p.distance_m/1000).toFixed(1)}km`;
+          poiHtml += `<div class="detail-poi-row"
+            data-poi-name="${escHtml(p.name||'')}"
+            data-walk-min="${p.walking_min||0}"
+            data-dist-m="${Math.round(p.distance_m)||0}"
+            onclick="togglePoiMarker(this)">
+            <span style="flex:1">${escHtml(p.name||'-')}</span>
+            <span class="detail-poi-dist">도보 ${p.walking_min||'?'}분 · ${dist}</span>
+          </div>`;
+        });
+      });
+    } else {
+      poiHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
+    }
   } else {
     poiHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
   }
