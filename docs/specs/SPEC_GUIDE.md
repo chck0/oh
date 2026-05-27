@@ -177,5 +177,6 @@ Spec 완성 전 확인:
 | 11 | [11-rec-card-emphasis.md](11-rec-card-emphasis.md) | 추천 카드 이유 강조 (이유 칩 3개) + 좌측 패널 유연형 확대 | ✅ Implemented |
 | 13 | [13-dual-workplace.md](13-dual-workplace.md) | 맞벌이 두 직장 교집합 추천 (Dual Workplace) | ✅ Implemented |
 | 14 | [14-favorites-compare.md](14-favorites-compare.md) | 즐겨찾기 단지 나란히 비교 (최대 3개 비교 테이블) | ✅ Implemented |
+| 15 | [15-search-history.md](15-search-history.md) | 최근 검색 직장 히스토리 칩 (1클릭 재검색) | ✅ Implemented |
 
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **15**
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **16**

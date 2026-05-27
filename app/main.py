@@ -299,6 +299,31 @@ def test_kakao():
         return {'error': f'{type(e).__name__}: {e}'}
 
 
+# ── 최근 검색 직장 히스토리 (spec-15) ───────────────────────
+@app.get("/api/workplaces/recent")
+def workplaces_recent(limit: int = 5):
+    """최근 검색한 직장 목록 (search_count DESC, last_used DESC).
+
+    search.html 히스토리 칩 용도. limit 1~10 클램프.
+    """
+    limit = max(1, min(limit, 10))
+    try:
+        from app.db import connect as db_connect  # lazy — 시작 시 import 불필요
+        conn = db_connect()
+        rows = conn.execute(
+            'SELECT address_input, address_norm, search_count, last_used '
+            'FROM workplaces '
+            'WHERE address_norm IS NOT NULL AND address_input IS NOT NULL '
+            'ORDER BY search_count DESC, last_used DESC '
+            'LIMIT ?',
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.warning('workplaces/recent error: %s', e)
+        return []
+
+
 # ── API 라우터 ───────────────────────────────────────────────
 if search_router is not None:
     app.include_router(search_router, prefix="/api")
