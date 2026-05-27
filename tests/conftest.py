@@ -54,11 +54,12 @@ CREATE TABLE IF NOT EXISTS trade_recent (
 );
 
 CREATE TABLE IF NOT EXISTS trade_history (
-    apt_seq      TEXT,
-    deal_year    INTEGER,
-    deal_month   INTEGER,
-    deal_price   INTEGER,
-    pyeong_type  TEXT
+    apt_seq         TEXT,
+    deal_year       INTEGER,
+    deal_month      INTEGER,
+    deal_price      INTEGER,
+    pyeong_type     TEXT,
+    deal_amount_int INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS transit_cache (

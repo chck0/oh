@@ -457,8 +457,52 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             except Exception:
                 pass
 
+    # ─ 4d. 가격 변동률 배치 조회 (trade_history 최근 3개월 vs 4~9개월 전) ─
+    price_chg_map: dict = {}
+    if cards:
+        import datetime
+        _now = datetime.date.today()
+
+        def _ym(months_back: int) -> int:
+            """months_back 개월 전 YYYYMM 정수 반환."""
+            y, m = _now.year, _now.month - months_back
+            while m <= 0:
+                m += 12
+                y -= 1
+            return y * 100 + m
+
+        ym_3mo = _ym(3)   # 3개월 전 (최근 구간 시작)
+        ym_9mo = _ym(9)   # 9개월 전 (과거 구간 시작)
+        seqs_chg = list({c['apt_seq'] for c in cards})
+        ph_chg = ','.join('?' * len(seqs_chg))
+        try:
+            chg_rows = conn.execute(
+                f'SELECT apt_seq, pyeong_type,'
+                f'  AVG(CASE WHEN deal_year*100+deal_month >= {ym_3mo}'
+                f'           THEN deal_amount_int END) AS recent_avg,'
+                f'  AVG(CASE WHEN deal_year*100+deal_month >= {ym_9mo}'
+                f'            AND deal_year*100+deal_month < {ym_3mo}'
+                f'           THEN deal_amount_int END) AS past_avg'
+                f' FROM trade_history'
+                f' WHERE apt_seq IN ({ph_chg})'
+                f'   AND deal_year*100+deal_month >= {ym_9mo}'
+                f' GROUP BY apt_seq, pyeong_type',
+                seqs_chg,
+            ).fetchall()
+            for row in chg_rows:
+                r_avg, p_avg = row['recent_avg'], row['past_avg']
+                if r_avg and p_avg and p_avg > 0:
+                    pct = round((r_avg - p_avg) / p_avg * 100, 1)
+                    if abs(pct) >= 3.0:
+                        price_chg_map[(row['apt_seq'], row['pyeong_type'])] = pct
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map, tag_map, dual=dual) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, dual=dual) for c in cards]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
@@ -663,7 +707,7 @@ def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: 
     return summary
 
 
-def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, dual: bool = False):
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, dual: bool = False):
     # ── wp1 transit 파싱 ─────────────────────────────────────────
     if dual:
         bc_1, sc_1 = r['bus_cnt_1'], r['subway_cnt_1']
@@ -737,6 +781,7 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         'deal_count': r['deal_count'],
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
         'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
+        'price_chg_6m_pct': (price_chg_map or {}).get((apt_seq, pyeong_type)),
     }
     return card
 
