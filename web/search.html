@@ -219,6 +219,25 @@
     /* ─── 직장 주소 row ────────────────────────────────────── */
     .address-row { display: flex; gap: 10px; }
     .address-row input { flex: 1; }
+    .wp-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--color-brand-primary); margin-bottom: 6px;
+    }
+    .btn-add-wp2 {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 12px; padding: 8px 14px;
+      font-size: 13px; font-weight: 600; color: var(--color-brand-primary);
+      background: var(--color-brand-bg-subtle); border: 1.5px dashed var(--color-brand-primary);
+      border-radius: var(--radius-pill); cursor: pointer; transition: opacity .15s;
+    }
+    .btn-add-wp2:hover { opacity: .75; }
+    .wp2-row { margin-top: 14px; }
+    .btn-remove-wp2 {
+      padding: 11px 14px; background: none;
+      border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+      font-size: 16px; color: var(--color-text-secondary); cursor: pointer;
+    }
+    .btn-remove-wp2:hover { color: var(--color-text-primary); }
     .btn-secondary {
       padding: 11px 18px;
       background: white;
@@ -489,11 +508,31 @@
           </div>
         </span>
       </div>
+
+      <!-- W1 (기존) -->
+      <div class="wp-label" id="wp1-label" style="display:none;">W1 직장</div>
       <div class="address-row">
         <input type="text" id="address" readonly required placeholder="주소 찾기 버튼을 눌러주세요">
-        <button type="button" class="btn-secondary" onclick="openPostcode()">주소 찾기</button>
+        <button type="button" class="btn-secondary" onclick="openPostcode('address')">주소 찾기</button>
       </div>
       <div class="error" id="address-error"></div>
+
+      <!-- + 다른 가족 직장 추가 버튼 -->
+      <button type="button" id="add-wp2-btn" class="btn-add-wp2" onclick="toggleWp2()">
+        + 다른 가족 직장 추가 (맞벌이)
+      </button>
+
+      <!-- W2 (선택) -->
+      <div id="wp2-row" class="wp2-row" hidden>
+        <div class="wp-label">W2 직장</div>
+        <div class="address-row">
+          <input type="text" id="address2" readonly placeholder="두 번째 직장 주소 찾기">
+          <button type="button" class="btn-secondary" onclick="openPostcode('address2')">주소 찾기</button>
+          <button type="button" class="btn-remove-wp2" onclick="removeWp2()" aria-label="W2 직장 제거">×</button>
+        </div>
+        <div class="hint" style="margin-top:6px;font-size:13px;color:var(--color-text-secondary);">두 직장 모두 통근 가능한 단지를 찾아드려요.</div>
+        <div class="error" id="address2-error"></div>
+      </div>
     </section>
 
     <!-- ② 가격 범위 -->
@@ -658,12 +697,27 @@ document.querySelectorAll('#commute-chips .chip').forEach(chip => {
 });
 
 // ── Daum Postcode ─────────────────────────────────────────
-function openPostcode() {
+function openPostcode(targetId) {
   new daum.Postcode({
     oncomplete: (data) => {
-      document.getElementById('address').value = data.roadAddress || data.jibunAddress;
+      document.getElementById(targetId || 'address').value =
+        data.roadAddress || data.jibunAddress;
     }
   }).open();
+}
+
+// ── Dual Workplace 토글 ────────────────────────────────────
+function toggleWp2() {
+  document.getElementById('wp2-row').hidden = false;
+  document.getElementById('add-wp2-btn').style.display = 'none';
+  document.getElementById('wp1-label').style.display = '';   // W1 라벨 표시
+}
+function removeWp2() {
+  document.getElementById('address2').value = '';
+  document.getElementById('address2-error').classList.remove('show');
+  document.getElementById('wp2-row').hidden = true;
+  document.getElementById('add-wp2-btn').style.display = '';
+  document.getElementById('wp1-label').style.display = 'none';
 }
 
 // ── 가격 검증 ─────────────────────────────────────────────
@@ -764,6 +818,18 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
   const mincnt = document.querySelector('input[name=mincnt]:checked').value;
   const buildYearMin = document.querySelector('input[name=build_year_min]:checked').value;
 
+  // W2 직장 처리 (선택)
+  const address2El = document.getElementById('address2');
+  const address2 = address2El ? address2El.value.trim() : '';
+  if (address2) {
+    if (address2 === address) {
+      const errEl = document.getElementById('address2-error');
+      errEl.textContent = '두 직장이 같으면 한 번만 입력해주세요';
+      errEl.classList.add('show');
+      return;
+    }
+  }
+
   const params = new URLSearchParams({
     workplace_address: address,
     max_price: String(maxPrice),
@@ -773,6 +839,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
   if (minPrice !== null) params.set('min_price', String(minPrice));
   if (mincnt) params.set('min_kaptdaCnt', mincnt);
   if (buildYearMin) params.set('build_year_min', buildYearMin);
+  if (address2) params.set('workplace_address_2', address2);
 
   window.location.href = '/result.html?' + params.toString();
 });

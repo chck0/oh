@@ -12,7 +12,7 @@ from app.db import get_db, connect as db_connect
 from app.workplaces import get_or_create
 from app.transit import fetch_cells, haversine, cell_center
 from app.ai import build_recommendations, build_stats, build_comments, card_key
-from app.portable import upsert_sql, year_month_minus, year_minus
+from app.portable import upsert_sql, year_month_minus, year_minus, greatest
 
 router = APIRouter()
 
@@ -23,6 +23,10 @@ _ALLOWED_PYEONG = {'10평미만', '10평대', '20평대', '30평대', '40평대'
 
 class SearchRequest(BaseModel):
     workplace_address: str = Field(..., min_length=2, max_length=200, description="직장 도로명/지번 주소")
+    workplace_address_2: str | None = Field(
+        None, min_length=2, max_length=200,
+        description="두 번째 직장 주소 (맞벌이용, 선택)",
+    )
     max_minutes:  int = Field(60, ge=10, le=60, description="사용자 선택값. 내부적으로 10분 여유 차감")
     max_price:    int = Field(50000, ge=1000, le=2_000_000, description="만원 단위, 예: 50000=5억")
     pyeong_types: list[str] = Field(
@@ -38,6 +42,15 @@ class SearchRequest(BaseModel):
         None, ge=1000, le=2_000_000,
         description="최소 가격 (만원). 예: 30000=3억. 미지정=하한 없음.",
     )
+
+    @field_validator('workplace_address_2')
+    @classmethod
+    def _check_workplace_2(cls, v, info):
+        if v is not None:
+            wp1 = info.data.get('workplace_address', '').strip()
+            if v.strip() == wp1:
+                raise ValueError('두 직장이 동일합니다. 단일 모드로 검색하세요.')
+        return v
 
     @field_validator('min_price')
     @classmethod
@@ -89,6 +102,17 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     effective_max_min = max(req.max_minutes - COMMUTE_BUFFER_MIN, 5)
     radius_km = effective_max_min * 20 / 60
 
+    # ─ 1b. 두 번째 직장 (dual workplace 모드) ─
+    wp_2 = None
+    if req.workplace_address_2:
+        wp_2 = await asyncio.to_thread(get_or_create, conn, req.workplace_address_2)
+        if not wp_2:
+            raise HTTPException(400, f'두 번째 주소 변환 실패: {req.workplace_address_2}')
+        if wp_2['wp_id'] == wp['wp_id']:
+            raise HTTPException(422, '두 직장이 동일합니다. 단일 모드로 검색하세요.')
+    dual = wp_2 is not None
+    wp_id_2 = wp_2['wp_id'] if dual else None
+
     # ─ 2. 후보 단지 → 셀 ─
     apt_filter = 'WHERE is_apt=1 AND recent_trade=3'
     apt_params = []
@@ -101,11 +125,14 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     apts = conn.execute(
         f'SELECT apt_seq, lat, lng FROM apartments {apt_filter}', apt_params
     ).fetchall()
-    near_keys = [a['apt_seq'] for a in apts
-                 if haversine(a['lat'], a['lng'], dest_lat, dest_lng) <= radius_km]
+    near_keys = [
+        a['apt_seq'] for a in apts
+        if haversine(a['lat'], a['lng'], dest_lat, dest_lng) <= radius_km
+        and (not dual or haversine(a['lat'], a['lng'], wp_2['lat'], wp_2['lng']) <= radius_km)
+    ]
 
     if not near_keys:
-        return _empty_response(wp, [])
+        return _empty_response(wp, [], wp_2=wp_2)
 
     ph = ','.join('?'*len(near_keys))
     pt = ','.join('?'*len(req.pyeong_types))
@@ -122,7 +149,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     matched_keys = [r['apt_seq'] for r in matched_rows]
 
     if not matched_keys:
-        return _empty_response(wp, [])
+        return _empty_response(wp, [], wp_2=wp_2)
 
     ph2 = ','.join('?'*len(matched_keys))
     cells = sorted(set(r['grid_key'] for r in conn.execute(
@@ -132,35 +159,83 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
 
     # ─ 3. 캐시 미스 셀만 ODsay 호출 ─
     # passed_filter=1 인 셀만 "캐시됨"으로 간주 → passed_filter=0/응답실패는 재호출
-    # (ApiKey 인증 실패한 키가 섞여 있던 시기에 만들어진 빈 캐시 자동 복구)
-    cached = set(r['origin_cell'] for r in conn.execute(
+    cached_1 = set(r['origin_cell'] for r in conn.execute(
         'SELECT origin_cell FROM transit_cache WHERE wp_id=? AND passed_filter=1', (wp_id,)
     ).fetchall())
     conn.execute('DELETE FROM transit_cache WHERE wp_id=? AND passed_filter=0', (wp_id,))
+    if dual:
+        cached_2 = set(r['origin_cell'] for r in conn.execute(
+            'SELECT origin_cell FROM transit_cache WHERE wp_id=? AND passed_filter=1', (wp_id_2,)
+        ).fetchall())
+        conn.execute('DELETE FROM transit_cache WHERE wp_id=? AND passed_filter=0', (wp_id_2,))
+    else:
+        cached_2 = set()
     conn.commit()
-    to_fetch_all = [c for c in cells if c not in cached]
 
-    # 직장 가까운 셀부터 N개만 처리 (60s 안에 끝내기).
-    # 남은 셀은 다음 검색에서 캐시 채워짐.
-    def _cell_dist(c):
-        clat, clng = cell_center(c)
-        return haversine(clat, clng, dest_lat, dest_lng)
-    to_fetch_sorted = sorted(to_fetch_all, key=_cell_dist)
-    to_fetch = to_fetch_sorted[:MAX_FETCH_CELLS_PER_CALL]
-    deferred_cells = len(to_fetch_all) - len(to_fetch)
+    # 셀별 직장 거리 계산 헬퍼
+    def _cell_dist_to(lat, lng):
+        def _fn(c):
+            clat, clng = cell_center(c)
+            return haversine(clat, clng, lat, lng)
+        return _fn
+
+    to_fetch_all_1 = [c for c in cells if c not in cached_1]
+    to_fetch_all_2 = [c for c in cells if c not in cached_2] if dual else []
+
+    # ── 동적 분배: wp별 미스 수를 측정 후 적은 쪽이 먼저 할당량 차지 ──
+    TOTAL_LIMIT = MAX_FETCH_CELLS_PER_CALL  # 200
+    half = TOTAL_LIMIT // 2                  # 100
+    n1, n2 = len(to_fetch_all_1), len(to_fetch_all_2)
+
+    if not dual:
+        take_1, take_2 = min(n1, TOTAL_LIMIT), 0
+    elif n1 <= half and n2 <= half:
+        take_1, take_2 = n1, n2
+    elif n1 <= half:
+        take_1 = n1
+        take_2 = min(n2, TOTAL_LIMIT - n1)
+    elif n2 <= half:
+        take_2 = n2
+        take_1 = min(n1, TOTAL_LIMIT - n2)
+    else:
+        take_1, take_2 = half, half
+
+    to_fetch_1 = sorted(to_fetch_all_1, key=_cell_dist_to(dest_lat, dest_lng))[:take_1]
+    to_fetch_2 = (
+        sorted(to_fetch_all_2, key=_cell_dist_to(wp_2['lat'], wp_2['lng']))[:take_2]
+        if dual else []
+    )
+    deferred_cells_1 = n1 - len(to_fetch_1)
+    deferred_cells_2 = n2 - len(to_fetch_2) if dual else 0
 
     # 하드 타임아웃: Vercel 60s 제약 안에 반드시 응답 반환.
-    # TimeoutError 시 이미 캐시된 셀 결과로만 카드 생성 → partial=True.
     try:
-        odsay_stats = await asyncio.wait_for(
-            fetch_cells(conn, wp, to_fetch),
-            timeout=ODSAY_HARD_TIMEOUT_S,
-        )
+        if dual:
+            odsay_results = await asyncio.wait_for(
+                asyncio.gather(
+                    fetch_cells(conn, wp, to_fetch_1),
+                    fetch_cells(conn, wp_2, to_fetch_2),
+                ),
+                timeout=ODSAY_HARD_TIMEOUT_S,
+            )
+            odsay_stats_1, odsay_stats_2 = odsay_results
+        else:
+            odsay_stats_1 = await asyncio.wait_for(
+                fetch_cells(conn, wp, to_fetch_1),
+                timeout=ODSAY_HARD_TIMEOUT_S,
+            )
+            odsay_stats_2 = None
     except asyncio.TimeoutError:
-        print(f'[search] ODsay {ODSAY_HARD_TIMEOUT_S}s 타임아웃 — 캐시 결과로만 응답 (셀 {len(to_fetch)}개 미완)')
-        odsay_stats = {'fetched': 0, 'passed': 0, 'failed': 0,
-                       'elapsed_ms': ODSAY_HARD_TIMEOUT_S * 1000}
-        deferred_cells += len(to_fetch)  # 미처리 셀 전부 deferred로 표시
+        print(f'[search] ODsay {ODSAY_HARD_TIMEOUT_S}s 타임아웃 — 캐시 결과로만 응답')
+        odsay_stats_1 = {'fetched': 0, 'passed': 0, 'failed': 0,
+                         'elapsed_ms': ODSAY_HARD_TIMEOUT_S * 1000}
+        odsay_stats_2 = None
+        deferred_cells_1 += len(to_fetch_1)
+        deferred_cells_2 += len(to_fetch_2)
+
+    # 기존 변수명 호환 (단일 모드 하위 호환)
+    odsay_stats = odsay_stats_1
+    deferred_cells = deferred_cells_1 + deferred_cells_2
 
     # ── 벽시계 잔여 예산 체크 ────────────────────────────────────
     # ODsay 이후 cards 쿼리·추천 로직에 최소 10s 필요.
@@ -180,59 +255,136 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                      'odsay_elapsed_ms': int(_elapsed * 1000)},
         }
 
-    # ─ 4. 카드 쿼리 (인덱스 최적화된 단일 쿼리) ─
-    min_cnt_clause   = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
-    build_year_clause = ' AND a.build_year >= ?' if req.build_year_min is not None else ''
+    # ─ 4. 카드 쿼리 ─
+    min_cnt_clause        = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
+    build_year_clause     = ' AND a.build_year >= ?' if req.build_year_min is not None else ''
     min_price_card_clause = ' AND t.deal_amount_int >= ?' if req.min_price is not None else ''
-    cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types]
-    if req.min_kaptdaCnt is not None:
-        cards_params.append(req.min_kaptdaCnt)
-    if req.build_year_min is not None:
-        cards_params.append(req.build_year_min)
-    if req.min_price is not None:
-        cards_params.append(req.min_price)
 
-    # 카드 = (apt_seq, pyeong_type) 단위. 평형별로 행 1개씩.
-    cards = conn.execute(f"""
-        SELECT
-            a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
-            a.kaptCode,
-            r.total_time_min, r.bus_cnt, r.subway_cnt,
-            r.step1_type, r.step1_time_min, r.step1_노선,
-            r.step2_type, r.step2_time_min, r.step2_노선,
-            r.step3_type, r.step3_time_min, r.step3_노선,
-            r.step4_type, r.step4_time_min, r.step4_노선,
-            r.step5_type, r.step5_time_min, r.step5_노선,
-            t.pyeong_type,
-            MIN(t.deal_amount_int) AS price_low,
-            MAX(t.deal_amount_int) AS price_high,
-            COUNT(t.id) AS deal_count,
-            AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
-            MAX(k.kaptTopFloor) AS top_floor,
-            MAX(k.kaptUsedate) AS use_date
-        FROM apartments a
-        LEFT JOIN kapt_complexes k ON a.kaptCode = k.kaptCode
-        JOIN transit_routes r ON a.grid_key = r.origin_cell
-        JOIN trade_recent t   ON a.apt_seq  = t.apt_seq
-        WHERE a.is_apt=1
-          AND r.wp_id=? AND r.rank=1 AND r.total_time_min<=?
-          AND t.deal_amount_int<=?
-          AND t.pyeong_type IN ({pt})
-          {min_cnt_clause}
-          {build_year_clause}
-          {min_price_card_clause}
-        GROUP BY
-            a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
-            a.kaptCode,
-            r.total_time_min, r.bus_cnt, r.subway_cnt,
-            r.step1_type, r.step1_time_min, r.step1_노선,
-            r.step2_type, r.step2_time_min, r.step2_노선,
-            r.step3_type, r.step3_time_min, r.step3_노선,
-            r.step4_type, r.step4_time_min, r.step4_노선,
-            r.step5_type, r.step5_time_min, r.step5_노선,
-            t.pyeong_type
-        ORDER BY r.total_time_min, price_low
-    """, cards_params).fetchall()
+    def _extra_params():
+        p = []
+        if req.min_kaptdaCnt is not None:
+            p.append(req.min_kaptdaCnt)
+        if req.build_year_min is not None:
+            p.append(req.build_year_min)
+        if req.min_price is not None:
+            p.append(req.min_price)
+        return p
+
+    if not dual:
+        # ── 단일 모드 (기존 쿼리 그대로) ────────────────────────
+        cards_params = [wp_id, effective_max_min, req.max_price, *req.pyeong_types,
+                        *_extra_params()]
+        cards = conn.execute(f"""
+            SELECT
+                a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+                a.kaptCode,
+                r.total_time_min, r.bus_cnt, r.subway_cnt,
+                r.step1_type, r.step1_time_min, r.step1_노선,
+                r.step2_type, r.step2_time_min, r.step2_노선,
+                r.step3_type, r.step3_time_min, r.step3_노선,
+                r.step4_type, r.step4_time_min, r.step4_노선,
+                r.step5_type, r.step5_time_min, r.step5_노선,
+                t.pyeong_type,
+                MIN(t.deal_amount_int) AS price_low,
+                MAX(t.deal_amount_int) AS price_high,
+                COUNT(t.id) AS deal_count,
+                AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                MAX(k.kaptTopFloor) AS top_floor,
+                MAX(k.kaptUsedate) AS use_date
+            FROM apartments a
+            LEFT JOIN kapt_complexes k ON a.kaptCode = k.kaptCode
+            JOIN transit_routes r ON a.grid_key = r.origin_cell
+            JOIN trade_recent t   ON a.apt_seq  = t.apt_seq
+            WHERE a.is_apt=1
+              AND r.wp_id=? AND r.rank=1 AND r.total_time_min<=?
+              AND t.deal_amount_int<=?
+              AND t.pyeong_type IN ({pt})
+              {min_cnt_clause}
+              {build_year_clause}
+              {min_price_card_clause}
+            GROUP BY
+                a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+                a.kaptCode,
+                r.total_time_min, r.bus_cnt, r.subway_cnt,
+                r.step1_type, r.step1_time_min, r.step1_노선,
+                r.step2_type, r.step2_time_min, r.step2_노선,
+                r.step3_type, r.step3_time_min, r.step3_노선,
+                r.step4_type, r.step4_time_min, r.step4_노선,
+                r.step5_type, r.step5_time_min, r.step5_노선,
+                t.pyeong_type
+            ORDER BY r.total_time_min, price_low
+        """, cards_params).fetchall()
+    else:
+        # ── dual 모드 — r1(wp1) + r2(wp2) self-join ────────────
+        # ORDER BY: GREATEST(t1, t2) 를 portable.greatest()로 처리
+        order_expr = greatest('r1.total_time_min', 'r2.total_time_min')
+        cards_params = [
+            wp_id, effective_max_min,
+            wp_id_2, effective_max_min,
+            req.max_price, *req.pyeong_types,
+            *_extra_params(),
+        ]
+        cards = conn.execute(f"""
+            SELECT
+                a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+                a.kaptCode,
+                r1.total_time_min AS total_time_min_1,
+                r1.bus_cnt AS bus_cnt_1, r1.subway_cnt AS subway_cnt_1,
+                r1.step1_type, r1.step1_time_min, r1.step1_노선,
+                r1.step2_type, r1.step2_time_min, r1.step2_노선,
+                r1.step3_type, r1.step3_time_min, r1.step3_노선,
+                r1.step4_type, r1.step4_time_min, r1.step4_노선,
+                r1.step5_type, r1.step5_time_min, r1.step5_노선,
+                r2.total_time_min AS total_time_min_2,
+                r2.bus_cnt AS bus_cnt_2, r2.subway_cnt AS subway_cnt_2,
+                r2.step1_type AS step1_type_2, r2.step1_time_min AS step1_time_min_2,
+                r2.step1_노선 AS step1_노선_2,
+                r2.step2_type AS step2_type_2, r2.step2_time_min AS step2_time_min_2,
+                r2.step2_노선 AS step2_노선_2,
+                r2.step3_type AS step3_type_2, r2.step3_time_min AS step3_time_min_2,
+                r2.step3_노선 AS step3_노선_2,
+                r2.step4_type AS step4_type_2, r2.step4_time_min AS step4_time_min_2,
+                r2.step4_노선 AS step4_노선_2,
+                r2.step5_type AS step5_type_2, r2.step5_time_min AS step5_time_min_2,
+                r2.step5_노선 AS step5_노선_2,
+                t.pyeong_type,
+                MIN(t.deal_amount_int) AS price_low,
+                MAX(t.deal_amount_int) AS price_high,
+                COUNT(t.id) AS deal_count,
+                AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                MAX(k.kaptTopFloor) AS top_floor,
+                MAX(k.kaptUsedate) AS use_date
+            FROM apartments a
+            LEFT JOIN kapt_complexes k ON a.kaptCode = k.kaptCode
+            JOIN transit_routes r1 ON a.grid_key = r1.origin_cell
+            JOIN transit_routes r2 ON a.grid_key = r2.origin_cell
+            JOIN trade_recent t    ON a.apt_seq  = t.apt_seq
+            WHERE a.is_apt=1
+              AND r1.wp_id=? AND r1.rank=1 AND r1.total_time_min<=?
+              AND r2.wp_id=? AND r2.rank=1 AND r2.total_time_min<=?
+              AND t.deal_amount_int<=?
+              AND t.pyeong_type IN ({pt})
+              {min_cnt_clause}
+              {build_year_clause}
+              {min_price_card_clause}
+            GROUP BY
+                a.apt_seq, a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+                a.kaptCode,
+                r1.total_time_min, r1.bus_cnt, r1.subway_cnt,
+                r1.step1_type, r1.step1_time_min, r1.step1_노선,
+                r1.step2_type, r1.step2_time_min, r1.step2_노선,
+                r1.step3_type, r1.step3_time_min, r1.step3_노선,
+                r1.step4_type, r1.step4_time_min, r1.step4_노선,
+                r1.step5_type, r1.step5_time_min, r1.step5_노선,
+                r2.total_time_min, r2.bus_cnt, r2.subway_cnt,
+                r2.step1_type, r2.step1_time_min, r2.step1_노선,
+                r2.step2_type, r2.step2_time_min, r2.step2_노선,
+                r2.step3_type, r2.step3_time_min, r2.step3_노선,
+                r2.step4_type, r2.step4_time_min, r2.step4_노선,
+                r2.step5_type, r2.step5_time_min, r2.step5_노선,
+                t.pyeong_type
+            ORDER BY {order_expr}, price_low
+        """, cards_params).fetchall()
 
     # ─ 4b. 카드별 최근 거래 (3개월, 최대 4건) ─
     # 카드 단위 = (apt_seq, pyeong_type) 이므로 recent_map 키도 동일하게.
@@ -306,7 +458,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 pass
 
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map, tag_map) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map, dual=dual) for c in cards]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
@@ -344,23 +496,32 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             'address_norm':  wp['address_norm'],
             'lat': wp['lat'], 'lng': wp['lng'],
         },
+        'workplace_2': {
+            'wp_id': wp_2['wp_id'],
+            'address_input': wp_2['address_input'],
+            'address_norm':  wp_2['address_norm'],
+            'lat': wp_2['lat'], 'lng': wp_2['lng'],
+        } if dual else None,
         'stats': stats,
         'buckets': buckets,
         'cards': all_cards,
         'meta': {
+            'dual_workplace':   dual,
             'odsay_calls_made': odsay_stats['fetched'],
             'odsay_passed':     odsay_stats['passed'],
             'odsay_failed':     odsay_stats['failed'],
-            'cache_hits':       len(cached),
-            'odsay_elapsed_ms': odsay_stats['elapsed_ms'],
+            'odsay_calls_made_1': odsay_stats_1['fetched'],
+            'odsay_calls_made_2': odsay_stats_2['fetched'] if odsay_stats_2 else 0,
+            'cache_hits':         len(cached_1) + len(cached_2),
+            'odsay_elapsed_ms':   odsay_stats['elapsed_ms'],
             'llm_cached':       len(cached_comments),
             'llm_pending':      len(miss_cards),
             'llm_pending_recommend': sum(1 for c in miss_cards if c.get('is_recommended')),
             'llm_pending_regular':   sum(1 for c in miss_cards if not c.get('is_recommended')),
-            # 신규 워크플레이스 첫 검색에선 일부 셀이 다음 검색으로 미뤄짐.
-            # partial=True 면 프론트가 잠시 후 재검색해서 결과 보강 가능.
             'partial':          deferred_cells > 0,
             'deferred_cells':   deferred_cells,
+            'deferred_cells_1': deferred_cells_1,
+            'deferred_cells_2': deferred_cells_2,
             'total_cells':      len(cells),
         },
     }
@@ -452,7 +613,8 @@ def get_comments(wp_id: int, keys: str, conn=Depends(get_db)):
     }
 
 
-def _empty_response(wp, _cards):
+def _empty_response(wp, _cards, wp_2=None):
+    dual = wp_2 is not None
     return {
         'wp_id': wp['wp_id'],
         'llm_pending': False,
@@ -461,54 +623,86 @@ def _empty_response(wp, _cards):
             'address_norm':  wp['address_norm'],
             'lat': wp['lat'], 'lng': wp['lng'],
         },
+        'workplace_2': {
+            'wp_id': wp_2['wp_id'],
+            'address_input': wp_2['address_input'],
+            'address_norm':  wp_2['address_norm'],
+            'lat': wp_2['lat'], 'lng': wp_2['lng'],
+        } if dual else None,
         'stats': {'total': 0},
         'buckets': [],
         'cards': [],
-        'meta': {},
+        'meta': {'dual_workplace': dual},
     }
 
 
-def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None):
-    bc, sc = r['bus_cnt'], r['subway_cnt']
-
-    # 대중교통 요약 (지하철 호선 + 환승 + 도보)
-    steps = []
-    for i in range(1, 6):
-        st = r[f'step{i}_type']
-        if not st:
-            break
-        steps.append({
-            'type': st,
-            'time': r[f'step{i}_time_min'],
-            'line': r[f'step{i}_노선'],
-        })
-
+def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: int) -> str:
+    """steps 리스트 → 대중교통 요약 문자열 (wp1/wp2 공통 헬퍼)."""
     walk_min = None
     subway_line = None
     for s in steps:
         if s['type'] in ('도보', '환승도보', 'WALK') and walk_min is None:
             walk_min = s['time']
         if s['type'] in ('지하철', 'SUBWAY') and subway_line is None:
-            # "수도권 4호선" → "4호선"
             line_raw = s['line'] or ''
             m = re.search(r'\d+호선', line_raw)
             subway_line = m.group(0) if m else (line_raw.strip() or None)
 
     if subway_line:
         xfer = max(sc - 1, 0)
-        if xfer == 0:
-            transit_summary = f'{subway_line} 직통'
-        else:
-            transit_summary = f'{subway_line} {xfer}회환승'
+        summary = f'{subway_line} 직통' if xfer == 0 else f'{subway_line} {xfer}회환승'
         if walk_min:
-            transit_summary += f' (도보 {walk_min}분)'
+            summary += f' (도보 {walk_min}분)'
     elif bc:
         xfer = max(bc - 1, 0)
-        transit_summary = '버스 직통' if xfer == 0 else f'버스 {xfer}회환승'
+        summary = '버스 직통' if xfer == 0 else f'버스 {xfer}회환승'
         if walk_min:
-            transit_summary += f' (도보 {walk_min}분)'
+            summary += f' (도보 {walk_min}분)'
     else:
-        transit_summary = f'{r["total_time_min"]}분'
+        summary = f'{total_time_min}분'
+    return summary
+
+
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, dual: bool = False):
+    # ── wp1 transit 파싱 ─────────────────────────────────────────
+    if dual:
+        bc_1, sc_1 = r['bus_cnt_1'], r['subway_cnt_1']
+        steps_1 = []
+        for i in range(1, 6):
+            st = r[f'step{i}_type']
+            if not st:
+                break
+            steps_1.append({'type': st, 'time': r[f'step{i}_time_min'], 'line': r[f'step{i}_노선']})
+        transit_summary_1 = _build_transit_summary(steps_1, bc_1, sc_1, r['total_time_min_1'])
+
+        # ── wp2 transit 파싱 ────────────────────────────────────
+        bc_2, sc_2 = r['bus_cnt_2'], r['subway_cnt_2']
+        steps_2 = []
+        for i in range(1, 6):
+            st = r[f'step{i}_type_2']
+            if not st:
+                break
+            steps_2.append({'type': st, 'time': r[f'step{i}_time_min_2'], 'line': r[f'step{i}_노선_2']})
+        transit_summary_2 = _build_transit_summary(steps_2, bc_2, sc_2, r['total_time_min_2'])
+
+        total_time_min = max(r['total_time_min_1'], r['total_time_min_2'])
+        # 단일 모드 호환 필드 (transit_summary = wp1 요약)
+        bc, sc = bc_1, sc_1
+        transit_summary = transit_summary_1
+    else:
+        bc, sc = r['bus_cnt'], r['subway_cnt']
+        steps = []
+        for i in range(1, 6):
+            st = r[f'step{i}_type']
+            if not st:
+                break
+            steps.append({'type': st, 'time': r[f'step{i}_time_min'], 'line': r[f'step{i}_노선']})
+        transit_summary = _build_transit_summary(steps, bc, sc, r['total_time_min'])
+        total_time_min = r['total_time_min']
+        bc_1 = bc; sc_1 = sc
+        transit_summary_1 = transit_summary
+        bc_2 = None; sc_2 = None
+        transit_summary_2 = None
 
     # 준공연도: kaptUsedate = "20040517" → 2004
     use_date = r['use_date'] or ''
@@ -516,28 +710,35 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
 
     apt_seq = r['apt_seq']
     pyeong_type = r['pyeong_type'] if 'pyeong_type' in r.keys() else None
-    # 평당가 (만원/평)
     try:
         pa = r['pyeong_price_avg']
         pyeong_price = int(pa) if pa else None
     except (IndexError, KeyError):
         pyeong_price = None
-    return {
+
+    card = {
         'apt_seq': apt_seq, 'apt_nm': r['apt_nm'], 'umd_nm': r['umd_nm'],
         'pyeong_type': pyeong_type,
         'kaptdaCnt': int(r['kaptdaCnt'] or 0),
         'top_floor': r['top_floor'],
         'build_year': build_year,
         'lat': r['lat'], 'lng': r['lng'],
-        'total_time_min': r['total_time_min'],
+        'total_time_min': total_time_min,
+        'total_time_min_1': r['total_time_min_1'] if dual else total_time_min,
+        'total_time_min_2': r['total_time_min_2'] if dual else None,
         'bus_cnt': bc, 'subway_cnt': sc,
+        'bus_cnt_1': bc_1, 'subway_cnt_1': sc_1,
+        'bus_cnt_2': bc_2, 'subway_cnt_2': sc_2,
         'transit_summary': transit_summary,
+        'transit_summary_1': transit_summary_1,
+        'transit_summary_2': transit_summary_2,
         'price_low':  r['price_low'], 'price_high': r['price_high'],
         'pyeong_price_avg': pyeong_price,
         'deal_count': r['deal_count'],
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
         'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
     }
+    return card
 
 
 # ── GET /api/apt/{apt_seq}/routes ────────────────────────────
