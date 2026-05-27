@@ -14,7 +14,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- 카카오맵 SDK (클러스터러 제거 — 단지 단위 핀 직접 표시) -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=764855b79f6cfa586600499f333d624c&autoload=false"></script>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=764855b79f6cfa586600499f333d624c&libraries=services&autoload=false"></script>
 
   <style>
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
@@ -299,16 +299,10 @@
       font-weight: 400;
     }
 
-    /* result-layout: 정확히 2개의 자식(left-panel, map-panel)만 갖는 grid */
-    /* spec-11: 유연형 — 큰 화면일수록 LLM 분석면 자연 확대 (minmax 440~32%) */
+    /* result-layout: left-panel + resize-handle + map-panel (spec-19: 드래그 리사이즈) */
     .result-layout {
-      flex: 1; display: grid;
-      grid-template-columns: minmax(440px, 32%) 1fr;
+      flex: 1; display: flex;
       min-height: 0;
-    }
-    /* 태블릿: 지도 가시 영역 보장 위해 400px 고정 */
-    @media (max-width: 1100px) {
-      .result-layout { grid-template-columns: 400px 1fr; }
     }
     /* 모바일 세로 분할: 카드 위 / 지도 아래 50vh */
     @media (max-width: 767px) {
@@ -326,8 +320,8 @@
     .left-panel {
       display: flex; flex-direction: column;
       overflow: hidden;
-      border-right: 1px solid var(--color-border-strong);
       min-height: 0;
+      width: 440px; min-width: 280px; flex-shrink: 0;
     }
     .cards-panel {
       overflow-y: auto;
@@ -335,8 +329,17 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
-    .map-panel { position: relative; }
+    .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
+    /* spec-19: 리사이즈 핸들 */
+    .resize-handle {
+      width: 6px; flex-shrink: 0;
+      background: var(--color-border-strong);
+      cursor: col-resize; z-index: 10;
+      transition: background 0.15s;
+    }
+    .resize-handle:hover, .resize-handle.dragging { background: #5B9BD5; }
+    @media (max-width: 767px) { .resize-handle { display: none; } }
 
     /* ════════════════════════════════════════════════════════
        [2] 통계 패널 — 미니 막대그래프
@@ -1097,9 +1100,12 @@
     .detail-trade-floor { color: #aaa; font-size: 12px; text-align: right; }
     .detail-poi-row {
       display: flex; gap: 8px; align-items: center;
-      padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      padding: 7px 4px; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      cursor: pointer; border-radius: 4px; transition: background 0.1s;
     }
     .detail-poi-row:last-child { border-bottom: none; }
+    .detail-poi-row:hover { background: #f5f7ff; }
+    .detail-poi-row.poi-active { background: #EEF3FF; }
     .detail-poi-dist { color: #aaa; font-size: 12px; margin-left: auto; white-space: nowrap; }
     .detail-price-badge {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
@@ -1844,6 +1850,8 @@
         <div id="compare-table-container"></div>
       </div>
     </div>
+    <!-- spec-19: 드래그 리사이즈 핸들 -->
+    <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
     <div class="map-panel">
       <div id="map"></div>
@@ -1957,6 +1965,10 @@ let aptOverlayMap = {};   // apt_seq → CustomOverlay (핀 show/hide용)
 let panelMode = 'list';   // 'list' | 'detail'
 let detailChart = null;
 let detailChartData = null;
+let _poiMarker = null;
+let _poiInfoWindow = null;
+let _activePoiRow = null;
+let _currentAptSeq = null;
 let currentTabKey = null;
 let currentDetailCard = null;
 
@@ -2240,6 +2252,8 @@ function panToCard(aptSeq){ openDetail(aptSeq); }
 const _detailCache = {};
 
 function openDetail(aptSeq) {
+  _currentAptSeq = aptSeq;
+  clearPoiMarker();
   // 지도 pan
   if (kakaoMap && resultData) {
     const card = resultData.cards.find(c => c.apt_seq === aptSeq);
@@ -2272,6 +2286,7 @@ function openDetail(aptSeq) {
 function closeDetail() {
   document.getElementById('detail-overlay').classList.add('hidden');
   document.body.style.overflow = '';
+  clearPoiMarker();
 }
 function closeDetailOnBg(e) {
   if (e.target === document.getElementById('detail-overlay')) closeDetail();
@@ -2374,7 +2389,11 @@ function _renderDetail(d) {
       const cat = POI_LABEL[p.category] || p.category || '기타';
       const dist = p.distance_m < 1000 ? `${Math.round(p.distance_m)}m` : `${(p.distance_m/1000).toFixed(1)}km`;
       const walk = p.walking_min ? ` · 도보 ${p.walking_min}분` : '';
-      poiHtml += `<div class="detail-poi-row">
+      poiHtml += `<div class="detail-poi-row"
+        data-poi-name="${escHtml(p.name||'')}"
+        data-walk-min="${p.walking_min||0}"
+        data-dist-m="${Math.round(p.distance_m)||0}"
+        onclick="togglePoiMarker(this)">
         <span style="color:#aaa;font-size:11px;min-width:56px;">${escHtml(cat)}</span>
         <span>${escHtml(p.name||'-')}</span>
         <span class="detail-poi-dist">${dist}${walk}</span>
@@ -2386,6 +2405,96 @@ function _renderDetail(d) {
   document.getElementById('detail-tab-poi').innerHTML =
     `<div class="detail-section"><div class="detail-section__title">도보권 시설</div>${poiHtml}</div>`;
 }
+
+// ── POI 마커 (spec-19) ────────────────────────────────────────
+function clearPoiMarker() {
+  if (_poiInfoWindow) { _poiInfoWindow.close(); _poiInfoWindow = null; }
+  if (_poiMarker) { _poiMarker.setMap(null); _poiMarker = null; }
+  if (_activePoiRow) { _activePoiRow.classList.remove('poi-active'); _activePoiRow = null; }
+}
+
+function togglePoiMarker(row) {
+  if (_activePoiRow === row) { clearPoiMarker(); return; }
+  clearPoiMarker();
+  _activePoiRow = row;
+  row.classList.add('poi-active');
+  const poiName = row.dataset.poiName;
+  const walkMin = parseInt(row.dataset.walkMin, 10) || 0;
+  const distM   = parseInt(row.dataset.distM,  10) || 0;
+  showPoiMarker(poiName, walkMin, distM);
+}
+
+function showPoiMarker(poiName, walkMin, distM) {
+  if (!kakaoMap || !poiName) return;
+  const card = resultData && resultData.cards
+    ? resultData.cards.find(c => c.apt_seq === _currentAptSeq)
+    : null;
+  if (!card || !card.lat || !card.lng) return;
+
+  const ps = new kakao.maps.services.Places();
+  ps.keywordSearch(poiName, (data, status) => {
+    if (status !== kakao.maps.services.Status.OK || !data.length) return;
+    const doc = data[0];
+    const pos = new kakao.maps.LatLng(parseFloat(doc.y), parseFloat(doc.x));
+    _poiMarker = new kakao.maps.Marker({ position: pos, map: kakaoMap });
+    const distLabel = distM >= 1000
+      ? `${(distM / 1000).toFixed(1)}km`
+      : `${distM}m`;
+    const walkLabel = walkMin ? ` · 도보 ${walkMin}분` : '';
+    _poiInfoWindow = new kakao.maps.InfoWindow({
+      content: `<div style="padding:6px 10px;font-size:12px;white-space:nowrap;">${poiName}<br><span style="color:#888;">${distLabel}${walkLabel}</span></div>`
+    });
+    _poiInfoWindow.open(kakaoMap, _poiMarker);
+    kakao.maps.event.addListener(_poiMarker, 'click', () => {
+      _poiInfoWindow.open(kakaoMap, _poiMarker);
+    });
+  }, {
+    location: new kakao.maps.LatLng(card.lat, card.lng),
+    radius: 500,
+    size: 1
+  });
+}
+
+// ── 패널 리사이즈 핸들 (spec-19) ─────────────────────────────
+(function initResizeHandle() {
+  const handle  = document.getElementById('resize-handle');
+  const left    = document.querySelector('.left-panel');
+  const layout  = document.querySelector('.result-layout');
+  if (!handle || !left || !layout) return;
+
+  let dragging = false;
+  let startX   = 0;
+  let startW   = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX   = e.clientX;
+    startW   = left.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor     = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const layoutW = layout.getBoundingClientRect().width;
+    const minLeft = 280, minRight = 320, handleW = 8;
+    const maxW = layoutW - minRight - handleW;
+    const newW = Math.max(minLeft, Math.min(maxW, startW + e.clientX - startX));
+    left.style.width = newW + 'px';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor     = '';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+})();
 
 // ESC 키로 모달 닫기
 document.addEventListener('keydown', e => {
