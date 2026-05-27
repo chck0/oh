@@ -162,22 +162,28 @@ Spec 완성 전 확인:
 
 ## 기존 Specs
 
-| 번호 | 파일 | 기능 | 상태 |
-|------|------|------|------|
-| 01 | [01-search-input.md](01-search-input.md) | 검색 조건 입력 화면 (search.html) | ✅ Implemented |
-| 02 | [02-search-pipeline.md](02-search-pipeline.md) | 검색 파이프라인 (POST /api/search) | ✅ Implemented |
-| 03 | [03-recommendation-engine.md](03-recommendation-engine.md) | 추천 엔진 (통근버킷 × 평형 매트릭스) | ✅ Implemented |
-| 04 | [04-result-page.md](04-result-page.md) | 검색 결과 화면 (result.html) | ✅ Implemented |
-| 05 | [05-ai-comments.md](05-ai-comments.md) | AI 코멘트 생성 (Claude LLM) | ✅ Implemented |
-| 06 | [06-why-price-tag.md](06-why-price-tag.md) | Why-tagged 추천 카드 (저가 근거 자동 태깅) | ✅ Implemented |
-| 07 | [07-build-year-filter.md](07-build-year-filter.md) | 준공연도 필터 (build_year_min) | ✅ Implemented |
-| 08 | [08-favorites.md](08-favorites.md) | 관심 단지 ♥ 즐겨찾기 (localStorage) | ✅ Implemented |
-| 09 | [09-price-range.md](09-price-range.md) | 가격 범위 필터 (min_price) + 범위 경고 UI | ✅ Implemented |
-| 10 | [10-test-coverage.md](10-test-coverage.md) | 테스트 커버리지 강화 (search.py 79%, ai.py 96%, total 83%) | ✅ Implemented |
-| 11 | [11-rec-card-emphasis.md](11-rec-card-emphasis.md) | 추천 카드 이유 강조 (이유 칩 3개) + 좌측 패널 유연형 확대 | ✅ Implemented |
-| 13 | [13-dual-workplace.md](13-dual-workplace.md) | 맞벌이 두 직장 교집합 추천 (Dual Workplace) | ✅ Implemented |
-| 14 | [14-favorites-compare.md](14-favorites-compare.md) | 즐겨찾기 단지 나란히 비교 (최대 3개 비교 테이블) | ✅ Implemented |
-| 15 | [15-search-history.md](15-search-history.md) | 최근 검색 직장 히스토리 칩 (1클릭 재검색) | ✅ Implemented |
-| 16 | [16-price-change-badge.md](16-price-change-badge.md) | 가격 변동률 배지 (최근 3개월 vs 이전 6개월) | ✅ Implemented |
+| 번호 | 파일 | 기능 | 상태 | 작성자 |
+|------|------|------|------|--------|
+| 01 | [01-search-input.md](01-search-input.md) | 검색 조건 입력 화면 (search.html) | ✅ Implemented | — |
+| 02 | [02-search-pipeline.md](02-search-pipeline.md) | 검색 파이프라인 (POST /api/search) | ✅ Implemented | — |
+| 03 | [03-recommendation-engine.md](03-recommendation-engine.md) | 추천 엔진 (통근버킷 × 평형 매트릭스) | ✅ Implemented | — |
+| 04 | [04-result-page.md](04-result-page.md) | 검색 결과 화면 (result.html) | ✅ Implemented | — |
+| 05 | [05-ai-comments.md](05-ai-comments.md) | AI 코멘트 생성 (Claude LLM) | ✅ Implemented | — |
+| 06 | [06-why-price-tag.md](06-why-price-tag.md) | Why-tagged 추천 카드 (저가 근거 자동 태깅) | ✅ Implemented | — |
+| 07 | [07-build-year-filter.md](07-build-year-filter.md) | 준공연도 필터 (build_year_min) | ✅ Implemented | — |
+| 08 | [08-favorites.md](08-favorites.md) | 관심 단지 ♥ 즐겨찾기 (localStorage) | ✅ Implemented | — |
+| 09 | [09-price-range.md](09-price-range.md) | 가격 범위 필터 (min_price) + 범위 경고 UI | ✅ Implemented | — |
+| 10 | [10-test-coverage.md](10-test-coverage.md) | 테스트 커버리지 강화 (search.py 79%, ai.py 96%, total 83%) | ✅ Implemented | — |
+| 11 | [11-rec-card-emphasis.md](11-rec-card-emphasis.md) | 추천 카드 이유 강조 (이유 칩 3개) + 좌측 패널 유연형 확대 | ✅ Implemented | — |
+| 13 | [13-dual-workplace.md](13-dual-workplace.md) | 맞벌이 두 직장 교집합 추천 (Dual Workplace) | ✅ Implemented | hjkang83 |
+| 14 | [14-favorites-compare.md](14-favorites-compare.md) | 즐겨찾기 단지 나란히 비교 (최대 3개 비교 테이블) | ✅ Implemented | hjkang83 |
+| 15 | [15-search-history.md](15-search-history.md) | 최근 검색 직장 히스토리 칩 (1클릭 재검색) | ✅ Implemented | hjkang83 |
+| 16 | [16-price-change-badge.md](16-price-change-badge.md) | 가격 변동률 배지 (최근 3개월 vs 이전 6개월) | ✅ Implemented | hjkang83 |
+| 17 | [17-apt-detail-modal.md](17-apt-detail-modal.md) | 단지 상세 모달 (바텀시트 3탭) + W2 히스토리 칩 버그픽스 | ✅ Implemented | hjkang83 |
+| 18 | [18-transit-route-detail.md](18-transit-route-detail.md) | 경로 상세 팝업 — 통근시간 칩 클릭 → step-by-step 경로 | ✅ Implemented | hjkang83 |
+| 18† | [18-code-health-baseline.md](18-code-health-baseline.md) | 코드 헬스 베이스라인 — pylint 복구 + Claude 응답 타입 안전 처리 | ✅ Implemented | xihuan27 |
+| 19 | [19-panel-resize-poi-map-marker.md](19-panel-resize-poi-map-marker.md) | 패널 드래그 리사이저 + 도보 시설 POI 지도 마커 | ✅ Implemented | xihuan27 |
 
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **17**
+> † 18번 중복: `18-transit-route-detail`(hjkang83, PR #80)과 `18-code-health-baseline`(xihuan27, PR #82)이 동시에 18번을 사용. 다음 신규 spec부터 **20번**부터 시작합니다.
+
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **20**
