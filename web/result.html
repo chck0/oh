@@ -2467,6 +2467,10 @@ function showPoiMarker(poiName, walkMin, distM) {
     kakao.maps.event.addListener(_poiMarker, 'click', () => {
       _poiInfoWindow.open(kakaoMap, _poiMarker);
     });
+    // 모달이 지도 왼쪽을 가리므로: 레벨 4로 확대 후 핀 위치 중심, 오른쪽 영역에 보이도록 오프셋
+    kakaoMap.setLevel(4);
+    kakaoMap.setCenter(pos);
+    kakaoMap.panBy(-160, 0);
   }, {
     location: new kakao.maps.LatLng(card.lat, card.lng),
     radius: 500,
