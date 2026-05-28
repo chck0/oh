@@ -183,6 +183,5 @@ Spec 완성 전 확인:
 | 18 | [18-code-health-baseline.md](18-code-health-baseline.md) | 코드 헬스 베이스라인 — pylint 복구 + Claude 응답 타입 안전 처리 | ✅ Implemented | xihuan27 |
 | 19 | [19-panel-resize-poi-map-marker.md](19-panel-resize-poi-map-marker.md) | 패널 드래그 리사이저 + 도보 시설 POI 지도 마커 | ✅ Implemented | xihuan27 |
 | 20 | [20-transit-route-detail.md](20-transit-route-detail.md) | 경로 상세 팝업 — 통근시간 칩 클릭 → step-by-step 경로 | ✅ Implemented | hjkang83 |
-| 21 | [21-detail-modal-ux-fix.md](21-detail-modal-ux-fix.md) | 단지 상세 모달 UX 수정 — POI 카테고리 레이블 수정 + 거래 평형대 그룹화 | ✅ Implemented | hjkang83 |
 
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **22**
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **21**
