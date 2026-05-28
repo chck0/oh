@@ -501,8 +501,30 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             except Exception:
                 pass
 
+    # ─ 4e. POI 최단거리 집계 (정렬용) ─
+    poi_min_map: dict = {}
+    kaptcodes = list({c['kaptCode'] for c in cards if c['kaptCode']})
+    if kaptcodes:
+        ph_poi = ','.join(['?'] * len(kaptcodes))
+        poi_min_rows = conn.execute(f"""
+            SELECT kaptCode,
+                   MIN(CASE WHEN poi_lclas_cd='I' THEN walking_min END) AS nearest_park_min,
+                   MIN(CASE WHEN poi_lclas_cd='D' AND poi_mlsfc_cd='D01' THEN walking_min END) AS nearest_subway_min,
+                   MIN(CASE WHEN poi_lclas_cd='A' THEN walking_min END) AS nearest_school_min,
+                   MIN(CASE WHEN poi_lclas_cd='E' THEN walking_min END) AS nearest_mart_min
+            FROM apt_walking_poi
+            WHERE kaptCode IN ({ph_poi})
+            GROUP BY kaptCode
+        """, kaptcodes).fetchall()
+        poi_min_map = {r['kaptCode']: {
+            'nearest_park_min': r['nearest_park_min'],
+            'nearest_subway_min': r['nearest_subway_min'],
+            'nearest_school_min': r['nearest_school_min'],
+            'nearest_mart_min': r['nearest_mart_min'],
+        } for r in poi_min_rows}
+
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, dual=dual) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, poi_min_map, dual=dual) for c in cards]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
@@ -707,7 +729,7 @@ def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: 
     return summary
 
 
-def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, dual: bool = False):
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, poi_min_map: dict | None = None, dual: bool = False):
     # ── wp1 transit 파싱 ─────────────────────────────────────────
     if dual:
         bc_1, sc_1 = r['bus_cnt_1'], r['subway_cnt_1']
@@ -760,6 +782,8 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
     except (IndexError, KeyError):
         pyeong_price = None
 
+    poi_data = (poi_min_map or {}).get(r['kaptCode'], {})
+
     card = {
         'apt_seq': apt_seq, 'apt_nm': r['apt_nm'], 'umd_nm': r['umd_nm'],
         'pyeong_type': pyeong_type,
@@ -782,6 +806,10 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
         'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
         'price_chg_6m_pct': (price_chg_map or {}).get((apt_seq, pyeong_type)),
+        'nearest_park_min': poi_data.get('nearest_park_min'),
+        'nearest_subway_min': poi_data.get('nearest_subway_min'),
+        'nearest_school_min': poi_data.get('nearest_school_min'),
+        'nearest_mart_min': poi_data.get('nearest_mart_min'),
     }
     return card
 
