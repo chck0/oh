@@ -329,6 +329,39 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
+    /* sort-bar */
+    .sort-bar {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--color-border-light);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .sort-bar.visible { display: flex; }
+    .sort-bar__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 2px; }
+    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .sort-select-wrap label { font-size: 10px; color: var(--color-text-tertiary); font-weight: 600; }
+    .sort-select {
+      font-size: 12px; font-family: inherit;
+      padding: 4px 22px 4px 8px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 6px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 7px center;
+      appearance: none; cursor: pointer;
+      color: var(--color-text-primary);
+      width: 108px;
+    }
+    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
+    .sort-bar__reset {
+      margin-left: auto; font-size: 12px;
+      background: none; border: none; cursor: pointer;
+      color: var(--color-text-secondary); padding: 4px 6px;
+      white-space: nowrap;
+    }
+    .sort-bar__reset:hover { color: var(--color-brand-primary); }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -1745,6 +1778,22 @@
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
+      <div class="sort-bar" id="sort-bar">
+        <span class="sort-bar__label">정렬순서</span>
+        <div class="sort-select-wrap">
+          <label>1순위</label>
+          <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+        </div>
+        <div class="sort-select-wrap">
+          <label>2순위</label>
+          <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+        </div>
+        <div class="sort-select-wrap">
+          <label>3순위</label>
+          <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+        </div>
+        <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+      </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
       <div class="compare-bar hidden" id="compare-bar">
@@ -2890,6 +2939,7 @@ function renderCards(data){
   }
 
   panel.innerHTML = html;
+  initSortBar(data.cards);
 }
 
 function toggleBucket(headEl){
@@ -3582,6 +3632,115 @@ function renderPOIHTML(poi){
         <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
       </div>`).join('')}`;
   }).join('');
+}
+
+// ── 다중 우선순위 정렬 (spec-20) ────────────────────────────
+const SORT_OPTIONS = [
+  { value: '',                        label: '선택 안 함',       group: '' },
+  { value: 'total_time_min:asc',      label: '통근시간 짧은순',  group: '기본' },
+  { value: 'price_low:asc',           label: '최저가 낮은순',    group: '기본' },
+  { value: 'pyeong_price_avg:asc',    label: '평당가 낮은순',    group: '기본' },
+  { value: 'build_year:desc',         label: '준공연도 신축순',  group: '기본' },
+  { value: 'deal_count:desc',         label: '거래건수 많은순',  group: '기본' },
+  { value: 'nearest_park_min:asc',    label: '공원 도보',        group: '도보' },
+  { value: 'nearest_subway_min:asc',  label: '지하철 도보',      group: '도보' },
+  { value: 'nearest_school_min:asc',  label: '학교 도보',        group: '도보' },
+  { value: 'nearest_mart_min:asc',    label: '마트 도보',        group: '도보' },
+];
+
+function _buildSelectHTML(excludeValues) {
+  let html = '';
+  let lastGroup = '';
+  for (const o of SORT_OPTIONS) {
+    if (o.group && o.group !== lastGroup) {
+      if (lastGroup !== '') html += '</optgroup>';
+      html += `<optgroup label="${o.group}">`;
+      lastGroup = o.group;
+    }
+    const disabled = o.value && excludeValues.has(o.value) ? ' disabled' : '';
+    html += `<option value="${o.value}"${disabled}>${o.label}</option>`;
+  }
+  if (lastGroup !== '') html += '</optgroup>';
+  return html;
+}
+
+function initSortBar(cards) {
+  if (!cards || !cards.length) return;
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+  });
+  document.getElementById('sort-bar').classList.add('visible');
+}
+
+function updateSortDropdowns() {
+  const v1 = document.getElementById('sort-1').value;
+  const v2 = document.getElementById('sort-2').value;
+  const v3 = document.getElementById('sort-3').value;
+
+  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
+  const sel2 = document.getElementById('sort-2');
+  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
+  sel2.value = (v2 && v2 !== v1) ? v2 : '';
+  const newV2 = sel2.value;
+
+  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
+  const sel3 = document.getElementById('sort-3');
+  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
+  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
+}
+
+function onSortChange() {
+  updateSortDropdowns();
+  applySortOrder();
+}
+
+function applySortOrder() {
+  const keys = ['sort-1','sort-2','sort-3']
+    .map(id => document.getElementById(id).value)
+    .filter(v => v);
+
+  if (!keys.length) {
+    if (window._lastSearchData) renderCards(window._lastSearchData);
+    return;
+  }
+
+  const cards = [...(window._lastCards || [])];
+  cards.sort((a, b) => {
+    for (const key of keys) {
+      const [field, dir] = key.split(':');
+      const av = a[field] ?? null;
+      const bv = b[field] ?? null;
+      if (av === null && bv === null) continue;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const diff = dir === 'desc' ? bv - av : av - bv;
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  _renderSortedFlat(cards);
+}
+
+function _renderSortedFlat(cards) {
+  const data = window._lastSearchData;
+  if (!data) return;
+  const panel = document.getElementById('cards-panel');
+  const wpId = data.wp_id;
+  let html = renderStatsPanel(data);
+  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
+  panel.innerHTML = html;
+  _updateFavTab();
+}
+
+function resetSort() {
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  updateSortDropdowns();
+  if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
 // ── 실행 ─────────────────────────────────────────────────────
