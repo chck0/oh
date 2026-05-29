@@ -987,14 +987,21 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         dong_chart.setdefault(r['pyeong_type'], {})[ym] = int(r['avg_amount'])
 
     # ── 최근 실거래 내역 (최근 20건) ──────────────────────────
+    # trade_recent(최신 데이터) UNION trade_history(3년치) → 중복 제거 후 최신순
     trade_rows = conn.execute("""
+        SELECT deal_year, deal_month, deal_day,
+               pyeong, pyeong_type, deal_amount_int, floor
+        FROM trade_recent
+        WHERE apt_seq = ?
+        UNION
         SELECT deal_year, deal_month, deal_day,
                pyeong, pyeong_type, deal_amount_int, floor
         FROM trade_history
         WHERE apt_seq = ?
+          AND deal_year >= ?
         ORDER BY deal_year DESC, deal_month DESC, deal_day DESC
         LIMIT 20
-    """, [apt_seq]).fetchall()
+    """, [apt_seq, apt_seq, threshold_year]).fetchall()
 
     trades = [
         {
