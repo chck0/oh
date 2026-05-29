@@ -167,8 +167,8 @@ def _seed_base(conn):
     )
     conn.execute(
         "INSERT INTO trade_recent (apt_seq, pyeong_type, pyeong, floor, "
-        "deal_amount_int, deal_year, deal_month, deal_day) "
-        "VALUES ('APT001', '30평대', 32.5, 10, 80000, 2026, 4, 15)"
+        "deal_amount_int, deal_year, deal_month, deal_day, dealing_gbn) "
+        "VALUES ('APT001', '30평대', 32.5, 10, 80000, 2026, 4, 15, '중개거래')"
     )
     conn.commit()
 

@@ -175,8 +175,8 @@ def _seed_db(conn):
     # trade_recent: 2026년 4월 거래 (threshold=year_month_minus(3)=202602 통과)
     conn.execute(
         "INSERT INTO trade_recent "
-        "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day) "
-        "VALUES ('APT001', '20평대', 27.5, 10, 30000, 2026, 4, 15)"
+        "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day, dealing_gbn) "
+        "VALUES ('APT001', '20평대', 27.5, 10, 30000, 2026, 4, 15, '중개거래')"
     )
     # trade_tags: 1층 태그 사전 삽입
     conn.execute(
@@ -412,8 +412,8 @@ class TestSearchBuildYearFilter:
         )
         full_db.execute(
             "INSERT INTO trade_recent "
-            "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day) "
-            "VALUES ('APT002', '20평대', 25.0, 5, 20000, 2026, 4, 10)"
+            "(apt_seq, pyeong_type, pyeong, floor, deal_amount_int, deal_year, deal_month, deal_day, dealing_gbn) "
+            "VALUES ('APT002', '20평대', 25.0, 5, 20000, 2026, 4, 10, '중개거래')"
         )
         full_db.commit()
         data = self._post(full_client, {'build_year_min': 1960}).json()
