@@ -299,6 +299,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
               AND r.wp_id=? AND r.rank=1 AND r.total_time_min<=?
               AND t.deal_amount_int<=?
               AND t.pyeong_type IN ({pt})
+              AND t.dealing_gbn = '중개거래'
               {min_cnt_clause}
               {build_year_clause}
               {min_price_card_clause}
@@ -364,6 +365,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
               AND r2.wp_id=? AND r2.rank=1 AND r2.total_time_min<=?
               AND t.deal_amount_int<=?
               AND t.pyeong_type IN ({pt})
+              AND t.dealing_gbn = '중개거래'
               {min_cnt_clause}
               {build_year_clause}
               {min_price_card_clause}
@@ -405,6 +407,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 FROM trade_recent
                 WHERE apt_seq IN ({ph})
                   AND deal_year*100 + deal_month >= ?
+                  AND dealing_gbn = '중개거래'
             )
             SELECT apt_seq, pyeong, pyeong_type, floor, deal_amount_int,
                    deal_year, deal_month, deal_day, dealing_gbn
