@@ -56,6 +56,17 @@ CREATE TABLE IF NOT EXISTS trade_history (
     floor           INTEGER,
     umd_nm          TEXT
 );
+CREATE TABLE IF NOT EXISTS trade_recent (
+    apt_seq         TEXT,
+    pyeong_type     TEXT,
+    pyeong          REAL,
+    deal_year       INTEGER,
+    deal_month      INTEGER,
+    deal_day        INTEGER,
+    deal_amount_int INTEGER,
+    floor           INTEGER,
+    dealing_gbn     TEXT
+);
 
 CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (
     apt_seq     TEXT,
