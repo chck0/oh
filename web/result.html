@@ -1946,6 +1946,10 @@ if(!params.get('workplace_address') || !params.get('pyeong_types')){
   location.replace('/search.html');
   throw new Error('redirect');
 }
+// "조건 다시 입력" 링크에 현재 검색 조건 전달 (search.html에서 prefill)
+document.querySelectorAll('a[href="/search.html"]').forEach(a => {
+  a.href = '/search.html' + location.search;
+});
 const reqBody = {
   workplace_address: params.get('workplace_address'),
   max_price: parseInt(params.get('max_price'), 10),
@@ -3313,6 +3317,8 @@ function tooltipDetailClick(){
 async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
+  _currentAptSeq = aptSeq;
+  clearPoiMarker();
   const panel = document.getElementById('cards-panel');
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
@@ -3775,7 +3781,11 @@ function renderPOIHTML(poi){
   return orderedKeys.map(key=>{
     const catName = POI_CAT_NAME[key]||'기타';
     return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
-      <div class="dp-poi-row">
+      <div class="dp-poi-row detail-poi-row"
+        data-poi-name="${escHtml(p.name||'')}"
+        data-walk-min="${p.walking_min||0}"
+        data-dist-m="${Math.round(p.distance_m||0)}"
+        onclick="togglePoiMarker(this)">
         <div class="dp-poi-name">${escHtml(p.name)}</div>
         <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
       </div>`).join('')}`;
