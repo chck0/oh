@@ -3518,10 +3518,12 @@ function renderDetailPanel(d, routes, wpId){
     </div>
   `;
 
-  // 차트 초기화
+  // 차트 초기화 — 검색한 평형 탭 우선, 없으면 거래 많은 순 첫 번째
   detailChartData = d.chart;
   if(d.pyeong_tabs && d.pyeong_tabs.length>0){
-    const def = d.pyeong_tabs[0];
+    const searchedPyeong = currentDetailCard?.pyeong_type;
+    const def = (searchedPyeong && d.pyeong_tabs.find(t => t.pyeong_type === searchedPyeong))
+               || d.pyeong_tabs[0];
     const defKey = `${def.pyeong_type}_${def.pyeong}`;
     currentTabKey = defKey;
     document.querySelector(`[data-tab="${defKey}"]`)?.classList.add('active');
