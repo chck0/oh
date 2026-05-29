@@ -2051,7 +2051,7 @@ async function runSearch(){
     const msg = err.name === 'AbortError' ? '검색 시간이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요.' : err.message;
     document.getElementById('cards-panel').innerHTML=`
       <div class="error-box"><h2>분석 중 오류</h2><p>${msg}</p>
-      <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p></div>`;
+      <p style="margin-top:16px"><a href="/search.html${location.search}">← 조건 다시 입력</a></p></div>`;
   }
 }
 
@@ -3020,10 +3020,10 @@ function renderCards(data){
            <h2>두 직장 반경 교집합에 매물이 없어요 😅</h2>
            <p style="margin-top:12px">두 직장 사이 거리가 멀거나 반경이 좁을 때 생겨요.<br>
              반경(최대 통근시간)을 늘리거나, 한 직장만 검색해 보세요.</p>
-           <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p>
+           <p style="margin-top:16px"><a href="/search.html${location.search}">← 조건 다시 입력</a></p>
          </div>`
       : `<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
-           <p style="margin-top:16px"><a href="/search.html">← 조건 다시 입력</a></p>
+           <p style="margin-top:16px"><a href="/search.html${location.search}">← 조건 다시 입력</a></p>
          </div>`;
     panel.innerHTML = emptyMsg;
     return;
