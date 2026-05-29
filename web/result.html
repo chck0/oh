@@ -1946,6 +1946,10 @@ if(!params.get('workplace_address') || !params.get('pyeong_types')){
   location.replace('/search.html');
   throw new Error('redirect');
 }
+// "조건 다시 입력" 링크에 현재 검색 조건 전달 (search.html에서 prefill)
+document.querySelectorAll('a[href="/search.html"]').forEach(a => {
+  a.href = '/search.html' + location.search;
+});
 const reqBody = {
   workplace_address: params.get('workplace_address'),
   max_price: parseInt(params.get('max_price'), 10),

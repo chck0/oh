@@ -773,6 +773,62 @@ function fillAddress(addr, targetId) {
 // 페이지 로드 시 자동 실행
 loadRecentSearches();
 
+// ── 이전 검색 조건 복원 (result.html → "조건 다시 입력" 클릭 시) ──
+(function prefillFromParams() {
+  const p = new URLSearchParams(location.search);
+  if (!p.get('workplace_address')) return;
+
+  // W1 주소
+  document.getElementById('address').value = p.get('workplace_address');
+
+  // W2 주소
+  const addr2 = p.get('workplace_address_2');
+  if (addr2) {
+    toggleWp2();
+    document.getElementById('address2').value = addr2;
+  }
+
+  // 최대 가격
+  const maxPrice = parseInt(p.get('max_price'), 10);
+  if (maxPrice) {
+    document.getElementById('price-eok').value = Math.floor(maxPrice / 10000);
+    document.getElementById('price-man').value = maxPrice % 10000;
+  }
+
+  // 최소 가격
+  const minPrice = parseInt(p.get('min_price'), 10);
+  if (minPrice) {
+    document.getElementById('min-price-eok').value = Math.floor(minPrice / 10000);
+    document.getElementById('min-price-man').value = minPrice % 10000;
+  }
+
+  // 통근시간 칩
+  const maxMin = p.get('max_minutes');
+  if (maxMin) {
+    document.querySelectorAll('#commute-chips .chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.value === maxMin);
+    });
+  }
+
+  // 평형 체크박스
+  const pyeongTypes = (p.get('pyeong_types') || '').split(',').filter(Boolean);
+  if (pyeongTypes.length) {
+    document.querySelectorAll('input[name=pyeong]').forEach(cb => {
+      cb.checked = pyeongTypes.includes(cb.value);
+    });
+  }
+
+  // 세대수 라디오
+  const mincnt = p.get('min_kaptdaCnt') || '';
+  const mincntEl = document.querySelector(`input[name=mincnt][value="${mincnt}"]`);
+  if (mincntEl) mincntEl.checked = true;
+
+  // 준공연도 라디오
+  const buildYear = p.get('build_year_min') || '';
+  const byEl = document.querySelector(`input[name=build_year_min][value="${buildYear}"]`);
+  if (byEl) byEl.checked = true;
+})();
+
 // ── Daum Postcode ─────────────────────────────────────────
 function openPostcode(targetId) {
   new daum.Postcode({
