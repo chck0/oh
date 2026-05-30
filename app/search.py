@@ -13,6 +13,7 @@ from app.workplaces import get_or_create
 from app.transit import fetch_cells, haversine, cell_center
 from app.ai import build_recommendations, build_stats, build_comments, card_key
 from app.portable import upsert_sql, year_month_minus, year_minus, greatest
+from config import cfg
 
 router = APIRouter()
 
@@ -1167,7 +1168,7 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
 실시간 호가·전세 정보는 없으니 추정할 때 반드시 "확인 필요"를 붙여.
 
 == 단지 ==
-{apt['apt_nm']} · {apt['umd_nm']} · {(apt['kaptdaCnt'] or 0):,}세대 · 준공 {apt.get('build_year') or '미상'}년
+{apt['apt_nm']} · {apt['umd_nm']} · {(apt['kaptdaCnt'] or 0):,}세대 · 준공 {apt['build_year'] or '미상'}년
 
 == 최근 실거래 (3년, 최대 20건) ==
 {trade_lines}"""
@@ -1179,7 +1180,9 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     messages.append({'role': 'user', 'content': req.message})
 
     try:
-        client = _anth.Anthropic(api_key=cfg.ANTHROPIC_API_KEY)
+        import os as _os
+        api_key = _os.environ.get('ANTHROPIC_API_KEY') or cfg.ANTHROPIC_API_KEY
+        client = _anth.Anthropic(api_key=api_key)
         msg = client.messages.create(
             model='claude-opus-4-8',
             max_tokens=500,
@@ -1188,6 +1191,7 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         )
         reply = msg.content[0].text if msg.content else "잠깐, 다시 시도해봐."
     except Exception as e:
-        reply = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__})"
+        import traceback as _tb
+        reply = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__}: {str(e)[:80]})"
 
     return {'reply': reply}
