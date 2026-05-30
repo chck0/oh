@@ -2541,11 +2541,14 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
   _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
   document.getElementById('chat-apt-name').textContent = aptNm || '';
   document.getElementById('chat-messages').innerHTML = '';
-  document.getElementById('chat-suggestions').innerHTML =
-    CHAT_SUGGESTIONS.map(q =>
-      `<button class="chat-chip" data-q="${escHtml(q)}" onclick="sendChatMessage(this.dataset.q)">${escHtml(q)}</button>`
-    ).join('');
-  document.getElementById('chat-suggestions').style.display = '';
+  const sugBox = document.getElementById('chat-suggestions');
+  sugBox.innerHTML = CHAT_SUGGESTIONS.map(q =>
+    `<button class="chat-chip">${escHtml(q)}</button>`
+  ).join('');
+  sugBox.querySelectorAll('.chat-chip').forEach((btn, i) => {
+    btn.addEventListener('click', () => sendChatMessage(CHAT_SUGGESTIONS[i]));
+  });
+  sugBox.style.display = '';
   document.getElementById('chat-panel').classList.remove('hidden');
   document.getElementById('chat-input').focus();
 }
