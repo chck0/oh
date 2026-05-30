@@ -1213,16 +1213,21 @@ def _do_search(query: str) -> str:
         req = urllib.request.Request(url, headers={"User-Agent": "badugi-chat/1.0"})
         with urllib.request.urlopen(req, timeout=5) as r:
             data = _json.loads(r.read())
-        abstract = data.get("AbstractText", "").strip()
+        abstract   = data.get("AbstractText", "").strip()
+        source_url  = data.get("AbstractURL", "").strip()
+        source_name = data.get("AbstractSource", "").strip()
         related = [
             t.get("Text", "")
             for t in data.get("RelatedTopics", [])[:3]
             if isinstance(t, dict) and t.get("Text")
         ]
         result = abstract or "\n".join(related)
-        return result or "검색 결과를 찾지 못했어."
+        if result and source_url:
+            label = source_name or source_url
+            result += f"\n[출처: {label}] {source_url}"
+        return result or "관련 공식 정보를 찾지 못했어."
     except Exception as e:
-        return f"검색 중 오류: {type(e).__name__}"
+        return f"검색 오류: {type(e).__name__}"
 
 
 def _parse_reply(raw: str) -> "tuple[str, list[str]]":
@@ -1364,9 +1369,27 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         for r in trades
     ) or "실거래 데이터 없음"
 
+    # 도보 주요 시설 (10분 이내)
+    poi_rows = conn.execute("""
+        SELECT poi_lclas_cd, poi_nm, walking_min
+        FROM apt_walking_poi
+        WHERE kaptCode = (
+            SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1
+        )
+          AND walking_min <= 10
+        ORDER BY walking_min, poi_lclas_cd
+        LIMIT 20
+    """, [apt_seq]).fetchall()
+    poi_lines = [
+        f"- {r['poi_nm']} ({r['poi_lclas_cd']}, 도보 {r['walking_min']}분)"
+        for r in poi_rows
+    ]
+
     system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
-반말, 카톡 말투. 5줄 이내. 모르는 건 search_web 도구로 검색 후 답해.
+반말, 카톡 말투. 5줄 이내.
+모르는 건 search_web 도구로 검색해서 답해. 검색 결과가 없거나 제한적이면 "공식 확인이 필요해" 라고 표현해 ("검색이 잘 안 나와" 같은 말은 절대 쓰지 마).
 실시간 호가·전세 정보는 없으니 추정할 때 반드시 "확인 필요"를 붙여.
+교통 호재·재개발·정부 정책을 언급할 땐 반드시 출처를 명시해. 예: [출처: 기사제목 또는 URL]
 
 답변 마지막에 공백 한 줄 후 반드시 이 형식으로 한국어 후속 질문 3개를 추가해:
 CHIPS: 질문1 | 질문2 | 질문3
@@ -1384,7 +1407,10 @@ CHIPS: 질문1 | 질문2 | 질문3
 {chr(10).join(dong_lines) or '데이터 없음'}
 
 == 최근 실거래 (최대 20건) ==
-{trade_lines}"""
+{trade_lines}
+
+== 도보 10분 이내 주요 시설 ==
+{chr(10).join(poi_lines) or '시설 데이터 없음'}"""
 
     messages: list[dict] = []
     for h in (req.history or []):
