@@ -2540,7 +2540,23 @@ function _openChatFromEl(el) {
 function openFriendChat(aptSeq, aptNm, pyeongType) {
   _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
   document.getElementById('chat-apt-name').textContent = aptNm || '';
-  document.getElementById('chat-messages').innerHTML = '';
+  const msgBox = document.getElementById('chat-messages');
+  msgBox.innerHTML = '';
+
+  // F3(spec-23): localStorage 대화 복원 (24시간 TTL, 최대 10턴)
+  try {
+    const saved = localStorage.getItem(`chat_${aptSeq}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Date.now() - parsed.ts < 86400000) {
+        _chatHistory = parsed.history || [];
+        _chatHistory.forEach(m => {
+          _appendChatMsg(m.role, escHtml(m.content).replace(/\n/g, '<br>'));
+        });
+      }
+    }
+  } catch(e) {}
+
   const sugBox = document.getElementById('chat-suggestions');
   sugBox.innerHTML = CHAT_SUGGESTIONS.map(q =>
     `<button class="chat-chip">${escHtml(q)}</button>`
@@ -2555,6 +2571,13 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
 
 function closeFriendChat() {
   document.getElementById('chat-panel').classList.add('hidden');
+  try {
+    if (_chatAptSeq && _chatHistory.length) {
+      localStorage.setItem(`chat_${_chatAptSeq}`, JSON.stringify({
+        ts: Date.now(), history: _chatHistory.slice(-10),
+      }));
+    }
+  } catch(e) {}
   _chatHistory = [];
 }
 
@@ -2578,6 +2601,11 @@ async function sendChatMessage(text) {
     _appendChatMsg('assistant', escHtml(reply).replace(/\n/g, '<br>'));
     _chatHistory.push({role:'user', content: message}, {role:'assistant', content: reply});
     if (_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
+    try {
+      localStorage.setItem(`chat_${_chatAptSeq}`, JSON.stringify({
+        ts: Date.now(), history: _chatHistory.slice(-10),
+      }));
+    } catch(e) {}
   } catch {
     document.getElementById(loadId)?.remove();
     _appendChatMsg('assistant', '에러가 났어. 잠깐 기다려봐.');
