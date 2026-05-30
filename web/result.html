@@ -2567,13 +2567,16 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
   const msgBox = document.getElementById('chat-messages');
   msgBox.innerHTML = '';
 
-  // F1(spec-24): 호가 링크 바
-  const naverUrl = `https://land.naver.com/search/complexInfo.nhn?searchString=${encodeURIComponent(aptNm || '')}`;
-  const hoUrl = `https://hogangnono.com/?search=${encodeURIComponent(aptNm || '')}`;
+  // F1(spec-24): 호가 링크 바 — 단지 내부 ID 없이 검색 URL로 연결
+  const _q = encodeURIComponent(aptNm || '');
+  const naverUrl = `https://new.land.naver.com/complexes?ms=37.5,127,13&a=APT:ABYG:JGC:DDDAPT&e=RETAIL&q=${_q}`;
+  const hoUrl    = `https://hogangnono.com/apt/search?search=${_q}`;
+  const asilUrl  = `https://asil.kr/asil/aptList.jsp?complexName=${_q}`;
   document.getElementById('chat-price-links').innerHTML =
     `<span class="chat-price-links__label">호가 보기:</span>` +
     `<a href="${naverUrl}" target="_blank" rel="noopener">네이버부동산</a>` +
-    `<a href="${hoUrl}" target="_blank" rel="noopener">호갱노노</a>`;
+    `<a href="${hoUrl}" target="_blank" rel="noopener">호갱노노</a>` +
+    `<a href="${asilUrl}" target="_blank" rel="noopener">아실</a>`;
 
   // spec-23: localStorage 대화 복원 (24시간 TTL, 최대 10턴)
   try {
