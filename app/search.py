@@ -512,6 +512,22 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
 
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
     raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, avg_price_map, dual=dual) for c in cards]
+    # 대표가(3개월 평균)가 검색 범위를 벗어난 카드 제거
+    # avg_price_map이 없는 카드(거래 없음)는 유지
+    def _price_in_range(card: dict) -> bool:
+        p = card.get('price_low')
+        if not p:
+            return True
+        # avg_price_map에서 온 값만 필터 (recent_map 기반으로 계산된 경우)
+        key = (card['apt_seq'], card['pyeong_type'])
+        if key not in avg_price_map:
+            return True  # fallback 값이면 필터 안 함
+        if req.max_price and p > req.max_price:
+            return False
+        if req.min_price and p < req.min_price:
+            return False
+        return True
+    raw_cards = [c for c in raw_cards if _price_in_range(c)]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
