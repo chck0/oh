@@ -1123,3 +1123,71 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         'trades': trades,
         'poi':    poi,
     }
+
+
+# ── POST /api/apt/{apt_seq}/chat  (spec-22: 친구 채팅) ─────────
+class AptChatRequest(BaseModel):
+    pyeong_type: str | None = None
+    wp_id:       int | None = None
+    message:     str = Field(..., min_length=1, max_length=500)
+    history:     list[dict] = Field(default_factory=list)
+
+
+@router.post("/apt/{apt_seq}/chat")
+def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
+    import anthropic as _anth
+
+    apt = conn.execute(
+        "SELECT apt_nm, umd_nm, kaptdaCnt, build_year FROM apartments WHERE apt_seq=? LIMIT 1",
+        [apt_seq],
+    ).fetchone()
+    if not apt:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없어요")
+
+    trades = conn.execute(
+        "SELECT pyeong_type, pyeong, deal_year, deal_month, deal_day, deal_amount_int, floor "
+        "FROM trade_history WHERE apt_seq=? "
+        "ORDER BY deal_year DESC, deal_month DESC, deal_day DESC LIMIT 20",
+        [apt_seq],
+    ).fetchall()
+
+    def _fmt(v: int) -> str:
+        e, m = v // 10000, v % 10000
+        return f"{e}억{f' {m:,}만' if m else ''}"
+
+    trade_lines = "\n".join(
+        f"- {r['pyeong_type']}({r['pyeong']:.0f}평) "
+        f"{r['deal_year']}.{r['deal_month']:02d}.{r['deal_day']:02d} "
+        f"{_fmt(r['deal_amount_int'])} {r['floor']}층"
+        for r in trades
+    ) or "실거래 데이터 없음"
+
+    system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
+반말, 카톡 말투. 5줄 이내. 모르는 건 솔직히 모른다고 해.
+실시간 호가·전세 정보는 없으니 추정할 때 반드시 "확인 필요"를 붙여.
+
+== 단지 ==
+{apt['apt_nm']} · {apt['umd_nm']} · {(apt['kaptdaCnt'] or 0):,}세대 · 준공 {apt.get('build_year') or '미상'}년
+
+== 최근 실거래 (3년, 최대 20건) ==
+{trade_lines}"""
+
+    messages: list[dict] = []
+    for h in (req.history or []):
+        if h.get('role') in ('user', 'assistant') and h.get('content'):
+            messages.append({'role': h['role'], 'content': str(h['content'])})
+    messages.append({'role': 'user', 'content': req.message})
+
+    try:
+        client = _anth.Anthropic(api_key=cfg.ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model='claude-opus-4-8',
+            max_tokens=500,
+            system=system,
+            messages=messages,
+        )
+        reply = msg.content[0].text if msg.content else "잠깐, 다시 시도해봐."
+    except Exception as e:
+        reply = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__})"
+
+    return {'reply': reply}
