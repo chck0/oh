@@ -1138,6 +1138,67 @@
       padding: 20px;
     }
     .compare-overlay.hidden { display: none; }
+
+    /* spec-22: 친구 채팅 패널 */
+    .chat-panel {
+      position: fixed; top: 54px; right: 0;
+      width: 370px; height: calc(100vh - 54px);
+      background: #fff; z-index: 850;
+      box-shadow: -6px 0 24px rgba(0,0,0,0.13);
+      border-radius: 16px 0 0 16px;
+      display: flex; flex-direction: column;
+      transition: transform 0.25s ease;
+    }
+    .chat-panel.hidden { transform: translateX(100%); pointer-events: none; }
+    .chat-panel__header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px 12px; border-bottom: 1px solid #f0f0f0;
+      background: #1c1c2e; border-radius: 16px 0 0 0; color: #fff;
+    }
+    .chat-panel__avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .chat-panel__apt-name { flex: 1; font-size: 14px; font-weight: 600; }
+    .chat-panel__close {
+      background: none; border: none; color: rgba(255,255,255,0.6);
+      font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .chat-panel__messages {
+      flex: 1; overflow-y: auto; padding: 14px 14px 6px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .chat-msg { max-width: 88%; font-size: 13px; line-height: 1.5; padding: 9px 13px; border-radius: 14px; }
+    .chat-msg--user { align-self: flex-end; background: var(--color-brand-primary); color: #fff; border-radius: 14px 14px 4px 14px; }
+    .chat-msg--assistant { align-self: flex-start; background: #f4f4f8; color: #222; border-radius: 14px 14px 14px 4px; }
+    .chat-panel__suggestions {
+      padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 7px;
+    }
+    .chat-chip {
+      background: #f0f3ff; color: var(--color-brand-primary);
+      border: 1px solid #dde4ff; border-radius: 20px;
+      font-size: 12px; padding: 5px 12px; cursor: pointer;
+      white-space: nowrap; transition: background 0.15s;
+    }
+    .chat-chip:hover { background: #dde4ff; }
+    .chat-panel__input-row {
+      display: flex; gap: 8px; padding: 10px 12px 14px;
+      border-top: 1px solid #f0f0f0;
+    }
+    .chat-panel__input-row input {
+      flex: 1; border: 1px solid #e0e0e0; border-radius: 22px;
+      padding: 8px 14px; font-size: 13px; outline: none;
+      font-family: inherit;
+    }
+    .chat-panel__input-row input:focus { border-color: var(--color-brand-primary); }
+    .chat-panel__send {
+      background: var(--color-brand-primary); color: #fff;
+      border: none; border-radius: 22px; padding: 8px 16px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .dp__friend { cursor: pointer; }
+    .dp__friend:hover { opacity: 0.85; }
     .compare-panel {
       background: white; border-radius: 16px;
       max-width: 860px; width: 100%;
@@ -1865,6 +1926,22 @@
         <div id="compare-table-container"></div>
       </div>
     </div>
+    <!-- spec-22: 친구 채팅 패널 -->
+    <div class="chat-panel hidden" id="chat-panel">
+      <div class="chat-panel__header">
+        <div class="chat-panel__avatar">친구</div>
+        <div class="chat-panel__apt-name" id="chat-apt-name"></div>
+        <button class="chat-panel__close" onclick="closeFriendChat()">✕</button>
+      </div>
+      <div class="chat-panel__messages" id="chat-messages"></div>
+      <div class="chat-panel__suggestions" id="chat-suggestions"></div>
+      <div class="chat-panel__input-row">
+        <input type="text" id="chat-input" placeholder="궁금한 거 물어봐..."
+          maxlength="200" onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="chat-panel__send" onclick="sendChatMessage()">전송</button>
+      </div>
+    </div>
+
     <!-- spec-19: 드래그 리사이즈 핸들 -->
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
@@ -2445,6 +2522,73 @@ function _renderDetail(d) {
 }
 
 // ── POI 마커 (spec-19) ────────────────────────────────────────
+// ══ spec-22: 친구 채팅 ════════════════════════════════════════
+let _chatAptSeq = null, _chatPyeongType = null, _chatHistory = [];
+
+const CHAT_SUGGESTIONS = [
+  '지금 호가가 얼마야?',
+  '전세가는 어떻게 돼?',
+  '학군은 어때?',
+  '투자 가치 있어?',
+  '단지 장단점 솔직하게 말해봐',
+];
+
+function openFriendChat(aptSeq, aptNm, pyeongType) {
+  _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
+  document.getElementById('chat-apt-name').textContent = aptNm || '';
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('chat-suggestions').innerHTML =
+    CHAT_SUGGESTIONS.map(q =>
+      `<button class="chat-chip" onclick="sendChatMessage(${JSON.stringify(q)})">${escHtml(q)}</button>`
+    ).join('');
+  document.getElementById('chat-suggestions').style.display = '';
+  document.getElementById('chat-panel').classList.remove('hidden');
+  document.getElementById('chat-input').focus();
+}
+
+function closeFriendChat() {
+  document.getElementById('chat-panel').classList.add('hidden');
+  _chatHistory = [];
+}
+
+async function sendChatMessage(text) {
+  const input = document.getElementById('chat-input');
+  const message = (text || input.value).trim();
+  if (!message || !_chatAptSeq) return;
+  input.value = '';
+  document.getElementById('chat-suggestions').style.display = 'none';
+  _appendChatMsg('user', escHtml(message));
+  const loadId = 'cl-' + Date.now();
+  _appendChatMsg('assistant', '<span class="spinner-mini"></span> 생각 중...', loadId);
+  try {
+    const res = await fetch(`/api/apt/${_chatAptSeq}/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1'},
+      body: JSON.stringify({pyeong_type: _chatPyeongType, message, history: _chatHistory}),
+    });
+    const data = await res.json();
+    document.getElementById(loadId)?.remove();
+    const reply = data.reply || '잠깐, 다시 시도해봐.';
+    _appendChatMsg('assistant', escHtml(reply).replace(/\n/g, '<br>'));
+    _chatHistory.push({role:'user', content: message}, {role:'assistant', content: reply});
+    if (_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
+  } catch {
+    document.getElementById(loadId)?.remove();
+    _appendChatMsg('assistant', '에러가 났어. 잠깐 기다려봐.');
+  }
+}
+
+function _appendChatMsg(role, html, id) {
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg chat-msg--${role}`;
+  if (id) div.id = id;
+  div.innerHTML = html;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+// ═════════════════════════════════════════════════════════════
+
 function clearPoiMarker() {
   if (_poiInfoWindow) { _poiInfoWindow.close(); _poiInfoWindow = null; }
   if (_poiMarker) { _poiMarker.setMap(null); _poiMarker = null; }
@@ -2904,11 +3048,12 @@ function renderRecCard(c, wpId, cmpMode=false){
   </div>`;
 
   const comment = c.friend_comment || '';
+  const _rcChatArgs = `'${c.apt_seq}','${escHtml(c.apt_nm||'')}','${escHtml(c.pyeong_type||'')}'`;
   const friendHtml = comment
-    ? `<div class="rec-card__friend">
+    ? `<div class="rec-card__friend" style="cursor:pointer" onclick="event.stopPropagation();openFriendChat(${_rcChatArgs})" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
         <div class="rec-card__friend-body">
-          <div class="rec-card__friend-label">한마디</div>
+          <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
           <div class="rec-card__friend-text">${escHtml(comment)}</div>
         </div>
       </div>`
@@ -3427,11 +3572,12 @@ function renderDetailPanel(d, routes, wpId){
 
   // ── 친구 한마디 (HERO)
   const friend = d.friend_comment || '';
+  const _chatArgs = `'${d.apt_seq}','${escHtml(d.apt_nm)}','${escHtml(cardRef.pyeong_type||'')}'`;
   const friendHtml = friend
-    ? `<div class="dp__friend">
+    ? `<div class="dp__friend" onclick="openFriendChat(${_chatArgs})" title="친구에게 더 물어보기">
         <div class="dp__friend-avatar">친구</div>
         <div class="dp__friend-body">
-          <div class="dp__friend-label">한마디</div>
+          <div class="dp__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 탭해서 더 물어보기 →</span></div>
           <div class="dp__friend-text">${escHtml(friend)}</div>
         </div>
       </div>`
