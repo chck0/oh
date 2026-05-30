@@ -2567,16 +2567,15 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
   const msgBox = document.getElementById('chat-messages');
   msgBox.innerHTML = '';
 
-  // F1(spec-24): 호가 링크 바 — 단지 내부 ID 없이 검색 URL로 연결
+  // F1(spec-24): 호가 링크 바
+  // 두 플랫폼 모두 내부 단지 ID 필요 → 네이버는 검색 URL, 호갱노노는 홈에서 직접 검색
   const _q = encodeURIComponent(aptNm || '');
   const naverUrl = `https://new.land.naver.com/complexes?ms=37.5,127,13&a=APT:ABYG:JGC:DDDAPT&e=RETAIL&q=${_q}`;
-  const hoUrl    = `https://hogangnono.com/apt/search?search=${_q}`;
-  const asilUrl  = `https://asil.kr/asil/aptList.jsp?complexName=${_q}`;
+  const hoUrl    = `https://hogangnono.com/`;
   document.getElementById('chat-price-links').innerHTML =
     `<span class="chat-price-links__label">호가 보기:</span>` +
-    `<a href="${naverUrl}" target="_blank" rel="noopener">네이버부동산</a>` +
-    `<a href="${hoUrl}" target="_blank" rel="noopener">호갱노노</a>` +
-    `<a href="${asilUrl}" target="_blank" rel="noopener">아실</a>`;
+    `<a href="${naverUrl}" target="_blank" rel="noopener" title="${aptNm} 검색">네이버부동산</a>` +
+    `<a href="${hoUrl}" target="_blank" rel="noopener" title="호갱노노에서 직접 검색">호갱노노</a>`;
 
   // spec-23: localStorage 대화 복원 (24시간 TTL, 최대 10턴)
   try {
