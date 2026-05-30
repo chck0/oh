@@ -1114,6 +1114,8 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         'apt_nm':    apt['apt_nm'],
         'umd_nm':    umd_nm,
         'kaptdaCnt': apt['kaptdaCnt'],
+        'lat':       apt['lat'],
+        'lng':       apt['lng'],
         'tier':           tier,
         'friend_comment': friend_comment,
         'building':       building_info,
