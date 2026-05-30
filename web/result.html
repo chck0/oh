@@ -2503,6 +2503,45 @@ function showPoiMarker(poiName, walkMin, distM) {
   });
 }
 
+// ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
+async function validateAndFilterPois() {
+  const card = resultData?.cards.find(c => c.apt_seq === _currentAptSeq);
+  if (!card || !card.lat || !card.lng) return;
+  const rows = Array.from(document.querySelectorAll('.dp-poi-row.detail-poi-row'));
+  if (!rows.length) return;
+
+  const aptLatLng = new kakao.maps.LatLng(card.lat, card.lng);
+  const ps = new kakao.maps.services.Places();
+
+  function _search(name, radius) {
+    return new Promise(resolve => {
+      ps.keywordSearch(name, (data, status) => {
+        if (status === kakao.maps.services.Status.OK && data.length) { resolve(true); return; }
+        if (name.length > 4) {
+          ps.keywordSearch(name.substring(0, 6), (d2, s2) => {
+            resolve(s2 === kakao.maps.services.Status.OK && d2.length > 0);
+          }, { location: aptLatLng, radius, size: 1 });
+        } else { resolve(false); }
+      }, { location: aptLatLng, radius, size: 1 });
+    });
+  }
+
+  // 순차 처리 (Kakao API 동시 호출 제한 대비)
+  for (const row of rows) {
+    const name = row.dataset.poiName || '';
+    const distM = parseInt(row.dataset.distM, 10) || 300;
+    const radius = Math.min(Math.max(distM + 300, 600), 2000);
+    const found = await _search(name, radius);
+    if (!found) row.remove();
+  }
+
+  // 빈 카테고리 헤더 정리
+  document.querySelectorAll('.dp-poi-category').forEach(header => {
+    let sib = header.nextElementSibling;
+    if (!sib || sib.classList.contains('dp-poi-category')) header.remove();
+  });
+}
+
 // ── 패널 리사이즈 핸들 (spec-19) ─────────────────────────────
 (function initResizeHandle() {
   const handle  = document.getElementById('resize-handle');
@@ -3361,6 +3400,7 @@ async function showDetail(aptSeq, wpId){
     const routes = (await rRes.json()).options || [];
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
     renderDetailPanel(detail, routes, wpId);
+    if (kakaoMap) validateAndFilterPois();
   } catch(e){
     panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
@@ -3429,12 +3469,7 @@ function renderDetailPanel(d, routes, wpId){
   const poi = d.poi || [];
   const subwayPoi = poi.find(p=>p.category==='D' && p.sub_category==='D01') || null;
   const schoolCnt = poi.filter(p=>p.category==='A').length;
-  const poiPreview = poi.length
-    ? [
-        subwayPoi ? `지하철 도보 <span class="num">${subwayPoi.walking_min}</span>분` : null,
-        schoolCnt ? `학교 <span class="num">${schoolCnt}</span>곳` : null,
-      ].filter(Boolean).join(' · ') || `<span class="num">${poi.length}</span>곳 인근`
-    : '시설 데이터 없음';
+  const poiPreview = poi.length ? '도보 10분 이내' : '시설 데이터 없음';
 
   const bldPreviewParts = [];
   if(bld.builder) bldPreviewParts.push(`시공 ${escHtml(bld.builder)}`);

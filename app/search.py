@@ -1033,8 +1033,9 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         WHERE kaptCode = (
             SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1
         )
+          AND walking_min <= 10
         ORDER BY distance_m
-        LIMIT 30
+        LIMIT 50
     """, [apt_seq]).fetchall()
 
     poi = [
