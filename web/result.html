@@ -486,7 +486,47 @@
     }
 
     /* ════════════════════════════════════════════════════════
-       추천 섹션 헤더
+       spec-26: 아파트 직접 검색
+       ════════════════════════════════════════════════════════ */
+    .apt-search-bar {
+      display: flex; gap: 8px; padding: 10px 14px;
+      background: #f8f8fb; border-radius: 12px; margin-bottom: 10px;
+    }
+    .apt-search-bar input {
+      flex: 1; border: 1px solid #dde; border-radius: 20px;
+      padding: 7px 14px; font-size: 13px; outline: none; font-family: inherit;
+    }
+    .apt-search-bar input:focus { border-color: var(--color-brand-primary); }
+    .apt-search-bar button {
+      background: var(--color-brand-primary); color: #fff;
+      border: none; border-radius: 20px; padding: 7px 16px;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .apt-lookup-card {
+      background: #fff; border: 2px solid var(--color-brand-primary);
+      border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px;
+      position: relative;
+    }
+    .apt-lookup-card__badge {
+      display: inline-block; background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700; border-radius: 6px;
+      padding: 2px 8px; margin-bottom: 6px;
+    }
+    .apt-lookup-card__title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+    .apt-lookup-card__meta { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .apt-lookup-card__price { font-size: 14px; font-weight: 600; color: var(--red-600); }
+    .apt-lookup-card__transit { font-size: 12px; color: #555; margin-top: 3px; }
+    .apt-lookup-card__footer {
+      display: flex; justify-content: flex-end; margin-top: 10px;
+    }
+    .apt-lookup-card__chat {
+      background: #f0f3ff; color: var(--color-brand-primary);
+      border: 1px solid #dde4ff; border-radius: 16px;
+      font-size: 12px; padding: 5px 14px; cursor: pointer;
+    }
+    .apt-search-empty { color: #999; font-size: 13px; padding: 8px 14px; }
+
+       /* 추천 섹션 헤더
        ════════════════════════════════════════════════════════ */
     .rec-section-head {
       background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
@@ -2539,12 +2579,13 @@ function _renderDetail(d) {
 // ══ spec-22: 친구 채팅 ════════════════════════════════════════
 let _chatAptSeq = null, _chatPyeongType = null, _chatHistory = [];
 
+// spec-25: Claude가 실제로 답변 가능한 질문으로 구성
 const CHAT_SUGGESTIONS = [
-  '지금 호가가 얼마야?',
-  '전세가는 어떻게 돼?',
-  '학군은 어때?',
-  '투자 가치 있어?',
+  '최근 시세 트렌드 어때?',
+  '주변 단지 대비 시세는?',
   '단지 장단점 솔직하게 말해봐',
+  '투자 가치 있어?',
+  '학군이랑 주변 환경은?',
 ];
 
 function _openChatFromEl(el) {
@@ -2654,6 +2695,61 @@ function _appendChatMsg(role, html, id) {
   box.scrollTop = box.scrollHeight;
 }
 // ═════════════════════════════════════════════════════════════
+
+// ── spec-26: 아파트 직접 검색 ─────────────────────────────────
+async function searchAptDirect() {
+  const input = document.getElementById('apt-search-input');
+  const name = (input?.value || '').trim();
+  if (name.length < 2) return;
+  const wpId = window._lastWpId || 0;
+  const pyeongType = window._lastSearchData?.search_params?.pyeong_types?.[0] || '20평대';
+  const resultDiv = document.getElementById('apt-search-result');
+  if (!resultDiv) return;
+  resultDiv.innerHTML = '<div class="apt-search-empty">검색 중…</div>';
+  try {
+    const res = await fetch(
+      `/api/search/apt-lookup?name=${encodeURIComponent(name)}&wp_id=${wpId}&pyeong_type=${encodeURIComponent(pyeongType)}`,
+      {headers: {'ngrok-skip-browser-warning': '1'}}
+    );
+    const data = await res.json();
+    if (!data.results?.length) {
+      resultDiv.innerHTML = `<div class="apt-search-empty">「${escHtml(name)}」 검색 결과가 없어요</div>`;
+      return;
+    }
+    resultDiv.innerHTML = data.results.map(r => renderAptLookupCard(r)).join('');
+  } catch(e) {
+    resultDiv.innerHTML = '<div class="apt-search-empty">검색 중 오류가 발생했어요</div>';
+  }
+}
+
+function renderAptLookupCard(r) {
+  function _fmt(v) {
+    if (!v) return '-';
+    const e = Math.floor(v / 10000), m = v % 10000;
+    return e ? `${e}억${m ? ` ${m.toLocaleString()}만` : ''}` : `${v.toLocaleString()}만`;
+  }
+  const price = (r.price_low && r.price_high)
+    ? `${_fmt(r.price_low)} ~ ${_fmt(r.price_high)}`
+    : (r.price_low ? _fmt(r.price_low) : '-');
+  const transit = r.transit_min ? `통근 약 ${r.transit_min}분` : '통근시간 미조회';
+  const meta = [r.umd_nm, r.kaptdaCnt ? `${r.kaptdaCnt.toLocaleString()}세대` : null, r.build_year ? `${r.build_year}년` : null]
+    .filter(Boolean).join(' · ');
+  return `<div class="apt-lookup-card">
+    <div class="apt-lookup-card__badge">직접 검색</div>
+    <div class="apt-lookup-card__title">${escHtml(r.apt_nm)}</div>
+    <div class="apt-lookup-card__meta">${escHtml(meta)}</div>
+    <div class="apt-lookup-card__price">${escHtml(r.pyeong_type)} ${price}</div>
+    <div class="apt-lookup-card__transit">${transit}</div>
+    <div class="apt-lookup-card__footer">
+      <button class="apt-lookup-card__chat"
+        data-apt-seq="${r.apt_seq}" data-apt-nm="${escHtml(r.apt_nm)}"
+        data-pyeong-type="${escHtml(r.pyeong_type)}"
+        data-lat="${r.lat||''}" data-lng="${r.lng||''}"
+        onclick="_openChatFromEl(this)">친구에게 물어보기</button>
+    </div>
+  </div>`;
+}
+// ─────────────────────────────────────────────────────────────
 
 function clearPoiMarker() {
   if (_poiInfoWindow) { _poiInfoWindow.close(); _poiInfoWindow = null; }
@@ -3292,6 +3388,15 @@ function renderCards(data){
     : '';
 
   let html = partialBanner + renderStatsPanel(data);
+
+  // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
+  html += `
+    <div class="apt-search-bar">
+      <input type="text" id="apt-search-input" placeholder="아파트 이름으로 직접 검색… (예: 래미안아트리치)"
+        maxlength="30" onkeydown="if(event.key==='Enter')searchAptDirect()">
+      <button onclick="searchAptDirect()">찾기</button>
+    </div>
+    <div id="apt-search-result"></div>`;
 
   // 추천 섹션
   if(recommended.length){

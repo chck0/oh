@@ -868,6 +868,58 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
     return {'apt_seq': apt_seq, 'wp_id': wp_id, 'options': options}
 
 
+# ── GET /api/search/apt-lookup  (spec-26: 분석결과 직접 검색) ──
+@router.get("/search/apt-lookup")
+def search_apt_lookup(
+    name: str = "",
+    wp_id: int = 0,
+    pyeong_type: str = "20평대",
+    conn=Depends(get_db),
+):
+    if len(name.strip()) < 2:
+        return {"results": []}
+
+    apts = conn.execute(
+        "SELECT apt_seq, apt_nm, umd_nm, lat, lng, kaptdaCnt, build_year "
+        "FROM apartments WHERE apt_nm LIKE ? AND is_apt=1 "
+        "ORDER BY kaptdaCnt DESC LIMIT 3",
+        [f"%{name.strip()}%"],
+    ).fetchall()
+
+    results = []
+    for apt in apts:
+        trade = conn.execute(
+            "SELECT price_low, price_high FROM trade_recent "
+            "WHERE apt_seq=? AND pyeong_type=? LIMIT 1",
+            [apt["apt_seq"], pyeong_type],
+        ).fetchone()
+
+        transit = conn.execute(
+            "SELECT MIN(total_time) AS transit_min FROM transit_cache "
+            "WHERE wp_id=? AND passed_filter=1 "
+            "  AND origin_cell=(SELECT grid_key FROM apartments WHERE apt_seq=? LIMIT 1)",
+            [wp_id, apt["apt_seq"]],
+        ).fetchone()
+
+        results.append(
+            {
+                "apt_seq":    apt["apt_seq"],
+                "apt_nm":     apt["apt_nm"],
+                "umd_nm":     apt["umd_nm"],
+                "lat":        apt["lat"],
+                "lng":        apt["lng"],
+                "kaptdaCnt":  apt["kaptdaCnt"],
+                "build_year": apt["build_year"],
+                "pyeong_type": pyeong_type,
+                "price_low":  trade["price_low"]  if trade else None,
+                "price_high": trade["price_high"] if trade else None,
+                "transit_min": transit["transit_min"] if transit and transit["transit_min"] else None,
+            }
+        )
+
+    return {"results": results}
+
+
 # ── GET /api/apt/{apt_seq}/detail ────────────────────────────
 @router.get("/apt/{apt_seq}/detail")
 def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
