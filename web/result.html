@@ -2533,6 +2533,10 @@ const CHAT_SUGGESTIONS = [
   '단지 장단점 솔직하게 말해봐',
 ];
 
+function _openChatFromEl(el) {
+  openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '');
+}
+
 function openFriendChat(aptSeq, aptNm, pyeongType) {
   _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
   document.getElementById('chat-apt-name').textContent = aptNm || '';
@@ -3048,9 +3052,10 @@ function renderRecCard(c, wpId, cmpMode=false){
   </div>`;
 
   const comment = c.friend_comment || '';
-  const _rcChatArgs = `'${c.apt_seq}','${escHtml(c.apt_nm||'')}','${escHtml(c.pyeong_type||'')}'`;
   const friendHtml = comment
-    ? `<div class="rec-card__friend" style="cursor:pointer" onclick="event.stopPropagation();openFriendChat(${_rcChatArgs})" title="더 물어보기">
+    ? `<div class="rec-card__friend" style="cursor:pointer"
+        data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
+        onclick="event.stopPropagation();_openChatFromEl(this)" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
         <div class="rec-card__friend-body">
           <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
@@ -3572,9 +3577,10 @@ function renderDetailPanel(d, routes, wpId){
 
   // ── 친구 한마디 (HERO)
   const friend = d.friend_comment || '';
-  const _chatArgs = `'${d.apt_seq}','${escHtml(d.apt_nm)}','${escHtml(cardRef.pyeong_type||'')}'`;
   const friendHtml = friend
-    ? `<div class="dp__friend" onclick="openFriendChat(${_chatArgs})" title="친구에게 더 물어보기">
+    ? `<div class="dp__friend"
+        data-apt-seq="${d.apt_seq}" data-apt-nm="${escHtml(d.apt_nm)}" data-pyeong-type="${escHtml(cardRef.pyeong_type||'')}"
+        onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
         <div class="dp__friend-avatar">친구</div>
         <div class="dp__friend-body">
           <div class="dp__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 탭해서 더 물어보기 →</span></div>
