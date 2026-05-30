@@ -881,8 +881,8 @@ def search_apt_lookup(
 
     apts = conn.execute(
         "SELECT apt_seq, apt_nm, umd_nm, lat, lng, kaptdaCnt, build_year "
-        "FROM apartments WHERE apt_nm LIKE ? AND is_apt=1 "
-        "ORDER BY kaptdaCnt DESC LIMIT 3",
+        "FROM apartments WHERE apt_nm LIKE ? "
+        "ORDER BY kaptdaCnt DESC LIMIT 5",
         [f"%{name.strip()}%"],
     ).fetchall()
 
