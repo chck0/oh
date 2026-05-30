@@ -489,19 +489,32 @@
        spec-26: 아파트 직접 검색
        ════════════════════════════════════════════════════════ */
     .apt-search-bar {
-      display: flex; gap: 8px; padding: 10px 14px;
-      background: #f8f8fb; border-radius: 12px; margin-bottom: 10px;
+      padding: 10px 14px 4px; background: #f8f8fb; border-radius: 12px; margin-bottom: 10px;
     }
+    .apt-search-input-wrap { position: relative; }
     .apt-search-bar input {
-      flex: 1; border: 1px solid #dde; border-radius: 20px;
-      padding: 7px 14px; font-size: 13px; outline: none; font-family: inherit;
+      width: 100%; box-sizing: border-box;
+      border: 1px solid #dde; border-radius: 20px;
+      padding: 8px 16px; font-size: 13px; outline: none; font-family: inherit;
     }
     .apt-search-bar input:focus { border-color: var(--color-brand-primary); }
-    .apt-search-bar button {
-      background: var(--color-brand-primary); color: #fff;
-      border: none; border-radius: 20px; padding: 7px 16px;
-      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    .apt-search-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #fff; border: 1px solid #dde4ff; border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 200; overflow: hidden;
     }
+    .apt-dropdown-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; cursor: pointer; gap: 8px;
+    }
+    .apt-dropdown-item:hover { background: #f0f3ff; }
+    .apt-dropdown-nm { font-size: 13px; font-weight: 600; }
+    .apt-dropdown-meta { font-size: 11px; color: #999; flex-shrink: 0; }
+    .apt-dropdown-tag {
+      font-size: 10px; background: #e8f0ff; color: var(--color-brand-primary);
+      border-radius: 6px; padding: 1px 6px; margin-left: 4px;
+    }
+    .apt-dropdown-empty, .apt-dropdown-loading { padding: 10px 16px; font-size: 13px; color: #999; }
     .apt-lookup-card {
       background: #fff; border: 2px solid var(--color-brand-primary);
       border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px;
@@ -2696,30 +2709,87 @@ function _appendChatMsg(role, html, id) {
 }
 // ═════════════════════════════════════════════════════════════
 
-// ── spec-26: 아파트 직접 검색 ─────────────────────────────────
-async function searchAptDirect() {
-  const input = document.getElementById('apt-search-input');
-  const name = (input?.value || '').trim();
-  if (name.length < 2) return;
-  const wpId = window._lastWpId || 0;
+// ── spec-26: 아파트 직접 검색 (자동완성) ────────────────────────
+let _aptSearchDebounce = null;
+let _aptDropdownData   = [];
+
+function _onAptSearchInput() {
+  const val = (document.getElementById('apt-search-input')?.value || '').trim();
+  if (val.length < 2) { _hideAptDropdown(); return; }
+
+  // 1) 현재 결과 카드에서 즉시 검색 (항상 동작)
+  const cardHits = _searchInCards(val);
+  _showAptDropdown(cardHits, val, true);
+
+  // 2) DB 에서 추가 검색 (300ms 디바운스)
+  clearTimeout(_aptSearchDebounce);
+  _aptSearchDebounce = setTimeout(() => _fetchAptSuggestions(val, cardHits), 300);
+}
+
+function _searchInCards(query) {
+  const q = query.toLowerCase();
+  return (window._lastCards || [])
+    .filter(c => c.apt_nm?.toLowerCase().includes(q))
+    .slice(0, 5)
+    .map(c => ({
+      apt_seq: c.apt_seq, apt_nm: c.apt_nm, umd_nm: c.umd_nm,
+      lat: c.lat, lng: c.lng, kaptdaCnt: c.kaptdaCnt, build_year: c.build_year,
+      pyeong_type: c.pyeong_type, price_low: c.price_low, price_high: c.price_high,
+      transit_min: c.total_time_min, _inResult: true,
+    }));
+}
+
+async function _fetchAptSuggestions(name, cardHits) {
+  const wpId       = window._lastWpId || 0;
   const pyeongType = window._lastSearchData?.search_params?.pyeong_types?.[0] || '20평대';
-  const resultDiv = document.getElementById('apt-search-result');
-  if (!resultDiv) return;
-  resultDiv.innerHTML = '<div class="apt-search-empty">검색 중…</div>';
   try {
     const res = await fetch(
       `/api/search/apt-lookup?name=${encodeURIComponent(name)}&wp_id=${wpId}&pyeong_type=${encodeURIComponent(pyeongType)}`,
-      {headers: {'ngrok-skip-browser-warning': '1'}}
+      { headers: { 'ngrok-skip-browser-warning': '1' } }
     );
     const data = await res.json();
-    if (!data.results?.length) {
-      resultDiv.innerHTML = `<div class="apt-search-empty">「${escHtml(name)}」 검색 결과가 없어요</div>`;
-      return;
-    }
-    resultDiv.innerHTML = data.results.map(r => renderAptLookupCard(r)).join('');
+    const seenSeqs = new Set(cardHits.map(r => r.apt_seq));
+    const extra = (data.results || []).filter(r => !seenSeqs.has(r.apt_seq));
+    _showAptDropdown([...cardHits, ...extra], name, false);
   } catch(e) {
-    resultDiv.innerHTML = '<div class="apt-search-empty">검색 중 오류가 발생했어요</div>';
+    _showAptDropdown(cardHits, name, false);
   }
+}
+
+function _showAptDropdown(results, query, loading) {
+  _aptDropdownData = results;
+  const drop = document.getElementById('apt-search-dropdown');
+  if (!drop) return;
+  if (!results.length && !loading) {
+    drop.innerHTML = `<div class="apt-dropdown-empty">「${escHtml(query)}」 결과 없음</div>`;
+    drop.style.display = 'block';
+    return;
+  }
+  drop.innerHTML = results.map((r, i) =>
+    `<div class="apt-dropdown-item" data-idx="${i}">
+      <span class="apt-dropdown-nm">${escHtml(r.apt_nm)}
+        ${r._inResult ? '<span class="apt-dropdown-tag">결과 내</span>' : ''}
+      </span>
+      <span class="apt-dropdown-meta">${escHtml(r.umd_nm || '')}</span>
+    </div>`
+  ).join('') + (loading ? '<div class="apt-dropdown-loading">검색 중…</div>' : '');
+  drop.querySelectorAll('.apt-dropdown-item').forEach(el => {
+    el.addEventListener('click', () => _selectAptResult(_aptDropdownData[+el.dataset.idx]));
+  });
+  drop.style.display = 'block';
+}
+
+function _hideAptDropdown() {
+  const drop = document.getElementById('apt-search-dropdown');
+  if (drop) drop.style.display = 'none';
+}
+
+function _selectAptResult(r) {
+  const inp = document.getElementById('apt-search-input');
+  if (inp) inp.value = r.apt_nm;
+  _hideAptDropdown();
+  const resultDiv = document.getElementById('apt-search-result');
+  if (resultDiv) resultDiv.innerHTML = renderAptLookupCard(r);
 }
 
 function renderAptLookupCard(r) {
@@ -3392,9 +3462,14 @@ function renderCards(data){
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
   html += `
     <div class="apt-search-bar">
-      <input type="text" id="apt-search-input" placeholder="아파트 이름으로 직접 검색… (예: 래미안아트리치)"
-        maxlength="30" onkeydown="if(event.key==='Enter')searchAptDirect()">
-      <button onclick="searchAptDirect()">찾기</button>
+      <div class="apt-search-input-wrap">
+        <input type="text" id="apt-search-input"
+          placeholder="아파트 이름으로 직접 검색… (예: 래미안)"
+          maxlength="30" autocomplete="off"
+          oninput="_onAptSearchInput()"
+          onkeydown="if(event.key==='Escape')_hideAptDropdown()">
+        <div class="apt-search-dropdown" id="apt-search-dropdown" style="display:none"></div>
+      </div>
     </div>
     <div id="apt-search-result"></div>`;
 
