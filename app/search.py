@@ -431,6 +431,12 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     else:
         recent_map = {}
 
+    # ─ 4b-2. 3개월 평균가 맵 (배지 대표 가격용) ─
+    avg_price_map: dict = {
+        key: round(sum(t['amount'] for t in trades) / len(trades))
+        for key, trades in recent_map.items() if trades
+    }
+
     # ─ 4c. why_tags 배치 조회 ─
     # trade_tags 테이블이 없거나 비어 있으면 graceful degradation → why_tags: []
     tag_map: dict = {}
@@ -505,7 +511,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 pass
 
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, dual=dual) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, avg_price_map, dual=dual) for c in cards]
     rec = build_recommendations(raw_cards, effective_max_min)
     buckets = rec['buckets']
     all_cards = rec['cards']
@@ -710,7 +716,7 @@ def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: 
     return summary
 
 
-def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, dual: bool = False):
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, avg_price_map: dict | None = None, dual: bool = False):
     # ── wp1 transit 파싱 ─────────────────────────────────────────
     if dual:
         bc_1, sc_1 = r['bus_cnt_1'], r['subway_cnt_1']
@@ -779,7 +785,11 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         'transit_summary': transit_summary,
         'transit_summary_1': transit_summary_1,
         'transit_summary_2': transit_summary_2,
-        'price_low':  r['price_low'], 'price_high': r['price_high'],
+        # 대표가: 3개월 평균 → 최신 거래 → MIN(fallback)
+        'price_low': (avg_price_map or {}).get((apt_seq, pyeong_type))
+                     or ((recent_map or {}).get((apt_seq, pyeong_type)) or [{}])[0].get('amount')
+                     or r['price_low'],
+        'price_high': r['price_high'],
         'pyeong_price_avg': pyeong_price,
         'deal_count': r['deal_count'],
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
