@@ -13,6 +13,7 @@ from app.workplaces import get_or_create
 from app.transit import fetch_cells, haversine, cell_center
 from app.ai import build_recommendations, build_stats, build_comments, card_key
 from app.portable import upsert_sql, year_month_minus, year_minus, greatest
+from config import cfg
 
 router = APIRouter()
 

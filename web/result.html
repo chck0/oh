@@ -2543,7 +2543,7 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('chat-suggestions').innerHTML =
     CHAT_SUGGESTIONS.map(q =>
-      `<button class="chat-chip" onclick="sendChatMessage(${JSON.stringify(q)})">${escHtml(q)}</button>`
+      `<button class="chat-chip" data-q="${escHtml(q)}" onclick="sendChatMessage(this.dataset.q)">${escHtml(q)}</button>`
     ).join('');
   document.getElementById('chat-suggestions').style.display = '';
   document.getElementById('chat-panel').classList.remove('hidden');
@@ -2560,7 +2560,6 @@ async function sendChatMessage(text) {
   const message = (text || input.value).trim();
   if (!message || !_chatAptSeq) return;
   input.value = '';
-  document.getElementById('chat-suggestions').style.display = 'none';
   _appendChatMsg('user', escHtml(message));
   const loadId = 'cl-' + Date.now();
   _appendChatMsg('assistant', '<span class="spinner-mini"></span> 생각 중...', loadId);
