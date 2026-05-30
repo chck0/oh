@@ -2548,7 +2548,8 @@ const CHAT_SUGGESTIONS = [
 ];
 
 function _openChatFromEl(el) {
-  openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '');
+  openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '',
+    parseFloat(el.dataset.lat) || 0, parseFloat(el.dataset.lng) || 0);
 }
 
 function _renderChips(questions) {
@@ -2561,22 +2562,20 @@ function _renderChips(questions) {
   });
 }
 
-function openFriendChat(aptSeq, aptNm, pyeongType) {
+function openFriendChat(aptSeq, aptNm, pyeongType, lat, lng) {
   _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
   document.getElementById('chat-apt-name').textContent = aptNm || '';
   const msgBox = document.getElementById('chat-messages');
   msgBox.innerHTML = '';
 
-  // F1(spec-24): 호가 링크 바 — 단지 내부 ID 없이 검색 URL로 연결
-  const _q = encodeURIComponent(aptNm || '');
-  const naverUrl = `https://new.land.naver.com/complexes?ms=37.5,127,13&a=APT:ABYG:JGC:DDDAPT&e=RETAIL&q=${_q}`;
-  const hoUrl    = `https://hogangnono.com/apt/search?search=${_q}`;
-  const asilUrl  = `https://asil.kr/asil/aptList.jsp?complexName=${_q}`;
+  // F1(spec-24): 호가 링크 바 — lat/lng 좌표로 단지 위치 직접 열기 (zoom 17)
+  const _ms = (lat && lng) ? `${lat},${lng},17` : '37.5,127,13';
+  const naverUrl = `https://new.land.naver.com/complexes?ms=${_ms}&a=APT:ABYG:JGC:DDDAPT&e=RETAIL`;
+  const hoUrl    = `https://hogangnono.com/`;
   document.getElementById('chat-price-links').innerHTML =
     `<span class="chat-price-links__label">호가 보기:</span>` +
-    `<a href="${naverUrl}" target="_blank" rel="noopener">네이버부동산</a>` +
-    `<a href="${hoUrl}" target="_blank" rel="noopener">호갱노노</a>` +
-    `<a href="${asilUrl}" target="_blank" rel="noopener">아실</a>`;
+    `<a href="${naverUrl}" target="_blank" rel="noopener" title="${escHtml(aptNm||'')} 위치로 이동">네이버부동산</a>` +
+    `<a href="${hoUrl}" target="_blank" rel="noopener" title="호갱노노에서 직접 검색">호갱노노</a>`;
 
   // spec-23: localStorage 대화 복원 (24시간 TTL, 최대 10턴)
   try {
@@ -3118,6 +3117,7 @@ function renderRecCard(c, wpId, cmpMode=false){
   const friendHtml = comment
     ? `<div class="rec-card__friend" style="cursor:pointer"
         data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
+        data-lat="${c.lat||''}" data-lng="${c.lng||''}"
         onclick="event.stopPropagation();_openChatFromEl(this)" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
         <div class="rec-card__friend-body">
@@ -3643,6 +3643,7 @@ function renderDetailPanel(d, routes, wpId){
   const friendHtml = friend
     ? `<div class="dp__friend"
         data-apt-seq="${d.apt_seq}" data-apt-nm="${escHtml(d.apt_nm)}" data-pyeong-type="${escHtml(cardRef.pyeong_type||'')}"
+        data-lat="${d.lat||''}" data-lng="${d.lng||''}"
         onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
         <div class="dp__friend-avatar">친구</div>
         <div class="dp__friend-body">
