@@ -1148,12 +1148,60 @@ def _chat_cache_set(key: tuple, reply: str) -> None:
     _chat_cache[key] = (now, reply)
 
 
+def _do_search(query: str) -> str:
+    """DuckDuckGo Instant Answer API — API 키 불필요 (spec-24 F3)."""
+    import urllib.request
+    import urllib.parse
+    import json as _json
+    try:
+        q = urllib.parse.quote(query)
+        url = f"https://api.duckduckgo.com/?q={q}&format=json&no_html=1&skip_disambig=1"
+        req = urllib.request.Request(url, headers={"User-Agent": "badugi-chat/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = _json.loads(r.read())
+        abstract = data.get("AbstractText", "").strip()
+        related = [
+            t.get("Text", "")
+            for t in data.get("RelatedTopics", [])[:3]
+            if isinstance(t, dict) and t.get("Text")
+        ]
+        result = abstract or "\n".join(related)
+        return result or "검색 결과를 찾지 못했어."
+    except Exception as e:
+        return f"검색 중 오류: {type(e).__name__}"
+
+
+def _parse_reply(raw: str) -> "tuple[str, list[str]]":
+    """CHIPS 줄을 분리해 (reply, suggestions) 반환."""
+    chips_match = re.search(r"\nCHIPS:\s*(.+)$", raw, re.MULTILINE)
+    if not chips_match:
+        return raw.strip(), []
+    suggestions = [s.strip() for s in chips_match.group(1).split("|")][:3]
+    suggestions = [s for s in suggestions if s]
+    return raw[: chips_match.start()].strip(), suggestions
+
+
 # ── POST /api/apt/{apt_seq}/chat  (spec-22: 친구 채팅) ─────────
 class AptChatRequest(BaseModel):
     pyeong_type: str | None = None
     wp_id:       int | None = None
     message:     str = Field(..., min_length=1, max_length=500)
     history:     list[dict] = Field(default_factory=list)
+
+
+_SEARCH_TOOLS = [
+    {
+        "name": "search_web",
+        "description": "학군·지역정보·개발계획·최신뉴스 등 실시간 정보 검색 (DuckDuckGo)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "검색어 (한국어 포함 가능)"}
+            },
+            "required": ["query"],
+        },
+    }
+]
 
 
 @router.post("/apt/{apt_seq}/chat")
@@ -1169,19 +1217,18 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     if not apt:
         raise HTTPException(status_code=404, detail="단지를 찾을 수 없어요")
 
-    # F2: 캐시 체크 (초기 질문, history_len <= 2)
     history_len = len(req.history or [])
     cache_key = (apt_seq, hashlib.md5(req.message.encode()).hexdigest(), history_len)
     if history_len <= 2:
         cached = _chat_cache_get(cache_key)
         if cached:
-            return {'reply': cached}
+            reply, suggestions = _parse_reply(cached)
+            return {'reply': reply, 'suggestions': suggestions}
 
     def _fmt(v: int) -> str:
         e, m = v // 10000, v % 10000
         return f"{e}억{f' {m:,}만' if m else ''}"
 
-    # F1: 컨텍스트 강화 쿼리
     today = _dt.date.today()
     threshold_year = today.year - 1
     d6 = today - _dt.timedelta(days=183)
@@ -1224,7 +1271,6 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         [apt_seq],
     ).fetchall()
 
-    # 평형별 통계 텍스트
     stat_lines = [
         f"- {r['pyeong_type']}({r['pyeong']:.0f}평): "
         f"평균 {_fmt(int(r['avg_amt']))} / "
@@ -1234,7 +1280,6 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         for r in stat_rows
     ]
 
-    # 6개월 변동률 (최근 3개월 avg vs 이전 3개월 avg)
     trend_by_type: dict = {}
     for r in trend_rows:
         pt = r['pyeong_type']
@@ -1266,8 +1311,11 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     ) or "실거래 데이터 없음"
 
     system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
-반말, 카톡 말투. 5줄 이내. 모르는 건 솔직히 모른다고 해.
+반말, 카톡 말투. 5줄 이내. 모르는 건 search_web 도구로 검색 후 답해.
 실시간 호가·전세 정보는 없으니 추정할 때 반드시 "확인 필요"를 붙여.
+
+답변 마지막에 공백 한 줄 후 반드시 이 형식으로 한국어 후속 질문 3개를 추가해:
+CHIPS: 질문1 | 질문2 | 질문3
 
 == 단지 ==
 {apt['apt_nm']} · {apt['umd_nm']} · {(apt['kaptdaCnt'] or 0):,}세대 · 준공 {apt['build_year'] or '미상'}년
@@ -1290,20 +1338,43 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
             messages.append({'role': h['role'], 'content': str(h['content'])})
     messages.append({'role': 'user', 'content': req.message})
 
+    raw = "잠깐, 다시 시도해봐."
     try:
         api_key = _os.environ.get('ANTHROPIC_API_KEY') or cfg.ANTHROPIC_API_KEY
         client = _anth.Anthropic(api_key=api_key)
-        msg = client.messages.create(
-            model='claude-opus-4-8',
-            max_tokens=500,
-            system=system,
-            messages=messages,
-        )
-        reply = msg.content[0].text if msg.content else "잠깐, 다시 시도해봐."
+
+        # F3: tool_use agentic loop (최대 3턴)
+        MAX_TOOL_TURNS = 3
+        for _ in range(MAX_TOOL_TURNS + 1):
+            msg = client.messages.create(
+                model='claude-opus-4-8',
+                max_tokens=700,
+                system=system,
+                messages=messages,
+                tools=_SEARCH_TOOLS,
+            )
+            if msg.stop_reason != 'tool_use':
+                break
+            # 검색 도구 실행
+            messages.append({'role': 'assistant', 'content': msg.content})
+            tool_results = []
+            for block in msg.content:
+                if block.type == 'tool_use':
+                    search_result = _do_search(block.input.get('query', ''))
+                    tool_results.append({
+                        'type': 'tool_result',
+                        'tool_use_id': block.id,
+                        'content': search_result,
+                    })
+            messages.append({'role': 'user', 'content': tool_results})
+
+        text_parts = [b.text for b in msg.content if hasattr(b, 'text') and b.text]
+        raw = '\n'.join(text_parts).strip() or "잠깐, 다시 시도해봐."
     except Exception as e:
-        reply = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__}: {str(e)[:80]})"
+        raw = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__}: {str(e)[:80]})"
 
     if history_len <= 2:
-        _chat_cache_set(cache_key, reply)
+        _chat_cache_set(cache_key, raw)
 
-    return {'reply': reply}
+    reply, suggestions = _parse_reply(raw)
+    return {'reply': reply, 'suggestions': suggestions}

@@ -1197,6 +1197,19 @@
       border: none; border-radius: 22px; padding: 8px 16px;
       font-size: 13px; font-weight: 600; cursor: pointer;
     }
+    .chat-price-links {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 14px; background: #f8f8fb;
+      border-bottom: 1px solid #eee; font-size: 11.5px; flex-shrink: 0;
+    }
+    .chat-price-links__label { color: #999; margin-right: 2px; }
+    .chat-price-links a {
+      color: #555; text-decoration: none;
+      padding: 3px 10px; border: 1px solid #ddd;
+      border-radius: 12px; background: #fff;
+      transition: background 0.15s;
+    }
+    .chat-price-links a:hover { background: #f0f3ff; color: var(--color-brand-primary); border-color: #c5d0ff; }
     .dp__friend { cursor: pointer; }
     .dp__friend:hover { opacity: 0.85; }
     .compare-panel {
@@ -1933,6 +1946,7 @@
         <div class="chat-panel__apt-name" id="chat-apt-name"></div>
         <button class="chat-panel__close" onclick="closeFriendChat()">✕</button>
       </div>
+      <div class="chat-price-links" id="chat-price-links"></div>
       <div class="chat-panel__messages" id="chat-messages"></div>
       <div class="chat-panel__suggestions" id="chat-suggestions"></div>
       <div class="chat-panel__input-row">
@@ -2537,13 +2551,31 @@ function _openChatFromEl(el) {
   openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '');
 }
 
+function _renderChips(questions) {
+  const sugBox = document.getElementById('chat-suggestions');
+  sugBox.innerHTML = questions.map(q =>
+    `<button class="chat-chip">${escHtml(q)}</button>`
+  ).join('');
+  sugBox.querySelectorAll('.chat-chip').forEach(btn => {
+    btn.addEventListener('click', () => sendChatMessage(btn.textContent.trim()));
+  });
+}
+
 function openFriendChat(aptSeq, aptNm, pyeongType) {
   _chatAptSeq = aptSeq; _chatPyeongType = pyeongType; _chatHistory = [];
   document.getElementById('chat-apt-name').textContent = aptNm || '';
   const msgBox = document.getElementById('chat-messages');
   msgBox.innerHTML = '';
 
-  // F3(spec-23): localStorage 대화 복원 (24시간 TTL, 최대 10턴)
+  // F1(spec-24): 호가 링크 바
+  const naverUrl = `https://land.naver.com/search/complexInfo.nhn?searchString=${encodeURIComponent(aptNm || '')}`;
+  const hoUrl = `https://hogangnono.com/?search=${encodeURIComponent(aptNm || '')}`;
+  document.getElementById('chat-price-links').innerHTML =
+    `<span class="chat-price-links__label">호가 보기:</span>` +
+    `<a href="${naverUrl}" target="_blank" rel="noopener">네이버부동산</a>` +
+    `<a href="${hoUrl}" target="_blank" rel="noopener">호갱노노</a>`;
+
+  // spec-23: localStorage 대화 복원 (24시간 TTL, 최대 10턴)
   try {
     const saved = localStorage.getItem(`chat_${aptSeq}`);
     if (saved) {
@@ -2557,14 +2589,8 @@ function openFriendChat(aptSeq, aptNm, pyeongType) {
     }
   } catch(e) {}
 
-  const sugBox = document.getElementById('chat-suggestions');
-  sugBox.innerHTML = CHAT_SUGGESTIONS.map(q =>
-    `<button class="chat-chip">${escHtml(q)}</button>`
-  ).join('');
-  sugBox.querySelectorAll('.chat-chip').forEach((btn, i) => {
-    btn.addEventListener('click', () => sendChatMessage(CHAT_SUGGESTIONS[i]));
-  });
-  sugBox.style.display = '';
+  _renderChips(CHAT_SUGGESTIONS);
+  document.getElementById('chat-suggestions').style.display = '';
   document.getElementById('chat-panel').classList.remove('hidden');
   document.getElementById('chat-input').focus();
 }
@@ -2606,6 +2632,10 @@ async function sendChatMessage(text) {
         ts: Date.now(), history: _chatHistory.slice(-10),
       }));
     } catch(e) {}
+    // F2(spec-24): 동적 Chip 갱신
+    if (data.suggestions && data.suggestions.length) {
+      _renderChips(data.suggestions);
+    }
   } catch {
     document.getElementById(loadId)?.remove();
     _appendChatMsg('assistant', '에러가 났어. 잠깐 기다려봐.');
