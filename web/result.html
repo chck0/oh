@@ -1195,14 +1195,22 @@
     /* spec-22: 친구 채팅 패널 */
     .chat-panel {
       position: fixed; top: 54px; right: 0;
-      width: 370px; height: calc(100vh - 54px);
+      width: 440px; height: calc(100vh - 54px);
       background: #fff; z-index: 850;
       box-shadow: -6px 0 24px rgba(0,0,0,0.13);
       border-radius: 16px 0 0 16px;
       display: flex; flex-direction: column;
       transition: transform 0.25s ease;
+      min-width: 320px; max-width: 700px;
     }
     .chat-panel.hidden { transform: translateX(100%); pointer-events: none; }
+    .chat-panel__resize {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 7px;
+      cursor: col-resize; z-index: 10; border-radius: 16px 0 0 16px;
+      background: transparent; transition: background 0.15s;
+    }
+    .chat-panel__resize:hover,
+    .chat-panel__resize.dragging { background: rgba(91,155,213,0.35); }
     .chat-panel__header {
       display: flex; align-items: center; gap: 10px;
       padding: 14px 16px 12px; border-bottom: 1px solid #f0f0f0;
@@ -1994,6 +2002,7 @@
     </div>
     <!-- spec-22: 친구 채팅 패널 -->
     <div class="chat-panel hidden" id="chat-panel">
+      <div class="chat-panel__resize" id="chat-resize-handle"></div>
       <div class="chat-panel__header">
         <div class="chat-panel__avatar">친구</div>
         <div class="chat-panel__apt-name" id="chat-apt-name"></div>
@@ -2982,6 +2991,47 @@ async function validateAndFilterPois() {
     document.body.style.userSelect = '';
     document.body.style.cursor     = '';
     if (kakaoMap) kakaoMap.relayout();
+  });
+})();
+
+// ── 채팅 패널 좌측 드래그 리사이즈 ──────────────────────────
+(function() {
+  const CHAT_W_KEY = 'chat_panel_w';
+  const panel = document.getElementById('chat-panel');
+  const handle = document.getElementById('chat-resize-handle');
+  if (!panel || !handle) return;
+
+  // 저장된 너비 복원
+  const savedW = parseInt(localStorage.getItem(CHAT_W_KEY) || '0');
+  if (savedW >= 320 && savedW <= 700) panel.style.width = savedW + 'px';
+
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX   = e.clientX;
+    startW   = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor     = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const minW = 320, maxW = Math.min(700, window.innerWidth * 0.65);
+    // 왼쪽 드래그 → 너비 증가, 오른쪽 드래그 → 너비 감소
+    const newW = Math.max(minW, Math.min(maxW, startW + (startX - e.clientX)));
+    panel.style.width = newW + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor     = '';
+    localStorage.setItem(CHAT_W_KEY, Math.round(panel.getBoundingClientRect().width));
   });
 })();
 
