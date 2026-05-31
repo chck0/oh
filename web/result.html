@@ -3531,13 +3531,14 @@ function _whyTagsHtml(tags){
   return `<div class="why-tags">저가 근거: ${labels}</div>`;
 }
 
-// spec-28: 통근 경제성 행 (월 교통비 · 연간 시간)
+// spec-28: 통근 경제성 행 (월 교통비 · 연간 시간, AC3: 버킷 내 최단 대비 diff)
 function _commuteEconRow(c) {
   const cost  = c.monthly_transit_cost;
   const hours = c.annual_commute_hours;
   if (!cost || !hours) return '';
   const costStr = `약 ${Math.round(cost / 1000)}천원`;
-  return `<div class="commute-econ-row">🚇 월 교통비 ${costStr} · 연 ${hours}시간 통근</div>`;
+  const diffStr = c.annual_hours_diff ? ` (최단 대비 +${c.annual_hours_diff}시간)` : '';
+  return `<div class="commute-econ-row">🚇 월 교통비 ${costStr} · 연 ${hours}시간 통근${diffStr}</div>`;
 }
 
 // spec-16: 가격 변동률 배지 (6개월 비교)

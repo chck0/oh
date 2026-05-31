@@ -105,8 +105,8 @@ class TestCallLlmSuccess:
         assert call_kwargs.kwargs['max_tokens'] == 150
 
     @pytest.mark.asyncio
-    async def test_non_text_block_returns_failure(self):
-        """TextBlock이 아닌 블록 반환 시 '(생성 실패)' 반환."""
+    async def test_non_text_block_returns_empty_string(self):
+        """TextBlock이 아닌 블록 반환 시 빈 문자열 반환 — 500 에러 방지."""
         mock_block = MagicMock()  # spec 없음 → isinstance(block, TextBlock) = False
         mock_msg = MagicMock()
         mock_msg.content = [mock_block]
@@ -114,7 +114,7 @@ class TestCallLlmSuccess:
         mock_client.messages.create = AsyncMock(return_value=mock_msg)
         with patch('app.ai._get_client', return_value=mock_client):
             result = await _call_llm('prompt', HAIKU_MODEL, 80)
-        assert result == '(생성 실패)'
+        assert result == ''
 
 
 # ── _call_llm — RateLimitError ────────────────────────────────
