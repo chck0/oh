@@ -1230,6 +1230,27 @@ def _do_search(query: str) -> str:
         return f"검색 오류: {type(e).__name__}"
 
 
+def _extract_doc_text(data: bytes, media_type: str, filename: str) -> str:
+    """PDF / 텍스트 → 최대 3000자 텍스트 추출 (spec-27).
+    Word/PPT는 lxml 의존으로 Vercel 미지원 → 안내 메시지 반환."""
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    try:
+        if ext in ("docx", "pptx") or "wordprocessingml" in media_type or "presentationml" in media_type:
+            return f"[{filename} 파일은 PDF로 변환 후 첨부해주세요]"
+        if ext == "pdf" or media_type == "application/pdf":
+            from pypdf import PdfReader
+            import io as _io
+            reader = PdfReader(_io.BytesIO(data))
+            return "\n".join(
+                page.extract_text() or "" for page in reader.pages[:10]
+            ).strip()[:3000]
+        if ext == "txt" or media_type.startswith("text/"):
+            return data.decode("utf-8", errors="ignore")[:3000]
+    except Exception as e:
+        return f"[파일 파싱 오류: {type(e).__name__}]"
+    return ""
+
+
 def _parse_reply(raw: str) -> "tuple[str, list[str]]":
     """CHIPS 줄을 분리해 (reply, suggestions) 반환."""
     chips_match = re.search(r"\nCHIPS:\s*(.+)$", raw, re.MULTILINE)
@@ -1244,8 +1265,9 @@ def _parse_reply(raw: str) -> "tuple[str, list[str]]":
 class AptChatRequest(BaseModel):
     pyeong_type: str | None = None
     wp_id:       int | None = None
-    message:     str = Field(..., min_length=1, max_length=500)
+    message:     str = Field(default="", max_length=500)
     history:     list[dict] = Field(default_factory=list)
+    attachments: list[dict] | None = Field(default=None)  # spec-27: [{type, media_type, data, filename}]
 
 
 _SEARCH_TOOLS = [
@@ -1277,8 +1299,9 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         raise HTTPException(status_code=404, detail="단지를 찾을 수 없어요")
 
     history_len = len(req.history or [])
+    has_attachment = bool(req.attachments)
     cache_key = (apt_seq, hashlib.md5(req.message.encode()).hexdigest(), history_len)
-    if history_len <= 2:
+    if not has_attachment and history_len <= 2:
         cached = _chat_cache_get(cache_key)
         if cached:
             reply, suggestions = _parse_reply(cached)
@@ -1412,11 +1435,43 @@ CHIPS: 질문1 | 질문2 | 질문3
 == 도보 10분 이내 주요 시설 ==
 {chr(10).join(poi_lines) or '시설 데이터 없음'}"""
 
+    # spec-27: 첨부 파일 처리
+    import base64 as _b64
+    image_blocks: list[dict] = []
+    doc_texts: list[str] = []
+    for att in (req.attachments or [])[:1]:  # 최대 1개
+        att_data = att.get("data", "")
+        if not att_data:
+            continue
+        att_bytes = _b64.b64decode(att_data)
+        att_type = att.get("type", "")
+        att_media = att.get("media_type", "")
+        att_fname = att.get("filename", "파일")
+        if att_type == "image":
+            image_blocks.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": att_media, "data": att_data},
+            })
+        else:
+            text = _extract_doc_text(att_bytes, att_media, att_fname)
+            if text:
+                doc_texts.append(f"== 첨부 파일 ({att_fname}) ==\n{text}")
+
+    # 문서 텍스트를 시스템 프롬프트에 추가
+    if doc_texts:
+        system += "\n\n" + "\n\n".join(doc_texts)
+
     messages: list[dict] = []
     for h in (req.history or []):
         if h.get('role') in ('user', 'assistant') and h.get('content'):
             messages.append({'role': h['role'], 'content': str(h['content'])})
-    messages.append({'role': 'user', 'content': req.message})
+
+    # 이미지 첨부 시 vision content blocks
+    user_text = req.message or "이 파일을 분석해줘."
+    if image_blocks:
+        messages.append({'role': 'user', 'content': image_blocks + [{"type": "text", "text": user_text}]})
+    else:
+        messages.append({'role': 'user', 'content': user_text})
 
     raw = "잠깐, 다시 시도해봐."
     try:
@@ -1453,7 +1508,7 @@ CHIPS: 질문1 | 질문2 | 질문3
     except Exception as e:
         raw = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__}: {str(e)[:80]})"
 
-    if history_len <= 2:
+    if not has_attachment and history_len <= 2:
         _chat_cache_set(cache_key, raw)
 
     reply, suggestions = _parse_reply(raw)
