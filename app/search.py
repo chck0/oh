@@ -1231,25 +1231,12 @@ def _do_search(query: str) -> str:
 
 
 def _extract_doc_text(data: bytes, media_type: str, filename: str) -> str:
-    """Word / PPT / PDF / 텍스트 → 최대 3000자 텍스트 추출 (spec-27)."""
+    """PDF / 텍스트 → 최대 3000자 텍스트 추출 (spec-27).
+    Word/PPT는 lxml 의존으로 Vercel 미지원 → 안내 메시지 반환."""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     try:
-        if ext == "docx" or "wordprocessingml" in media_type:
-            from docx import Document
-            import io as _io
-            doc = Document(_io.BytesIO(data))
-            return "\n".join(p.text for p in doc.paragraphs if p.text.strip())[:3000]
-        if ext == "pptx" or "presentationml" in media_type:
-            from pptx import Presentation
-            import io as _io
-            prs = Presentation(_io.BytesIO(data))
-            texts = [
-                shape.text
-                for slide in prs.slides
-                for shape in slide.shapes
-                if hasattr(shape, "text") and shape.text.strip()
-            ]
-            return "\n".join(texts)[:3000]
+        if ext in ("docx", "pptx") or "wordprocessingml" in media_type or "presentationml" in media_type:
+            return f"[{filename} 파일은 PDF로 변환 후 첨부해주세요]"
         if ext == "pdf" or media_type == "application/pdf":
             from pypdf import PdfReader
             import io as _io
