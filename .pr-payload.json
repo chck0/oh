@@ -1,0 +1,6 @@
+{
+  "title": "fix(spec-21): 단지상세모달 POI 카테고리 수정 + 거래 평형대 그룹화",
+  "head": "hjkang83",
+  "base": "main",
+  "body": "## 변경 요약\n\n### spec-21 — 단지 상세 모달 UX 수정\n\n#### 버그 1: 주변시설 탭 POI 카테고리 레이블 오류 수정\n- 구형 `POI_LABEL` (A=공원·B=버스정류장 등) 제거 — 실제 DB 코드와 완전 불일치\n- `POI_CAT_NAME` / `POI_ORDER` / `POI_ALLOWED_SUBS` (스크립트 하단 정의) 재사용\n- 카테고리별 그룹 헤더 표시 (교통 → 학교 → 어린이집 → 쇼핑/편의 순)\n- `POI_ALLOWED_SUBS` 필터로 오분류 데이터 제외 (주유소·아파트단지 등)\n- 기존 `togglePoiMarker` 지도 마커 클릭 기능 유지\n\n#### 버그 2: 시세·거래 탭 평형대 혼합 나열 → 그룹화\n- `pyeong_type` 기준 그룹화, 그룹 헤더 표시\n- 컬럼 4열(날짜·금액·평형·층) → 3열(날짜·금액·층) — 평형은 헤더로\n- 그룹당 최대 8건 표시\n\n## 영향 범위\n- `web/result.html` 만 수정 (백엔드 변경 없음, DB 변경 없음)\n- `docs/specs/21-detail-modal-ux-fix.md` 신규\n- `docs/specs/SPEC_GUIDE.md` spec-21 추가, 다음 번호 22\n\n## 테스트\n- 387 tests passed (회귀 없음)\n- 기존 실패 1건(`test_non_text_block_returns_failure`)은 pre-existing 버그로 본 PR과 무관\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+}
