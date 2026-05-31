@@ -11,6 +11,11 @@ pydantic>=2.6
 # ── LLM ──────────────────────────────────────────────────────
 anthropic>=0.40
 
+# ── 파일 첨부 파싱 (spec-27) ─────────────────────────────────
+python-docx>=1.1              # Word .docx 텍스트 추출
+python-pptx>=0.6              # PowerPoint .pptx 텍스트 추출
+pypdf>=4.0                    # PDF 텍스트 추출
+
 # ── Supabase / Postgres (Vercel 런타임에서 사용) ─────────────
 # psycopg[binary] — Vercel 빌드 환경에 wheel 제공 (gcc 빌드 불필요)
 psycopg[binary]>=3.1

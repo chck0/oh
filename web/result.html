@@ -1248,6 +1248,23 @@
       white-space: nowrap; transition: background 0.15s;
     }
     .chat-chip:hover { background: #dde4ff; }
+    .chat-attachment-bar { padding: 0 12px 4px; }
+    .chat-attach-preview {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: #f0f3ff; border-radius: 10px; padding: 6px 10px; font-size: 12px;
+    }
+    .chat-attach-preview img { max-height: 56px; border-radius: 6px; object-fit: cover; }
+    .chat-attach-preview span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-attach-preview button {
+      background: none; border: none; cursor: pointer; color: #aaa;
+      font-size: 15px; line-height: 1; padding: 0 2px; flex-shrink: 0;
+    }
+    .chat-attach-btn {
+      background: none; border: 1px solid #dde; border-radius: 50%;
+      width: 36px; height: 36px; font-size: 17px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #666;
+    }
+    .chat-attach-btn:hover { background: #f0f3ff; }
     .chat-panel__input-row {
       display: flex; gap: 8px; padding: 10px 12px 14px;
       border-top: 1px solid #f0f0f0;
@@ -2016,8 +2033,13 @@
       <div class="chat-price-links" id="chat-price-links"></div>
       <div class="chat-panel__messages" id="chat-messages"></div>
       <div class="chat-panel__suggestions" id="chat-suggestions"></div>
+      <div class="chat-attachment-bar" id="chat-attachment-bar"></div>
+      <input type="file" id="chat-file-input" style="display:none"
+        accept="image/*,.pdf,.docx,.pptx,.txt"
+        onchange="_onChatFileSelected(event)">
       <div class="chat-panel__input-row">
-        <input type="text" id="chat-input" placeholder="궁금한 거 물어봐..."
+        <button class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="파일·이미지 첨부">📎</button>
+        <input type="text" id="chat-input" placeholder="궁금한 거 물어봐…"
           maxlength="200" onkeydown="if(event.key==='Enter')sendChatMessage()">
         <button class="chat-panel__send" onclick="sendChatMessage()">전송</button>
       </div>
@@ -2605,6 +2627,45 @@ function _renderDetail(d) {
 // ── POI 마커 (spec-19) ────────────────────────────────────────
 // ══ spec-22: 친구 채팅 ════════════════════════════════════════
 let _chatAptSeq = null, _chatPyeongType = null, _chatHistory = [];
+let _chatAttachment = null;  // spec-27: {type, media_type, data (base64), filename}
+
+function _onChatFileSelected(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    alert('파일이 너무 커요. 3MB 이하만 첨부 가능해요.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const [meta, b64] = ev.target.result.split(',');
+    const mediaType = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+    _chatAttachment = {
+      type: file.type.startsWith('image/') ? 'image' : 'document',
+      media_type: mediaType, data: b64, filename: file.name,
+    };
+    _renderChatAttachment();
+  };
+  reader.readAsDataURL(file);
+}
+
+function _renderChatAttachment() {
+  const bar = document.getElementById('chat-attachment-bar');
+  if (!bar) return;
+  if (!_chatAttachment) { bar.innerHTML = ''; return; }
+  const isImg = _chatAttachment.type === 'image';
+  bar.innerHTML = `<div class="chat-attach-preview">
+    ${isImg ? `<img src="data:${_chatAttachment.media_type};base64,${_chatAttachment.data}" alt="첨부">` : ''}
+    <span>${isImg ? '이미지 첨부됨' : escHtml(_chatAttachment.filename)}</span>
+    <button onclick="_clearChatAttachment()">✕</button>
+  </div>`;
+}
+
+function _clearChatAttachment() {
+  _chatAttachment = null;
+  _renderChatAttachment();
+}
 
 // spec-25: Claude가 실제로 답변 가능한 질문으로 구성
 const CHAT_SUGGESTIONS = [
@@ -2689,8 +2750,12 @@ async function sendChatMessage(text) {
     const res = await fetch(`/api/apt/${_chatAptSeq}/chat`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1'},
-      body: JSON.stringify({pyeong_type: _chatPyeongType, message, history: _chatHistory}),
+      body: JSON.stringify({
+        pyeong_type: _chatPyeongType, message, history: _chatHistory,
+        attachments: _chatAttachment ? [_chatAttachment] : null,
+      }),
     });
+    _clearChatAttachment();  // 전송 직후 첨부 초기화
     const data = await res.json();
     document.getElementById(loadId)?.remove();
     const reply = data.reply || '잠깐, 다시 시도해봐.';
