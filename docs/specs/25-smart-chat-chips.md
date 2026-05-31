@@ -1,6 +1,6 @@
 # Spec 25: 스마트 초기 Chip — Claude가 답할 수 있는 질문으로 교체
 
-> **상태**: In Progress 🔨
+> **상태**: Implemented ✅
 > **작성일**: 2026-05-30
 > **구현 브랜치**: hjkang83
 

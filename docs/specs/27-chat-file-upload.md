@@ -1,6 +1,6 @@
 # Spec 27: 친구 채팅 파일·이미지 첨부
 
-> **상태**: In Progress 🔨
+> **상태**: Implemented ✅ (Word/PPT 제외 — Vercel lxml 제약)
 > **작성일**: 2026-05-31
 > **구현 브랜치**: hjkang83
 
@@ -66,8 +66,13 @@
 
 ## 5. Acceptance Criteria
 
-- [ ] AC1: 이미지 첨부 후 전송 → Claude가 이미지 내용 기반으로 답변
-- [ ] AC2: Word/PPT/PDF 첨부 → 문서 내용 요약/분석 답변
-- [ ] AC3: 3MB 초과 파일 → 경고 메시지, 전송 차단
-- [ ] AC4: 전송 후 미리보기 초기화
-- [ ] AC5: pytest 387+ passed 유지
+- [x] AC1: 이미지 첨부 후 전송 → Claude Vision으로 이미지 내용 분석
+- [x] AC2: PDF 첨부 → pypdf 텍스트 추출 → Claude 분석
+- [x] AC2b: Word/PPT 첨부 → "PDF로 변환 후 첨부" 안내 (lxml 의존으로 Vercel 미지원)
+- [x] AC3: 3MB 초과 파일 → 경고 메시지, 전송 차단
+- [x] AC4: 전송 후 미리보기 초기화
+- [x] AC5: pytest 387+ passed 유지
+
+## 구현 제약 (Vercel)
+- `python-docx` / `python-pptx` → `lxml` C 확장 의존 → Vercel 빌드 실패
+- `pypdf` (순수 Python) 만 사용, Word/PPT는 PDF 변환 후 첨부 안내
