@@ -716,6 +716,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .commute-econ-row {
+      font-size: 11.5px; color: #777;
+      margin-top: 7px; padding-top: 6px;
+      border-top: 1px dashed #eee;
+      display: flex; align-items: center; gap: 4px;
+    }
 
     /* ── 관심 단지 ♥ ───────────────────────────────────────── */
     .fav-btn {
@@ -3513,6 +3519,7 @@ function renderRecCard(c, wpId, cmpMode=false){
     <div class="rec-card__meta num">${meta}</div>
     ${_whyTagsHtml(c.why_tags)}
     ${reasonsHtml}
+    ${_commuteEconRow(c)}
     ${friendHtml}
   </div>`;
 }
@@ -3522,6 +3529,16 @@ function _whyTagsHtml(tags){
   if(!tags || !tags.length) return '';
   const labels = tags.slice(0,2).map(t=>escHtml(t.label)).join(' · ');
   return `<div class="why-tags">저가 근거: ${labels}</div>`;
+}
+
+// spec-28: 통근 경제성 행 (월 교통비 · 연간 시간, AC3: 버킷 내 최단 대비 diff)
+function _commuteEconRow(c) {
+  const cost  = c.monthly_transit_cost;
+  const hours = c.annual_commute_hours;
+  if (!cost || !hours) return '';
+  const costStr = `약 ${Math.round(cost / 1000)}천원`;
+  const diffStr = c.annual_hours_diff ? ` (최단 대비 +${c.annual_hours_diff}시간)` : '';
+  return `<div class="commute-econ-row">🚇 월 교통비 ${costStr} · 연 ${hours}시간 통근${diffStr}</div>`;
 }
 
 // spec-16: 가격 변동률 배지 (6개월 비교)
@@ -3603,6 +3620,7 @@ function renderListCard(c, wpId, cmpMode=false){
         ? `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
         : `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
     </div>
+    ${_commuteEconRow(c)}
     ${commentHtml}
   </article>`;
 }

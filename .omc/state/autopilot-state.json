@@ -1,0 +1,15 @@
+{
+  "active": false,
+  "iteration": 3,
+  "max_iterations": 3,
+  "current_phase": "완료",
+  "completed_at": "2026-05-25T09:11:00Z",
+  "final_commit": "0c63013",
+  "status": "DONE",
+  "_meta": {
+    "mode": "autopilot",
+    "sessionId": null,
+    "updatedAt": "2026-05-25T09:11:08.897Z",
+    "updatedBy": "state_write_tool"
+  }
+}
