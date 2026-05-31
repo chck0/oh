@@ -2798,19 +2798,45 @@ function renderAptLookupCard(r) {
     const e = Math.floor(v / 10000), m = v % 10000;
     return e ? `${e}억${m ? ` ${m.toLocaleString()}만` : ''}` : `${v.toLocaleString()}만`;
   }
-  const price = (r.price_low && r.price_high)
-    ? `${_fmt(r.price_low)} ~ ${_fmt(r.price_high)}`
-    : (r.price_low ? _fmt(r.price_low) : '-');
-  const transit = r.transit_min ? `통근 약 ${r.transit_min}분` : '통근시간 미조회';
-  const meta = [r.umd_nm, r.kaptdaCnt ? `${r.kaptdaCnt.toLocaleString()}세대` : null, r.build_year ? `${r.build_year}년` : null]
+  const thisYear = new Date().getFullYear();
+
+  // 가격 (범위)
+  const priceHtml = (r.price_low && r.price_high && r.price_low !== r.price_high)
+    ? `${_fmt(r.price_low)}<span style="font-size:12px;font-weight:400;color:#aaa"> ~ ${_fmt(r.price_high)}</span>`
+    : _fmt(r.price_low || r.price_high);
+
+  // 통근 버킷
+  let bucketLabel = '시간 미조회';
+  if (r.transit_min != null) {
+    if      (r.transit_min <= 30) bucketLabel = '30분 이내';
+    else if (r.transit_min <= 40) bucketLabel = '30~40분';
+    else if (r.transit_min <= 50) bucketLabel = '40~50분';
+    else                           bucketLabel = '50~60분';
+  }
+
+  const meta = [r.umd_nm, r.kaptdaCnt ? `${r.kaptdaCnt.toLocaleString()}세대` : null]
     .filter(Boolean).join(' · ');
-  return `<div class="apt-lookup-card">
-    <div class="apt-lookup-card__badge">직접 검색</div>
-    <div class="apt-lookup-card__title">${escHtml(r.apt_nm)}</div>
-    <div class="apt-lookup-card__meta">${escHtml(meta)}</div>
-    <div class="apt-lookup-card__price">${escHtml(r.pyeong_type)} ${price}</div>
-    <div class="apt-lookup-card__transit">${transit}</div>
-    <div class="apt-lookup-card__footer">
+
+  const transitChip = r.transit_min
+    ? `<span class="reason-chip reason-chip--info">통근 약 ${r.transit_min}분</span>` : '';
+  const yearChip = r.build_year
+    ? `<span class="reason-chip reason-chip--neutral">${r.build_year}년 (${thisYear - r.build_year}년차)</span>` : '';
+
+  const favActive = (typeof isFav === 'function' && isFav(r.apt_seq, r.pyeong_type)) ? ' active' : '';
+  const favTitle  = favActive ? '관심 해제' : '관심 추가';
+
+  return `<div class="rec-card" style="border:2px solid var(--color-brand-primary)">
+    <button class="fav-btn${favActive}"
+      onclick="toggleFav('${escHtml(r.apt_seq)}','${escHtml(r.pyeong_type||'')}',this,event)"
+      title="${favTitle}">♥</button>
+    <span class="rec-card__slot">직접 검색<span class="rec-card__slot-divider"></span>${escHtml(r.pyeong_type||'')}</span>
+    <div class="rec-card__title-row">
+      <h3 class="rec-card__title">${escHtml(r.apt_nm)}</h3>
+      <div class="rec-card__price">${priceHtml}</div>
+    </div>
+    <div class="rec-card__meta num">${escHtml(meta)}</div>
+    <div class="rec-card__reasons">${transitChip}${yearChip}</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
       <button class="apt-lookup-card__chat"
         data-apt-seq="${r.apt_seq}" data-apt-nm="${escHtml(r.apt_nm)}"
         data-pyeong-type="${escHtml(r.pyeong_type)}"
