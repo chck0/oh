@@ -992,6 +992,11 @@
       border-color: var(--color-pin-recommended-bg);
       box-shadow: var(--shadow-pin-recommended);
     }
+    .pin-lookup {
+      background: #f59e0b; color: #fff;
+      border-color: #d97706; font-weight: 700;
+      box-shadow: 0 2px 8px rgba(245,158,11,0.45);
+    }
     .pin-workplace {
       background: var(--color-pin-selected-bg);
       color: var(--color-pin-selected-text);
@@ -2718,6 +2723,51 @@ function _appendChatMsg(role, html, id) {
 }
 // ═════════════════════════════════════════════════════════════
 
+// ── spec-26: 직접 검색 결과 캐시 + 지도 연동 ─────────────────
+const _lookupResultCache = {};  // apt_seq → lookup result 객체
+let   _lookupOverlay     = null; // 직접 검색 핀 오버레이
+
+function _openLookupDetail(aptSeq) {
+  const r = _lookupResultCache[aptSeq];
+  if (!r) return;
+
+  // resultData.cards에 임시 추가 (showDetail이 lat/lng·card 참조 가능하도록)
+  if (resultData && resultData.cards) {
+    resultData.cards = resultData.cards.filter(c => !c._isLookup || c.apt_seq !== aptSeq);
+    resultData.cards.push({
+      apt_seq: r.apt_seq, apt_nm: r.apt_nm, pyeong_type: r.pyeong_type,
+      price_low: r.price_low, price_high: r.price_high,
+      total_time_min: r.transit_min, lat: r.lat, lng: r.lng,
+      kaptdaCnt: r.kaptdaCnt, build_year: r.build_year, _isLookup: true,
+    });
+  }
+
+  // aptGroupMap에 추가 (핀 클릭 이벤트 위임 처리용)
+  aptGroupMap[aptSeq] = aptGroupMap[aptSeq] || {
+    apt_seq: r.apt_seq, apt_nm: r.apt_nm, lat: r.lat, lng: r.lng,
+    umd_nm: r.umd_nm, kaptdaCnt: r.kaptdaCnt, build_year: r.build_year,
+    any_recommended: false,
+    cards: [{ apt_seq: r.apt_seq, apt_nm: r.apt_nm, pyeong_type: r.pyeong_type,
+               price_low: r.price_low, total_time_min: r.transit_min }],
+  };
+
+  // 기존 직접 검색 핀 제거 → 새 핀 추가
+  if (_lookupOverlay) { _lookupOverlay.setMap(null); _lookupOverlay = null; }
+  if (kakaoMap && r.lat && r.lng) {
+    kakaoMap.panTo(new kakao.maps.LatLng(r.lat, r.lng));
+    const pinText = `${escHtml(r.apt_nm.slice(0,6))} ${r.transit_min ? r.transit_min+'분' : '?'}`;
+    _lookupOverlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(r.lat, r.lng),
+      content: `<div class="pin pin-lookup" data-apt-seq="${r.apt_seq}">${pinText}</div>`,
+      yAnchor: 1, zIndex: 100,
+    });
+    _lookupOverlay.setMap(kakaoMap);
+  }
+
+  // 상세 패널 열기
+  showDetail(aptSeq, window._lastWpId || 0);
+}
+
 // ── spec-26: 아파트 직접 검색 (자동완성) ────────────────────────
 let _aptSearchDebounce = null;
 let _aptDropdownData   = [];
@@ -2831,6 +2881,9 @@ function renderAptLookupCard(r) {
   const yearChip = r.build_year
     ? `<span class="reason-chip reason-chip--neutral">${r.build_year}년 (${thisYear - r.build_year}년차)</span>` : '';
 
+  // 클릭·핀 이벤트용 캐시 저장
+  _lookupResultCache[r.apt_seq] = r;
+
   const favActive = (typeof isFav === 'function' && isFav(r.apt_seq, r.pyeong_type)) ? ' active' : '';
   const favTitle  = favActive ? '관심 해제' : '관심 추가';
 
@@ -2840,7 +2893,8 @@ function renderAptLookupCard(r) {
       title="${favTitle}">♥</button>
     <span class="rec-card__slot">직접 검색<span class="rec-card__slot-divider"></span>${escHtml(r.pyeong_type||'')}</span>
     <div class="rec-card__title-row">
-      <h3 class="rec-card__title">${escHtml(r.apt_nm)}</h3>
+      <h3 class="rec-card__title" style="cursor:pointer;text-decoration:underline dotted"
+        onclick="_openLookupDetail('${escHtml(r.apt_seq)}')" title="지도에서 보기">${escHtml(r.apt_nm)}</h3>
       <div class="rec-card__price">${priceHtml}</div>
     </div>
     <div class="rec-card__meta num">${escHtml(meta)}</div>
