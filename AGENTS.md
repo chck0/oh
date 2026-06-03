@@ -49,8 +49,24 @@
 - SQLite(로컬) ↔ Postgres(Vercel)는 `DATABASE_URL` 유무로 자동 전환. 방언 차이는 `app/portable.py`에서 처리.
 - Vercel 서버리스 60초 제약: 신규 직장 첫 검색은 `partial=true`로 빠르게 반환, 재검색 시 캐시 채움.
 - pgBouncer Transaction mode: `prepared_statement=False`, `except` 블록에 `conn.rollback()` 필수.
-- LLM 역할 분리: 추천 카드 → `claude-sonnet-4-6`, 일반 카드 → `claude-haiku-4-5`.
+- LLM 역할 분리: 추천 카드 → `claude-sonnet-4-6`, 일반 카드 → `claude-haiku-4-5`. 동시 Haiku 호출 8개 이하 제한.
 - `result.html` 신규 DOM 요소 추가 시 `.result-layout` grid 자식 구조 영향 확인 필수.
+- 웹 검색(DuckDuckGo) 실패 시 graceful degradation — "공식 확인이 필요해" 안내, 500 에러 금지.
+- localStorage 상태: favorites(♥), search history(최근 직장), chat history(24시간) — 서버 저장 없음.
+
+### 검색 API 파라미터 (POST /api/search)
+| 파라미터 | 타입 | 설명 | 관련 spec |
+|---------|------|------|-----------|
+| `address` | str | 직장 주소 | spec-01 |
+| `max_min` | int | 최대 통근시간(분) | spec-01 |
+| `max_price` | int | 최대 예산(만원) | spec-01 |
+| `min_price` | int | 최소 예산(만원) | spec-09 |
+| `pyeong_types` | list | 평형 필터 (20평대 등) | spec-01 |
+| `build_year_min` | int | 준공연도 하한 | spec-07 |
+| `address_2` | str | 두 번째 직장 주소 (맞벌이) | spec-13 |
+| `max_min_2` | int | 두 번째 직장 최대 통근시간 | spec-13 |
+
+**주의**: `max_price` 범위가 넓을수록 ODsay 호출 셀 수 급증 → 504 위험. 범위 경고 UI 있음.
 
 ### 커밋 규칙
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `docs:`, `perf:`, `test:`
@@ -62,24 +78,29 @@
 ## 3. Project Map
 
 ```
-app/           # FastAPI 백엔드 핵심 로직
-  search.py    # POST /api/search 파이프라인
-  ai.py        # 추천 매트릭스 + Claude 코멘트
-  transit.py   # ODsay 멀티키 병렬 호출 + DB 캐시
-  main.py      # FastAPI 진입점 + 진단 엔드포인트
-api/           # Vercel 서버리스 진입점
+app/
+  search.py      # POST /api/search — 핵심 검색 파이프라인
+  ai.py          # 통근버킷×평형 추천 로직 + Claude 코멘트 생성
+  transit.py     # ODsay 멀티키 병렬 호출 + 경로 필터링 + DB 캐시
+  workplaces.py  # Kakao 주소 정규화 + wp_id 발급
+  db.py          # SQLite↔Postgres 이중 어댑터
+  portable.py    # DB 비호환 로직 Python 구현 (upsert, returning 등)
+  main.py        # FastAPI 진입점 + 미들웨어 + 진단 엔드포인트
+  models.py      # Pydantic 요청/응답 스키마
+api/
+  index.py       # Vercel 서버리스 진입점
 web/
-  result.html  # 메인 결과 UI (지도 + 카드 + 친구 채팅)
-  search.html  # 검색 조건 입력 화면
+  result.html    # 메인 결과 UI (지도 + 카드 + 친구 채팅 + 즐겨찾기)
+  search.html    # 검색 조건 입력 + 최근 직장 히스토리 칩
 docs/
-  specs/       # 기능 스펙 문서 (NN-feature-name.md)
-  manifesto.md # 제품 철학
-  whytree.md   # 핵심 설계 결정 근거
-  premortem.md # 실패 시나리오 + 현재 대응 상태
-wiki/          # 도메인 지식 아카이브 (이 폴더)
-scripts/       # 데이터 파이프라인 + DB 마이그레이션
-AGENTS.md      # 이 파일 — AI 에이전트 운영 규칙
-CLAUDE.md      # 기술 스택 + 환경변수 + 세부 작업 규칙
+  specs/         # 기능 스펙 (01~28, 다음: 29)
+  manifesto.md   # 제품 철학
+  whytree.md     # 핵심 설계 결정 근거 (Why 3단계)
+  premortem.md   # 실패 시나리오 + 현재 대응 상태
+wiki/            # 도메인 지식 아카이브
+scripts/         # 데이터 파이프라인 + DB 마이그레이션
+AGENTS.md        # 이 파일
+CLAUDE.md        # 기술 스택 + 환경변수 + 세부 작업 규칙
 ```
 
 ### 핵심 데이터 흐름
@@ -101,9 +122,13 @@ CLAUDE.md      # 기술 스택 + 환경변수 + 세부 작업 규칙
 |--------|------|------|
 | 2026-05 | `result-layout` grid 깨짐 — 새 div를 grid 직접 자식에 추가 | `grid-column`/`grid-row` 명시 |
 | 2026-05 | `InFailedSqlTransaction` — rollback 없이 다음 쿼리 | `except` 블록에 `conn.rollback()` |
-| 2026-05 | `UndefinedColumn` — supabase_schema.sql 업데이트했지만 Supabase `ALTER TABLE` 미실행 | Spec 구현 메모에 수동 마이그레이션 명시 |
-| 2026-05 | 504 Timeout — 가격 범위 넓음 → ODsay 셀 수 급증 | `MAX_FETCH_CELLS=200` + 범위 경고 UI |
+| 2026-05 | `UndefinedColumn` — `supabase_schema.sql` 업데이트했지만 Supabase `ALTER TABLE` 미실행 | Spec 구현 메모에 수동 마이그레이션 명시 |
+| 2026-05 | 504 Timeout — `max_price` 범위 넓음 → 매칭 단지 폭증 → ODsay 셀 수 급증 | `MAX_FETCH_CELLS=200` + 범위 경고 UI |
 | 2026-05 | lxml 의존 패키지(python-docx/pptx) Vercel 빌드 실패 | C 확장 의존 패키지 `requirements.txt` 추가 금지 |
+| 2026-05 | 직접 검색 단지 지도 이동 불가 — `showDetail()`이 `resultData.cards`에서 lat/lng 조회 | `_openLookupDetail()`에서 `_isLookup:true` 플래그로 cards에 임시 삽입 (spec-26) |
+| 2026-05 | onclick 인라인 핸들러에 특수문자 포함 아파트명 → JS 파싱 오류 | `addEventListener` 방식 또는 `data-*` 속성으로 교체 (spec-22) |
+| 2026-05 | Haiku 동시 호출 rate limit | 동시 호출 8개 이하로 제한 |
+| 2026-05 | trade_tags 미존재 테이블 SELECT → 500 연쇄 | graceful degradation + rollback 필수 |
 
 ---
 
