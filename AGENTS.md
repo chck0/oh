@@ -95,7 +95,7 @@ web/
 docs/
   specs/         # 기능 스펙 (01~28, 다음: 29)
   manifesto.md   # 제품 철학
-  whytree.md     # 핵심 설계 결정 근거 (Why 3단계)
+  whytree.md     # 핵심 설계 결정 근거 (Why Up ↔ How Down 계층 구조)
   premortem.md   # 실패 시나리오 + 현재 대응 상태
 wiki/            # 도메인 지식 아카이브
 scripts/         # 데이터 파이프라인 + DB 마이그레이션

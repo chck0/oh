@@ -134,7 +134,7 @@ Test → Error → 에러 붙여넣기 → AI 수정 → Re-test
 Spec 완성 전 확인:
 
 - [ ] MANIFESTO.md의 어떤 원칙을 구현하는가 명시됨
-- [ ] Why Tree의 기존 결정과 충돌하지 않음
+- [ ] Why Tree 3계층 중 어느 곳에 속하는지 명시됨 (개인화 / 신뢰 데이터 / 이해하기 쉬운 설명)
 - [ ] Pre-mortem의 위험 시나리오를 악화시키지 않음
 - [ ] Non-goals에 의도적 제외 항목이 명시됨
 - [ ] Acceptance Criteria가 체크리스트 형태로 작성됨
@@ -185,5 +185,11 @@ Spec 완성 전 확인:
 | 20 | [20-transit-route-detail.md](20-transit-route-detail.md) | 경로 상세 팝업 — 통근시간 칩 클릭 → step-by-step 경로 | ✅ Implemented | hjkang83 |
 | 21 | [21-detail-modal-ux-fix.md](21-detail-modal-ux-fix.md) | 단지 상세 모달 UX 수정 — POI 카테고리 레이블 수정 + 거래 평형대 그룹화 | ✅ Implemented | hjkang83 |
 | 22 | [22-friend-chat.md](22-friend-chat.md) | 친구 채팅 패널 — Claude Opus 기반 아파트 Q&A (호가·전세·학군 등) | ✅ Implemented | hjkang83 |
+| 23 | [23-friend-chat-enhanced.md](23-friend-chat-enhanced.md) | 친구 채팅 고도화 — 컨텍스트 강화 + 인메모리 캐시 + localStorage 대화 유지 | ✅ Implemented | hjkang83 |
+| 24 | [24-friend-chat-v3.md](24-friend-chat-v3.md) | 친구 채팅 v3 — 호가 링크 · 동적 Chip · 웹 검색 tool_use | ✅ Implemented | hjkang83 |
+| 25 | [25-smart-chat-chips.md](25-smart-chat-chips.md) | 스마트 초기 Chip — Claude가 답할 수 있는 질문으로 교체 | ✅ Implemented | hjkang83 |
+| 26 | [26-apt-direct-search.md](26-apt-direct-search.md) | 분석결과 아파트 직접 검색 — 지도 핀 + 상세 분석 패널 연동 | ✅ Implemented | hjkang83 |
+| 27 | [27-chat-file-upload.md](27-chat-file-upload.md) | 친구 채팅 파일·이미지 첨부 분석 (이미지·PDF, Word/PPT 제외) | ✅ Implemented | hjkang83 |
+| 28 | [28-commute-economics.md](28-commute-economics.md) | 통근 경제성 분석 — 월 교통비·연간 통근 시간·버킷 내 최단 대비 | ✅ Implemented | hjkang83 |
 
-새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **23**
+새 Spec 추가 시 이 표와 번호를 순서대로 업데이트하세요. 다음 번호: **29**
