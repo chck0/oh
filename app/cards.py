@@ -10,6 +10,25 @@ search.py가 from app.cards import _card_to_dict 로 사용.
 import re
 
 
+# ── 통근 경제성 계산 (spec-28) ───────────────────────────────
+def _commute_economics(total_time_min: "int | None") -> dict:
+    """수도권 교통카드 기준 월 교통비·연간 통근 시간 근사값."""
+    if not total_time_min:
+        return {'monthly_transit_cost': None, 'annual_commute_hours': None}
+    if total_time_min <= 25:
+        fare = 1500
+    elif total_time_min <= 40:
+        fare = 1800
+    elif total_time_min <= 55:
+        fare = 2100
+    else:
+        fare = 2300
+    return {
+        'monthly_transit_cost': fare * 2 * 20,
+        'annual_commute_hours': round(total_time_min * 2 * 20 * 12 / 60),
+    }
+
+
 def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: int) -> str:
     """steps 리스트 → 대중교통 요약 문자열 (wp1/wp2 공통 헬퍼)."""
     walk_min = None
@@ -116,5 +135,6 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
         'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
         'price_chg_6m_pct': (price_chg_map or {}).get((apt_seq, pyeong_type)),
+        **_commute_economics(total_time_min),
     }
     return card

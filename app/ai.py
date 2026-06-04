@@ -99,6 +99,19 @@ def build_recommendations(cards: list[dict], max_minutes: int) -> dict:
         c['bucket_idx'] = assign_bucket(c['total_time_min'], buckets)
         c['bucket_label'] = bucket_label(*buckets[c['bucket_idx']])
 
+    # spec-28 AC3: 버킷 내 최단 통근 대비 연간 시간 차이
+    bucket_min_hours: dict[int, int] = {}
+    for c in cards:
+        h = c.get('annual_commute_hours')
+        if h is not None:
+            bi = c['bucket_idx']
+            if bi not in bucket_min_hours or h < bucket_min_hours[bi]:
+                bucket_min_hours[bi] = h
+    for c in cards:
+        h = c.get('annual_commute_hours')
+        min_h = bucket_min_hours.get(c['bucket_idx'])
+        c['annual_hours_diff'] = (h - min_h) if (h is not None and min_h is not None and h > min_h) else None
+
     # 슬롯 그룹화
     slots: dict[tuple[int, str], list[dict]] = {}
     for c in cards:

@@ -108,8 +108,8 @@ class TestCallLlmSuccess:
         assert call_kwargs.kwargs['max_tokens'] == 150
 
     @pytest.mark.asyncio
-    async def test_non_text_block_returns_empty(self):
-        """TextBlock이 아닌 블록만 반환 시 빈 문자열 반환 (안전 처리)."""
+    async def test_non_text_block_returns_empty_string(self):
+        """TextBlock이 아닌 블록 반환 시 빈 문자열 반환 — 500 에러 방지."""
         mock_block = MagicMock()  # spec 없음 → isinstance(block, TextBlock) = False
         mock_msg = MagicMock()
         mock_msg.content = [mock_block]
