@@ -1,0 +1,5 @@
+# 작업 일지 — 개인용 로컬 파일은 절대 커밋되지 않게 (루트 .gitignore 보강)
+# 공유되는 건 정리된 <이름>.md 와 README.md, 그리고 이 .gitignore 뿐.
+.author
+.raw/
+.cursor*

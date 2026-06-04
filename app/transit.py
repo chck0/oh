@@ -4,7 +4,6 @@ ODsay 호출 + transit_cache/routes 적재
 
 Vercel(서버리스)에서는 raw JSON 아카이브 쓰기를 자동 스킵 (IS_SERVERLESS).
 """
-import os
 import asyncio
 import aiohttp
 import json
@@ -15,7 +14,9 @@ from config import cfg
 from app.workplaces import raw_dir
 from app.portable import upsert_sql
 
-IS_SERVERLESS = bool(os.getenv('VERCEL'))
+# 모듈 레벨 re-export — 테스트에서 monkeypatch.setattr(transit_mod, 'IS_SERVERLESS', ...)로
+# 교체할 수 있도록 모듈 속성으로 노출. 값은 cfg에서 가져옴.
+IS_SERVERLESS = cfg.IS_SERVERLESS
 log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
@@ -32,6 +33,21 @@ FIRST_LAST_WALK_M = 840
 TRANSFER_WALK_M   = 420
 
 KEYS = [{'owner': f'key{i+1}', **k} for i, k in enumerate(cfg.ODSAY_KEYS)]
+
+# ── transit_routes 컬럼 구조 ─────────────────────────────────
+# step이 추가될 때는 MAX_STEPS 숫자만 바꾸면 INSERT/SELECT 자동 반영.
+MAX_STEPS = 5
+_STEP_FIELDS = ('type', 'time_min', 'dist_m', '노선', '출발', '도착')
+_ROUTE_BASE_COLS = ['origin_cell', 'wp_id', 'rank',
+                    'total_time_min', 'bus_cnt', 'subway_cnt']
+_ROUTE_STEP_COLS = [f'step{n}_{f}' for n in range(1, MAX_STEPS + 1)
+                    for f in _STEP_FIELDS]
+_ROUTE_ALL_COLS  = _ROUTE_BASE_COLS + _ROUTE_STEP_COLS
+
+_ROUTE_INSERT_SQL = (
+    f'INSERT INTO transit_routes ({", ".join(_ROUTE_ALL_COLS)}) '
+    f'VALUES ({", ".join(["?"] * len(_ROUTE_ALL_COLS))})'
+)
 
 
 # ── 좌표 유틸 ────────────────────────────────────────────────
@@ -211,11 +227,11 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
                     for rank, p in ranked:
                         info = p['info']
                         steps = to_steps(p['subPath'])
-                        s1, s2, s3, s4, s5 = [step_cols(steps, i) for i in (1,2,3,4,5)]
+                        step_data = [step_cols(steps, i) for i in range(1, MAX_STEPS + 1)]
                         route_inserts.append((
                             origin, wp_id, rank,
                             info['totalTime'], info['busTransitCount'], info['subwayTransitCount'],
-                            *s1, *s2, *s3, *s4, *s5
+                            *(v for s in step_data for v in s),
                         ))
                     ok_cnt += 1
                 else:
@@ -250,16 +266,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
         cache_inserts,
     )
 
-    conn.executemany("""
-    INSERT INTO transit_routes (
-        origin_cell, wp_id, rank, total_time_min, bus_cnt, subway_cnt,
-        step1_type, step1_time_min, step1_dist_m, step1_노선, step1_출발, step1_도착,
-        step2_type, step2_time_min, step2_dist_m, step2_노선, step2_출발, step2_도착,
-        step3_type, step3_time_min, step3_dist_m, step3_노선, step3_출발, step3_도착,
-        step4_type, step4_time_min, step4_dist_m, step4_노선, step4_출발, step4_도착,
-        step5_type, step5_time_min, step5_dist_m, step5_노선, step5_출발, step5_도착
-    ) VALUES (?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?)
-    """, route_inserts)
+    conn.executemany(_ROUTE_INSERT_SQL, route_inserts)
 
     # workplaces.cells_cached 갱신
     cached = conn.execute(

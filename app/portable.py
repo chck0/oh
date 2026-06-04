@@ -5,10 +5,10 @@ SQLite ↔ Postgres 비호환 SQL을 Python 레벨로 끌어올린 헬퍼.
 DB별 분기가 꼭 필요한 곳(UPSERT, schema bootstrap 등)만 여기서 처리.
 """
 from __future__ import annotations
-import os
 from datetime import date
+from config import cfg
 
-USE_PG = bool(os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL'))
+USE_PG = cfg.USE_PG  # re-export for backward compat during migration
 
 
 # ── 날짜 헬퍼 ────────────────────────────────────────────────
@@ -81,13 +81,20 @@ def greatest(*cols: str) -> str:
 
 
 # ── 컬럼 목록 조회 (PRAGMA table_info 대체) ──────────────────
+_col_cache: dict[str, list[str]] = {}
+
 def list_columns(conn, table: str) -> list[str]:
+    if table in _col_cache:
+        return _col_cache[table]
     if USE_PG:
         rows = conn.execute(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name=? ORDER BY ordinal_position",
             [table],
         ).fetchall()
-        return [r[0] for r in rows]
-    rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
-    return [r[1] for r in rows]
+        result = [r[0] for r in rows]
+    else:
+        rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
+        result = [r[1] for r in rows]
+    _col_cache[table] = result
+    return result

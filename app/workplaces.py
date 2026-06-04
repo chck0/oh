@@ -3,10 +3,9 @@
 (sandbox/lib_workplace.py에서 정식 이전)
 
 서버리스(Vercel) 환경에서는 파일시스템이 read-only이므로 폴더/메타 파일
-생성은 자동 스킵 (IS_SERVERLESS).
+생성은 자동 스킵 (cfg.IS_SERVERLESS).
 DB 어댑터는 app/db.py 에서 Supabase/SQLite 자동 분기.
 """
-import os
 import pathlib
 import re
 import time
@@ -18,8 +17,6 @@ from app.portable import insert_returning_id, get_last_id, list_columns
 
 KAKAO_URL = 'https://dapi.kakao.com/v2/local/search/address.json'
 _UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
-# Vercel은 VERCEL=1 환경변수를 자동 세팅
-IS_SERVERLESS = bool(os.getenv('VERCEL'))
 
 
 def _sanitize_for_folder(s: str) -> str:
@@ -64,8 +61,32 @@ def resolve(addr_input: str) -> dict | None:
     }
 
 
+_wp_mem_cache: dict[str, dict] = {}  # address_input → wp dict (프로세스 생존 동안 유지)
+
+
 def get_or_create(conn, addr_input: str) -> dict | None:
     """workplaces UPSERT + 폴더 생성. dict 반환."""
+    # ── 1순위: 인메모리 캐시 → DB/Kakao 완전 생략 ───────────────
+    if addr_input in _wp_mem_cache:
+        return _wp_mem_cache[addr_input]
+
+    # ── 2순위: DB 조회 → Kakao API 호출 생략 ────────────────────
+    cols = list_columns(conn, 'workplaces')
+    cached = conn.execute(
+        'SELECT * FROM workplaces WHERE address_input = ?', (addr_input,)
+    ).fetchone()
+    if cached:
+        now = time.strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            'UPDATE workplaces SET last_used=?, search_count=search_count+1 WHERE wp_id=?',
+            (now, cached['wp_id'])
+        )
+        conn.commit()
+        result = dict(zip(cols, [cached[c] for c in cols]))
+        _wp_mem_cache[addr_input] = result
+        return result
+
+    # ── 3순위: Kakao REST API geocoding (첫 등록 시만) ──────────
     resolved = resolve(addr_input)
     if not resolved:
         return None
@@ -98,7 +119,7 @@ def get_or_create(conn, addr_input: str) -> dict | None:
         conn.execute('UPDATE workplaces SET folder_name=? WHERE wp_id=?', (folder, wp_id))
         conn.commit()
         # 로컬에서만 raw 아카이브 폴더 생성 (Vercel은 read-only FS)
-        if not IS_SERVERLESS:
+        if not cfg.IS_SERVERLESS:
             d = raw_dir_by(folder)
             d.mkdir(parents=True, exist_ok=True)
             (d / 'cells').mkdir(exist_ok=True)

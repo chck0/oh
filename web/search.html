@@ -905,8 +905,36 @@ function validatePrice() {
 
   return { maxPrice, minPrice };
 }
-['price-eok','price-man','min-price-eok','min-price-man'].forEach(id => {
-  document.getElementById(id).addEventListener('input', validatePrice);
+// 최대 금액 입력 시, 최소값을 (최대 - 5억)으로 자동 입력 → 검색 타임아웃 방지.
+// 사용자가 직접 입력한 최소값은 보존하고, 자동 입력분만 최대값 변경에 따라 갱신.
+let minAutoFilled = false;
+function autofillMinFromMax() {
+  const minEokEl = document.getElementById('min-price-eok');
+  const minManEl = document.getElementById('min-price-man');
+  const minTouched = minEokEl.value.trim() !== '' || minManEl.value.trim() !== '';
+  if (minTouched && !minAutoFilled) return;  // 사용자가 직접 넣은 값은 건드리지 않음
+
+  const maxEok = parseInt(document.getElementById('price-eok').value) || 0;
+  const maxMan = parseInt(document.getElementById('price-man').value) || 0;
+  const maxPrice = maxEok * 10000 + maxMan;
+
+  if (maxPrice > 50000) {                     // 5억 초과 → 범위 5억으로 자동 설정
+    const minVal = maxPrice - 50000;
+    minEokEl.value = Math.floor(minVal / 10000);
+    minManEl.value = minVal % 10000;
+    minAutoFilled = true;
+  } else if (minAutoFilled) {                 // 5억 이하로 줄면 자동 입력분 해제
+    minEokEl.value = '';
+    minManEl.value = '';
+    minAutoFilled = false;
+  }
+}
+
+['price-eok','price-man'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { autofillMinFromMax(); validatePrice(); });
+});
+['min-price-eok','min-price-man'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { minAutoFilled = false; validatePrice(); });
 });
 
 // ── 폼 제출 ────────────────────────────────────────────────
