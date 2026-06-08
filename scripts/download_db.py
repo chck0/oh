@@ -82,8 +82,36 @@ BATCH_SIZE = 5000
 # ─── 유틸 ──────────────────────────────────────────────────────────────────
 
 def _pg_connect(url: str) -> "psycopg.Connection":
-    """Supabase Postgres 연결 (Direct 5432 or pgBouncer 6543 모두 OK)."""
-    conn = psycopg.connect(url, autocommit=True)
+    """
+    Supabase Postgres 연결.
+
+    pgBouncer 호환성 자동 처리:
+      1) `:6543` (Transaction pooler) 감지 → `:5432` (Session pooler)로 자동 재작성.
+         Transaction pooler는 서버사이드 named cursor(DECLARE CURSOR)를 지원하지 않아
+         스트리밍 다운로드가 silent hang 됨. 같은 pooler 호스트의 5432 포트(Session mode)
+         로 바꾸면 named cursor가 정상 동작함.
+      2) autocommit=False: named cursor는 트랜잭션 블록 안에서만 동작 (psycopg 3.3+).
+      3) prepare_threshold=None: pgBouncer가 prepared statement를 차단해도 무방.
+      4) connect_timeout=30: 네트워크 hang 시 30초 내 에러로 떨어지게 (silent hang 방지).
+      5) statement_timeout=600s: 단일 쿼리가 10분 넘어가면 강제 종료.
+    """
+    # ── pgBouncer Transaction mode(6543) 감지 후 Session mode(5432)로 자동 전환 ──
+    rewritten = re.sub(r"(pooler\.supabase\.com):6543\b", r"\1:5432", url)
+    if rewritten != url:
+        print(
+            "⚠️   DATABASE_URL이 pgBouncer Transaction pooler(:6543)를 가리킵니다.\n"
+            "    download_db.py는 서버사이드 커서를 사용하므로 Session pooler(:5432)로\n"
+            "    자동 전환하여 연결합니다. (.env는 그대로 두어도 OK)"
+        )
+        url = rewritten
+
+    conn = psycopg.connect(
+        url,
+        autocommit=False,
+        prepare_threshold=None,
+        connect_timeout=30,
+        options="-c statement_timeout=600000",  # 10분
+    )
     return conn
 
 
