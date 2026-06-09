@@ -3688,6 +3688,7 @@ function renderCards(data){
   // 전역 상태 저장 (탭 전환 / 재렌더 시 참조)
   window._lastSearchData = data;
   window._lastCards      = data.cards || [];
+  window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
 
@@ -4516,16 +4517,21 @@ function renderPOIHTML(poi){
 
 // ── 다중 우선순위 정렬 (spec-20) ────────────────────────────
 const SORT_OPTIONS = [
-  { value: '',                        label: '선택 안 함',       group: '' },
-  { value: 'total_time_min:asc',      label: '통근시간 짧은순',  group: '기본' },
-  { value: 'price_low:asc',           label: '최저가 낮은순',    group: '기본' },
-  { value: 'pyeong_price_avg:asc',    label: '평당가 낮은순',    group: '기본' },
-  { value: 'build_year:desc',         label: '준공연도 신축순',  group: '기본' },
-  { value: 'deal_count:desc',         label: '거래건수 많은순',  group: '기본' },
-  { value: 'nearest_park_min:asc',    label: '공원 도보',        group: '도보' },
-  { value: 'nearest_subway_min:asc',  label: '지하철 도보',      group: '도보' },
-  { value: 'nearest_school_min:asc',  label: '학교 도보',        group: '도보' },
-  { value: 'nearest_mart_min:asc',    label: '마트 도보',        group: '도보' },
+  { value: '',                             label: '선택 안 함',        group: '' },
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
+  { value: 'build_year:desc',              label: '준공연도 신축순',   group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',   group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',     group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '집→대중교통 도보',  group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',         group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',       group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',     group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',   group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
 ];
 
 function _buildSelectHTML(excludeValues) {

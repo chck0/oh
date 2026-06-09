@@ -56,7 +56,7 @@ def _build_transit_summary(steps: list[dict], bc: int, sc: int, total_time_min: 
     return summary
 
 
-def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, avg_price_map: dict | None = None, dual: bool = False):
+def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None, price_chg_map: dict | None = None, avg_price_map: dict | None = None, poi_min_map: dict | None = None, dual: bool = False):
     # ── wp1 transit 파싱 ─────────────────────────────────────────
     if dual:
         bc_1, sc_1 = r['bus_cnt_1'], r['subway_cnt_1']
@@ -97,6 +97,10 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         bc_2 = None; sc_2 = None
         transit_summary_2 = None
 
+    # 집→대중교통 도보: wp1 기준 첫 번째 step이 도보인 경우의 시간
+    _wp1_steps = steps_1 if dual else steps
+    walk_to_transit_min = _wp1_steps[0]['time'] if _wp1_steps and _wp1_steps[0]['type'] == '도보' else None
+
     # 준공연도: kaptUsedate = "20040517" → 2004
     use_date = r['use_date'] or ''
     build_year = int(use_date[:4]) if len(use_date) >= 4 and use_date[:4].isdigit() else None
@@ -108,6 +112,14 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
         pyeong_price = int(pa) if pa else None
     except (IndexError, KeyError):
         pyeong_price = None
+
+    try:
+        py = r['pyeong']
+        pyeong_val = int(py) if py else None
+    except (IndexError, KeyError):
+        pyeong_val = None
+
+    poi_data = (poi_min_map or {}).get(r['kaptCode'], {})
 
     card = {
         'apt_seq': apt_seq, 'apt_nm': r['apt_nm'], 'umd_nm': r['umd_nm'],
@@ -131,10 +143,17 @@ def _card_to_dict(r, recent_map: dict | None = None, tag_map: dict | None = None
                      or r['price_low'],
         'price_high': r['price_high'],
         'pyeong_price_avg': pyeong_price,
+        'pyeong': pyeong_val,
         'deal_count': r['deal_count'],
         'recent_trades': (recent_map or {}).get((apt_seq, pyeong_type), []),
         'why_tags': (tag_map or {}).get((apt_seq, pyeong_type), []),
         'price_chg_6m_pct': (price_chg_map or {}).get((apt_seq, pyeong_type)),
+        'walk_to_transit_min': walk_to_transit_min,
+        'nearest_park_min': poi_data.get('nearest_park_min'),
+        'nearest_subway_min': poi_data.get('nearest_subway_min'),
+        'nearest_elementary_min': poi_data.get('nearest_elementary_min'),
+        'nearest_mid_high_min': poi_data.get('nearest_mid_high_min'),
+        'nearest_mart_min': poi_data.get('nearest_mart_min'),
         **_commute_economics(total_time_min),
     }
     return card

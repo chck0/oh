@@ -392,6 +392,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 MAX(t.deal_amount_int) AS price_high,
                 COUNT(t.id) AS deal_count,
                 AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                ROUND(AVG(t.pyeong)) AS pyeong,
                 MAX(k.kaptTopFloor) AS top_floor,
                 MAX(k.kaptUsedate) AS use_date
             FROM apartments a
@@ -456,6 +457,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 MAX(t.deal_amount_int) AS price_high,
                 COUNT(t.id) AS deal_count,
                 AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                ROUND(AVG(t.pyeong)) AS pyeong,
                 MAX(k.kaptTopFloor) AS top_floor,
                 MAX(k.kaptUsedate) AS use_date
             FROM apartments a
@@ -565,7 +567,8 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             SELECT kaptCode,
                    MIN(CASE WHEN poi_lclas_cd='I' THEN walking_min END) AS nearest_park_min,
                    MIN(CASE WHEN poi_lclas_cd='D' AND poi_mlsfc_cd='D01' THEN walking_min END) AS nearest_subway_min,
-                   MIN(CASE WHEN poi_lclas_cd='A' THEN walking_min END) AS nearest_school_min,
+                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm LIKE '%초등%' THEN walking_min END) AS nearest_elementary_min,
+                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm NOT LIKE '%초등%' THEN walking_min END) AS nearest_mid_high_min,
                    MIN(CASE WHEN poi_lclas_cd='E' THEN walking_min END) AS nearest_mart_min
             FROM apt_walking_poi
             WHERE kaptCode IN ({ph_poi})
@@ -574,7 +577,8 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
         poi_min_map = {r['kaptCode']: {
             'nearest_park_min': r['nearest_park_min'],
             'nearest_subway_min': r['nearest_subway_min'],
-            'nearest_school_min': r['nearest_school_min'],
+            'nearest_elementary_min': r['nearest_elementary_min'],
+            'nearest_mid_high_min': r['nearest_mid_high_min'],
             'nearest_mart_min': r['nearest_mart_min'],
         } for r in poi_min_rows}
 
