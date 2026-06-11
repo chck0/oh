@@ -392,6 +392,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 MAX(t.deal_amount_int) AS price_high,
                 COUNT(t.id) AS deal_count,
                 AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                ROUND(AVG(t.pyeong)) AS pyeong,
                 MAX(k.kaptTopFloor) AS top_floor,
                 MAX(k.kaptUsedate) AS use_date
             FROM apartments a
@@ -456,6 +457,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 MAX(t.deal_amount_int) AS price_high,
                 COUNT(t.id) AS deal_count,
                 AVG(t.deal_amount_int * 1.0 / NULLIF(t.pyeong, 0)) AS pyeong_price_avg,
+                ROUND(AVG(t.pyeong)) AS pyeong,
                 MAX(k.kaptTopFloor) AS top_floor,
                 MAX(k.kaptUsedate) AS use_date
             FROM apartments a
@@ -556,8 +558,32 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
                 if abs(pct) >= 3.0:
                     price_chg_map[(row['apt_seq'], row['pyeong_type'])] = pct
 
+    # ─ 4e. POI 최단거리 집계 (정렬용) ─
+    poi_min_map: dict = {}
+    kaptcodes = list({c['kaptCode'] for c in cards if c['kaptCode']})
+    if kaptcodes:
+        ph_poi = ','.join(['?'] * len(kaptcodes))
+        poi_min_rows = conn.execute(f"""
+            SELECT kaptCode,
+                   MIN(CASE WHEN poi_lclas_cd='I' THEN walking_min END) AS nearest_park_min,
+                   MIN(CASE WHEN poi_lclas_cd='D' AND poi_mlsfc_cd='D01' THEN walking_min END) AS nearest_subway_min,
+                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm LIKE '%초등%' THEN walking_min END) AS nearest_elementary_min,
+                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm NOT LIKE '%초등%' THEN walking_min END) AS nearest_mid_high_min,
+                   MIN(CASE WHEN poi_lclas_cd='E' THEN walking_min END) AS nearest_mart_min
+            FROM apt_walking_poi
+            WHERE kaptCode IN ({ph_poi})
+            GROUP BY kaptCode
+        """, kaptcodes).fetchall()
+        poi_min_map = {r['kaptCode']: {
+            'nearest_park_min': r['nearest_park_min'],
+            'nearest_subway_min': r['nearest_subway_min'],
+            'nearest_elementary_min': r['nearest_elementary_min'],
+            'nearest_mid_high_min': r['nearest_mid_high_min'],
+            'nearest_mart_min': r['nearest_mart_min'],
+        } for r in poi_min_rows}
+
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
-    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, avg_price_map, dual=dual) for c in cards]
+    raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, avg_price_map, poi_min_map, dual=dual) for c in cards]
     # 대표가(3개월 평균)가 검색 범위를 벗어난 카드 제거
     # avg_price_map이 없는 카드(거래 없음)는 유지
     def _price_in_range(card: dict) -> bool:
