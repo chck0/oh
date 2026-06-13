@@ -356,19 +356,22 @@ class TestSlopeLabelHelpers:
 
     def test_slope_label_flat(self):
         from app.search import _slope_label
-        assert _slope_label(2.0) == ('평지', '걷기 편해요')
+        assert _slope_label(2.0) == ('평지', '걷기 편해요', 1)
 
     def test_slope_label_gentle(self):
         from app.search import _slope_label
         assert _slope_label(5.0)[0] == '완만한 오르막'
+        assert _slope_label(5.0)[2] == 2
 
     def test_slope_label_hill(self):
         from app.search import _slope_label
         assert _slope_label(9.0)[0] == '언덕'
+        assert _slope_label(9.0)[2] == 3
 
     def test_slope_label_steep(self):
         from app.search import _slope_label
         assert _slope_label(13.0)[0] == '가파른 언덕'
+        assert _slope_label(13.0)[2] == 4
 
     def test_slope_label_negative_treated_flat(self):
         from app.search import _slope_label
@@ -407,6 +410,7 @@ class TestInfraSection:
         assert b['slope_label'] == '평지'
         assert b['slope_hint'] == '걷기 편해요'
         assert b['slope_avg'] == 2.0
+        assert b['slope_level'] == 1
 
     def test_far_bcr_aggregated(self, detail_client):
         b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']

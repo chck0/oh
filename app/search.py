@@ -23,8 +23,11 @@ router = APIRouter()
 # ── 입지·구조 지표 라벨 변환 (spec-31) ───────────────────────
 # 경사: 도(°) 원본은 툴팁용으로만 두고, 본문엔 체감 라벨+한 줄 설명으로 번역.
 #   ⚠️ apt_slope_avg 단위가 도(°) 가정. 프로덕션 데이터로 단위 확인 시 임계값만 조정.
-def _slope_label(avg) -> tuple[str, str] | None:
-    """단지 평균 경사(도) → (라벨, 한 줄 체감 설명). 비정상값은 None."""
+def _slope_label(avg) -> tuple[str, str, int] | None:
+    """단지 평균 경사(도) → (라벨, 한 줄 체감 설명, 레벨 1~4). 비정상값은 None.
+
+    레벨은 프론트 인디케이터 칸 수와 직결 — 라벨 문자열에 의존하지 않도록 백엔드가 산출.
+    """
     try:
         v = float(avg)
     except (TypeError, ValueError):
@@ -32,12 +35,12 @@ def _slope_label(avg) -> tuple[str, str] | None:
     if v < 0:
         v = 0.0  # 음수 이상치는 평지 취급
     if v < 3:
-        return ('평지', '걷기 편해요')
+        return ('평지', '걷기 편해요', 1)
     if v < 7:
-        return ('완만한 오르막', '살짝 오르막이에요')
+        return ('완만한 오르막', '살짝 오르막이에요', 2)
     if v < 12:
-        return ('언덕', '오르막이 확실히 느껴져요')
-    return ('가파른 언덕', '짐 들고 오르긴 부담돼요')
+        return ('언덕', '오르막이 확실히 느껴져요', 3)
+    return ('가파른 언덕', '짐 들고 오르긴 부담돼요', 4)
 
 
 def _far_level(far) -> str | None:
@@ -1013,7 +1016,7 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
 
     # ── 기본 단지 정보 + 건물 상세 ────────────────────────────────
     apt = conn.execute("""
-        SELECT a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+        SELECT a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng, a.kaptCode,
                k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
                k.kaptDongCnt, k.kaptdEcnt,
                k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
@@ -1067,12 +1070,9 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
     }
 
     # ── 입지·구조 지표 (spec-31): apt_slope + building_register ──
-    # kaptCode 별도 조회 후 두 테이블을 각각 try/except 로 보호.
+    # kaptCode 는 위 메인 쿼리에서 재사용. 두 테이블을 각각 try/except 로 보호.
     # ⚠️ 테이블 미존재/쿼리 실패 시 rollback 필수 (pgBouncer InFailedSqlTransaction 방지).
-    kapt_row = conn.execute(
-        'SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1', [apt_seq]
-    ).fetchone()
-    kapt_code = kapt_row['kaptCode'] if kapt_row else None
+    kapt_code = apt['kaptCode']
 
     if kapt_code:
         # 경사도 — 단지 평균만 사용 (주변 경사 미사용)
@@ -1086,6 +1086,7 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
                     building_info['slope_avg'] = round(float(srow['apt_slope_avg']), 1)
                     building_info['slope_label'] = labeled[0]
                     building_info['slope_hint'] = labeled[1]
+                    building_info['slope_level'] = labeled[2]
         except Exception:
             try:
                 conn.rollback()
@@ -1103,8 +1104,10 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
                 fars = [r['vlRat'] for r in brows if r['vlRat'] is not None]
                 bcrs = [r['bcRat'] for r in brows if r['bcRat'] is not None]
                 strs = [r['strctCdNm'] for r in brows if r['strctCdNm']]
-                days = [str(r['useAprDay']) for r in brows
-                        if r['useAprDay'] and str(r['useAprDay']).strip()]
+                # YYYYMMDD 8자리만 후보 → min() 이 짧은 비정상값을 고르지 않도록
+                days = [s for r in brows
+                        if (s := str(r['useAprDay'] or '').strip())[:8].isdigit()
+                        and len(s) >= 8]
                 if fars:
                     far = round(sum(fars) / len(fars), 1)
                     building_info['far'] = far

@@ -2534,10 +2534,9 @@ function _renderDetail(d) {
     : '-';
 
   // ── 입지·구조 (spec-31): 데이터 있는 행만 노출 ──────────────
-  const slopeLvMap = { '평지':1, '완만한 오르막':2, '언덕':3, '가파른 언덕':4 };
   const ihRows = [];
   if (b.slope_label) {
-    const lv = slopeLvMap[b.slope_label] || 1;
+    const lv = b.slope_level || 1;  // 레벨은 백엔드 산출값 사용 (라벨 문자열 결합 제거)
     const ind = `<span class="slope-ind" data-lv="${lv}"><i></i><i></i><i></i><i></i></span>`;
     const tip = b.slope_avg != null ? ` title="평균 경사 ${b.slope_avg}°"` : '';
     ihRows.push(`<div${tip}><div class="detail-kv__label">경사</div>`
