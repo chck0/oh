@@ -6,6 +6,9 @@ os.environ.setdefault('KAKAO_REST_API_KEY', 'test-kakao-key')
 os.environ.setdefault('ODSAY_KEY_1', 'test-odsay-key')
 os.environ.setdefault('ODSAY_REFERER_1', 'http://test.local')
 os.environ.setdefault('ANTHROPIC_API_KEY', 'test-anthropic-key')
+# 시작 캐시 워밍 비활성화: 워밍 태스크가 라우팅 안 된 실 db_connect()로 모듈
+# 캐시를 채워 테스트를 오염시키는 레이스를 막는다 (app/main.py lifespan 참조).
+os.environ.setdefault('BADUGI_NO_WARM', '1')
 # 테스트는 항상 SQLite 모드로 강제 — .env의 DATABASE_URL(실 Supabase)을 절대 안 침.
 # config.py가 load_dotenv(override=False)로 .env를 읽으므로, 여기서 빈 값을
 # 먼저 박아두면(override=False라 덮어쓰지 않음) USE_PG=False가 보장된다.

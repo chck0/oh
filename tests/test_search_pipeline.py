@@ -131,6 +131,15 @@ CREATE TABLE IF NOT EXISTS trade_tags (
     calc_date   TEXT,
     PRIMARY KEY (apt_seq, pyeong_type, tag_type)
 );
+
+CREATE TABLE IF NOT EXISTS apt_walking_poi (
+    kaptCode     TEXT,
+    poi_lclas_cd TEXT,
+    poi_mlsfc_cd TEXT,
+    poi_nm       TEXT,
+    distance_m   REAL,
+    walking_min  INTEGER
+);
 """
 
 # wp_id=1 직장 — Kakao 호출 없이 바로 반환할 딕셔너리
