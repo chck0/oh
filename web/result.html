@@ -333,26 +333,26 @@
     .sort-bar {
       display: none;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
+      gap: 10px;
+      padding: 10px 22px;
       background: #fff;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-strong);
       flex-shrink: 0;
       flex-wrap: wrap;
     }
     .sort-bar.visible { display: flex; }
-    .sort-bar__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 2px; }
+    .sort-bar__label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 4px; font-weight: 600; }
     .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sort-select-wrap label { font-size: 10px; color: var(--color-text-tertiary); font-weight: 600; }
+    .sort-select-wrap label { font-size: 11px; color: var(--color-text-tertiary); font-weight: 600; }
     .sort-select {
-      font-size: 12px; font-family: inherit;
-      padding: 4px 22px 4px 8px;
+      font-size: 13px; font-family: inherit;
+      padding: 6px 26px 6px 10px;
       border: 1px solid var(--color-border-strong);
       border-radius: 6px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 7px center;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
       appearance: none; cursor: pointer;
       color: var(--color-text-primary);
-      width: 108px;
+      width: 128px;
     }
     .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
     .sort-bar__reset {
@@ -2008,28 +2008,28 @@
 
 <main id="main" style="display:none;">
   <div class="summary-bar" id="summary"></div>
+  <div class="sort-bar" id="sort-bar">
+    <span class="sort-bar__label">정렬순서</span>
+    <div class="sort-select-wrap">
+      <label>1순위</label>
+      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>2순위</label>
+      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>3순위</label>
+      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+    </div>
+    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+  </div>
   <div class="result-layout">
     <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
-      </div>
-      <div class="sort-bar" id="sort-bar">
-        <span class="sort-bar__label">정렬순서</span>
-        <div class="sort-select-wrap">
-          <label>1순위</label>
-          <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
-        </div>
-        <div class="sort-select-wrap">
-          <label>2순위</label>
-          <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-        </div>
-        <div class="sort-select-wrap">
-          <label>3순위</label>
-          <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-        </div>
-        <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
