@@ -172,3 +172,76 @@ class TestDemoModeGate:
             wp = workplaces.get_or_create(mem_db, '없는주소xyz')
         mock_resolve.assert_called_once()
         assert wp is None
+
+
+# ── wp_id SERIAL 시퀀스 desync self-heal (IMG_8056 버그) ────────
+
+class TestWpSequenceSelfHeal:
+    """SERIAL 시퀀스가 max보다 뒤처져 duplicate key 날 때 자동 복구."""
+
+    def test_resync_sequence_noop_on_sqlite(self, mem_db):
+        from app.portable import resync_sequence
+        # SQLite는 no-op — 예외 없이 통과해야 함
+        resync_sequence(mem_db, 'workplaces', 'wp_id')
+
+    def test_get_or_create_inserts_new_address(self, mem_db, monkeypatch):
+        """정상 INSERT 경로 회귀 확인 (try/except 래핑 후에도 동작)."""
+        from app import workplaces
+        monkeypatch.delenv('BADUGI_DEMO', raising=False)
+        workplaces._wp_mem_cache.clear()
+        resolved = {
+            'address_key': 'k_new|1|0', 'address_norm': '서울 테스트구 테스트로 1',
+            'b_code': '1168010100', 'main_bun': '1', 'sub_bun': '',
+            'lat': 37.5, 'lng': 127.0,
+        }
+        with (
+            patch.object(workplaces, 'resolve', return_value=resolved),
+            patch.object(workplaces, 'raw_dir_by'),
+            patch.object(workplaces, '_write_meta'),
+        ):
+            wp = workplaces.get_or_create(mem_db, '테스트신규주소')
+        assert wp is not None
+        assert wp['wp_id'] >= 1
+        assert wp['address_key'] == 'k_new|1|0'
+
+    def test_insert_retries_after_unique_violation(self, mem_db, monkeypatch):
+        """첫 INSERT가 duplicate key로 실패 → resync 후 재시도하여 성공."""
+        from app import workplaces
+        monkeypatch.delenv('BADUGI_DEMO', raising=False)
+        workplaces._wp_mem_cache.clear()
+        resolved = {
+            'address_key': 'k_retry|2|0', 'address_norm': '서울 재시도구 1',
+            'b_code': '1168010100', 'main_bun': '2', 'sub_bun': '',
+            'lat': 37.5, 'lng': 127.0,
+        }
+
+        class FlakyConn:
+            """첫 INSERT만 duplicate key로 실패시키는 래퍼 (실제 conn 위임)."""
+            def __init__(self, real):
+                self._real = real
+                self.failed = False
+            def execute(self, sql, *a, **k):
+                if 'INSERT INTO workplaces' in sql and not self.failed:
+                    self.failed = True
+                    raise Exception('duplicate key value violates unique '
+                                    'constraint "workplaces_pkey"')
+                return self._real.execute(sql, *a, **k)
+            def commit(self): return self._real.commit()
+            def rollback(self): return self._real.rollback()
+
+        fc = FlakyConn(mem_db)
+        resynced = {'called': False}
+
+        def fake_resync(conn, table, col):
+            resynced['called'] = True
+
+        with (
+            patch.object(workplaces, 'resolve', return_value=resolved),
+            patch.object(workplaces, 'resync_sequence', side_effect=fake_resync),
+            patch.object(workplaces, 'raw_dir_by'),
+            patch.object(workplaces, '_write_meta'),
+        ):
+            wp = workplaces.get_or_create(fc, '재시도주소')
+        assert fc.failed is True              # 첫 시도는 실패했고
+        assert resynced['called'] is True     # 시퀀스 보정이 호출됐고
+        assert wp is not None and wp['wp_id'] >= 1  # 재시도로 성공

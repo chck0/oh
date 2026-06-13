@@ -67,6 +67,21 @@ def get_last_id(conn, cursor, table: str, id_col: str):
     return cursor.lastrowid
 
 
+def resync_sequence(conn, table: str, id_col: str) -> None:
+    """SERIAL 시퀀스를 MAX(id_col)로 보정 (Postgres 전용, SQLite는 no-op).
+
+    외부 적재/마이그레이션으로 시퀀스가 테이블 max보다 뒤처지면 INSERT 시
+    duplicate key(UniqueViolation)가 난다. setval로 nextval=max+1 되도록 복구.
+    table/id_col은 코드 내부 상수만 전달(사용자 입력 금지) — f-string 사용.
+    """
+    if not USE_PG:
+        return
+    conn.execute(
+        f"SELECT setval(pg_get_serial_sequence('{table}', '{id_col}'), "
+        f"COALESCE((SELECT MAX({id_col}) FROM {table}), 1), true)"
+    )
+
+
 # ── GREATEST 헬퍼 (dual workplace 정렬용) ────────────────────
 def greatest(*cols: str) -> str:
     """portable GREATEST(col1, col2, ...).
