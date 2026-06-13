@@ -448,3 +448,33 @@ class TestInfraSection:
         b = resp.json()['building']
         assert 'slope_label' not in b
         assert 'far' not in b
+
+    def test_far_bcr_zero_treated_as_missing(self):
+        """건축물대장 용적률/건폐율 0(미집계) → 0% 표시 대신 행 숨김."""
+        conn = sqlite3.connect(':memory:', check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.executescript(_SCHEMA)
+        _seed(conn)
+        # APT001의 building_register vlRat/bcRat를 0으로 교체
+        conn.execute("DELETE FROM building_register WHERE kaptCode='KC001'")
+        conn.execute(
+            "INSERT INTO building_register "
+            "(kaptCode,mgmBldrgstPk,vlRat,bcRat,strctCdNm,useAprDay) "
+            "VALUES ('KC001','KC001-1',0,0,'철근콘크리트구조','20040517')",
+        )
+        conn.commit()
+        from app.main import app
+        from app.db import get_db
+
+        def _ov():
+            yield conn
+
+        app.dependency_overrides[get_db] = _ov
+        with TestClient(app) as c:
+            b = c.get('/api/apt/APT001/detail?wp_id=1').json()['building']
+        app.dependency_overrides.clear()
+        conn.close()
+        assert 'far' not in b
+        assert 'bcr' not in b
+        # 구조·사용승인은 유효하므로 유지
+        assert b['structure'] == '철근콘크리트구조'
