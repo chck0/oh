@@ -181,8 +181,10 @@ def _q_to_pg(sql: str) -> str:
         s = m.group(0)
         if s == '?':
             return '%s'
-        if s[0] in ('"', "'"):
-            return s  # 이미 quoted거나 리터럴
+        if s[0] == '"':
+            return s  # 이미 인용된 식별자
+        if s[0] == "'":
+            return s.replace('%', '%%')  # LIKE '%..%' 안의 % → psycopg3 이스케이프
         return f'"{s}"'  # camelCase 컬럼명 → 큰따옴표로
     return _SQL_RE.sub(repl, sql)
 
