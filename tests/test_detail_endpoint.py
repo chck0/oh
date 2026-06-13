@@ -405,12 +405,14 @@ class TestSlopeLabelHelpers:
 class TestInfraSection:
     """detail building 객체의 입지·구조 필드."""
 
-    def test_slope_fields_present(self, detail_client):
+    def test_slope_disabled_until_data_verified(self, detail_client):
+        # 2026-06-13 임시 비활성(SLOPE_LABEL_ENABLED=False): 단위 미확정 → 경사 행 숨김.
+        # _slope_label 순수함수 자체는 유지(아래 TestSlopeLabelHelpers).
         b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']
-        assert b['slope_label'] == '평지'
-        assert b['slope_hint'] == '걷기 편해요'
-        assert b['slope_avg'] == 2.0
-        assert b['slope_level'] == 1
+        assert 'slope_label' not in b
+        assert 'slope_avg' not in b
+        # 나머지 입지·구조(용적률 등)는 정상 유지
+        assert b['far'] == 240.0
 
     def test_far_bcr_aggregated(self, detail_client):
         b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']
