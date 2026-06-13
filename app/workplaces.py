@@ -66,6 +66,17 @@ def resolve(addr_input: str) -> dict | None:
 
 def get_or_create(conn, addr_input: str) -> dict | None:
     """workplaces UPSERT + 폴더 생성. dict 반환."""
+    # 데모 모드(spec-30): 시드된 직장은 Kakao 호출 없이 DB에서 직접 반환.
+    # 미일치 시 평소처럼 Kakao로 진행 → 키가 더미면 정직하게 실패(400).
+    if os.getenv('BADUGI_DEMO'):
+        row = conn.execute(
+            'SELECT * FROM workplaces WHERE address_input=? OR address_norm=? '
+            'ORDER BY last_used DESC LIMIT 1', (addr_input, addr_input)
+        ).fetchone()
+        if row is not None:
+            cols = list_columns(conn, 'workplaces')
+            return dict(zip(cols, [row[c] for c in cols]))
+
     resolved = resolve(addr_input)
     if not resolved:
         return None

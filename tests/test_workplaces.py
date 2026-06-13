@@ -128,3 +128,45 @@ class TestResolve:
             result = resolve('테스트주소')
         assert result is not None
         assert result['address_norm']  # 빈 문자열 아님
+
+
+# ── 데모 모드 게이트 (spec-30) ────────────────────────────────
+
+class TestDemoModeGate:
+    """BADUGI_DEMO=1 + 시드된 직장 → Kakao 호출 없이 DB 행 반환."""
+
+    def _seed_wp(self, conn):
+        conn.execute(
+            "INSERT INTO workplaces (wp_id, address_key, address_input,"
+            " address_norm, b_code, lat, lng, folder_name)"
+            " VALUES (1, 'DEMO|gangnam|0', '강남역', '서울 강남구 테헤란로 504',"
+            " '1168010100', 37.4979, 127.0276, 'wp_0001__demo')")
+        conn.commit()
+
+    def test_demo_seeded_address_skips_kakao(self, mem_db, monkeypatch):
+        from app import workplaces
+        monkeypatch.setenv('BADUGI_DEMO', '1')
+        self._seed_wp(mem_db)
+        with patch.object(workplaces, 'resolve') as mock_resolve:
+            wp = workplaces.get_or_create(mem_db, '강남역')
+        mock_resolve.assert_not_called()
+        assert wp is not None
+        assert wp['wp_id'] == 1
+
+    def test_demo_unseeded_address_falls_through_to_kakao(self, mem_db, monkeypatch):
+        from app import workplaces
+        monkeypatch.setenv('BADUGI_DEMO', '1')
+        self._seed_wp(mem_db)
+        with patch.object(workplaces, 'resolve', return_value=None) as mock_resolve:
+            wp = workplaces.get_or_create(mem_db, '없는주소')
+        mock_resolve.assert_called_once()
+        assert wp is None
+
+    def test_no_demo_env_behaves_as_before(self, mem_db, monkeypatch):
+        from app import workplaces
+        monkeypatch.delenv('BADUGI_DEMO', raising=False)
+        self._seed_wp(mem_db)
+        with patch.object(workplaces, 'resolve', return_value=None) as mock_resolve:
+            wp = workplaces.get_or_create(mem_db, '강남역')
+        mock_resolve.assert_called_once()
+        assert wp is None

@@ -134,6 +134,7 @@ CLAUDE.md        # 기술 스택 + 환경변수 + 세부 작업 규칙
 
 ## 5. Spec 번호 현황
 
-다음 신규 Spec 번호: **29**
+다음 신규 Spec 번호: **31**
 
-완료 목록: spec-01~28 (세부 내용 → `docs/specs/SPEC_GUIDE.md`)
+완료 목록: spec-01~28, spec-30(로컬 데모 모드) (세부 내용 → `docs/specs/SPEC_GUIDE.md`)
+Draft: spec-29(실거래 데이터 자동 갱신)
