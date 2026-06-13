@@ -563,24 +563,33 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     kaptcodes = list({c['kaptCode'] for c in cards if c['kaptCode']})
     if kaptcodes:
         ph_poi = ','.join(['?'] * len(kaptcodes))
-        poi_min_rows = conn.execute(f"""
-            SELECT kaptCode,
-                   MIN(CASE WHEN poi_lclas_cd='I' THEN walking_min END) AS nearest_park_min,
-                   MIN(CASE WHEN poi_lclas_cd='D' AND poi_mlsfc_cd='D01' THEN walking_min END) AS nearest_subway_min,
-                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm LIKE '%초등%' THEN walking_min END) AS nearest_elementary_min,
-                   MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm NOT LIKE '%초등%' THEN walking_min END) AS nearest_mid_high_min,
-                   MIN(CASE WHEN poi_lclas_cd='E' THEN walking_min END) AS nearest_mart_min
-            FROM apt_walking_poi
-            WHERE kaptCode IN ({ph_poi})
-            GROUP BY kaptCode
-        """, kaptcodes).fetchall()
-        poi_min_map = {r['kaptCode']: {
-            'nearest_park_min': r['nearest_park_min'],
-            'nearest_subway_min': r['nearest_subway_min'],
-            'nearest_elementary_min': r['nearest_elementary_min'],
-            'nearest_mid_high_min': r['nearest_mid_high_min'],
-            'nearest_mart_min': r['nearest_mart_min'],
-        } for r in poi_min_rows}
+        try:
+            poi_min_rows = conn.execute(f"""
+                SELECT kaptCode,
+                       MIN(CASE WHEN poi_lclas_cd='I' THEN walking_min END) AS nearest_park_min,
+                       MIN(CASE WHEN poi_lclas_cd='D' AND poi_mlsfc_cd='D01' THEN walking_min END) AS nearest_subway_min,
+                       MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm LIKE '%초등%' THEN walking_min END) AS nearest_elementary_min,
+                       MIN(CASE WHEN poi_lclas_cd='A' AND poi_nm NOT LIKE '%초등%' THEN walking_min END) AS nearest_mid_high_min,
+                       MIN(CASE WHEN poi_lclas_cd='E' THEN walking_min END) AS nearest_mart_min
+                FROM apt_walking_poi
+                WHERE kaptCode IN ({ph_poi})
+                GROUP BY kaptCode
+            """, kaptcodes).fetchall()
+            poi_min_map = {r['kaptCode']: {
+                'nearest_park_min': r['nearest_park_min'],
+                'nearest_subway_min': r['nearest_subway_min'],
+                'nearest_elementary_min': r['nearest_elementary_min'],
+                'nearest_mid_high_min': r['nearest_mid_high_min'],
+                'nearest_mart_min': r['nearest_mart_min'],
+            } for r in poi_min_rows}
+        except Exception:
+            # apt_walking_poi 미존재/조회 실패 → poi_min_map 빈 채로 진행 (POI 정렬만 비활성).
+            # ⚠️ Postgres(pgBouncer)는 실패 후 트랜잭션 aborted → rollback 없이 다음 쿼리 시 500 연쇄.
+            poi_min_map = {}
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
     # ─ 5. 카드 변환 + 추천 로직 (통근버킷 × 평형 매트릭스) ─
     raw_cards = [_card_to_dict(c, recent_map, tag_map, price_chg_map, avg_price_map, poi_min_map, dual=dual) for c in cards]
