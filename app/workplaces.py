@@ -14,7 +14,7 @@ import json
 import urllib.parse
 import urllib.request
 from config import cfg
-from app.portable import insert_returning_id, get_last_id, list_columns
+from app.portable import insert_returning_id, get_last_id, list_columns, resync_sequence
 
 KAKAO_URL = 'https://dapi.kakao.com/v2/local/search/address.json'
 _UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
@@ -122,11 +122,25 @@ def get_or_create(conn, addr_input: str) -> dict | None:
             resolved['lat'], resolved['lng'], '',
             now, now, 1, 0,
         ]
-        cur = conn.execute(
-            insert_returning_id('workplaces', ins_cols, 'wp_id'),
-            ins_vals,
-        )
-        wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
+        try:
+            cur = conn.execute(
+                insert_returning_id('workplaces', ins_cols, 'wp_id'),
+                ins_vals,
+            )
+            wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
+        except Exception:
+            # wp_id SERIAL 시퀀스가 테이블 max보다 뒤처져 duplicate key가 나는 경우
+            # (외부 적재/마이그레이션 후 setval 누락) → 시퀀스 보정 후 1회 재시도.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            resync_sequence(conn, 'workplaces', 'wp_id')
+            cur = conn.execute(
+                insert_returning_id('workplaces', ins_cols, 'wp_id'),
+                ins_vals,
+            )
+            wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
         folder = f'wp_{wp_id:04d}__{_sanitize_for_folder(resolved["address_norm"])}'
         conn.execute('UPDATE workplaces SET folder_name=? WHERE wp_id=?', (folder, wp_id))
         conn.commit()
