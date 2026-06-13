@@ -296,6 +296,35 @@
       color: var(--color-text-secondary);
     }
 
+    /* ─── 매수가능액 계산기 (spec-36) ───────────────────────── */
+    .calc-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+    }
+    .calc-toggle-title { font-size: 16px; font-weight: 700; color: var(--color-text-primary); }
+    .calc-toggle-hint { font-size: 12px; color: var(--color-text-tertiary); }
+    .calc-chevron { margin-left: auto; font-size: 13px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .calc-toggle[aria-expanded="true"] .calc-chevron { transform: rotate(180deg); }
+    .calc-body { margin-top: 14px; }
+    .calc-opts { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0; font-size: 14px; }
+    .calc-opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .calc-opts-sub { font-size: 12px; color: var(--color-text-tertiary); }
+    .calc-adv { margin: 8px 0; }
+    .calc-adv summary { font-size: 13px; color: var(--color-text-secondary); cursor: pointer; }
+    .calc-result {
+      margin-top: 12px; padding: 14px 16px; border-radius: 10px;
+      background: var(--color-bg-muted); border: 1px solid var(--color-border);
+    }
+    .calc-result-amount { font-size: 20px; font-weight: 700; color: var(--color-text-primary); }
+    .calc-result-detail { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.55; }
+    .calc-apply { margin-top: 12px; width: 100%; }
+    .calc-disclaimer {
+      margin-top: 12px; font-size: 12px; line-height: 1.6;
+      color: var(--color-text-tertiary);
+    }
+    .calc-disclaimer strong { color: var(--color-text-secondary); }
+    .calc-disclaimer a { color: var(--color-brand-primary); }
+
     /* ─── 칩 그룹 ──────────────────────────────────────────── */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip {
@@ -567,6 +596,57 @@
         <div class="recent-searches" id="recent-searches-2"></div>
         <div class="hint" style="margin-top:6px;font-size:13px;color:var(--color-text-secondary);">두 직장 모두 통근 가능한 단지를 찾아드려요.</div>
         <div class="error" id="address2-error"></div>
+      </div>
+    </section>
+
+    <!-- ★ 매수가능액 계산기 (보조, spec-36) -->
+    <section class="section calc-section">
+      <button type="button" class="calc-toggle" id="calc-toggle" aria-expanded="false">
+        <span class="calc-toggle-title">얼마까지 살 수 있을까?</span>
+        <span class="calc-toggle-hint">현금·소득으로 매수가능액 계산</span>
+        <span class="calc-chevron" id="calc-chevron">▾</span>
+      </button>
+      <div class="calc-body" id="calc-body" hidden>
+        <div class="price-range-row">
+          <span class="price-label" style="width:auto;">현금</span>
+          <input type="number" id="calc-cash-eok" min="0" step="1" placeholder="0">
+          <span class="unit">억</span>
+          <input type="number" id="calc-cash-man" min="0" max="9000" step="1000" placeholder="0">
+          <span class="unit">만원</span>
+        </div>
+        <div class="price-range-row">
+          <span class="price-label" style="width:auto;">연소득</span>
+          <input type="number" id="calc-income" min="0" step="100" placeholder="예: 5000" style="width:110px;">
+          <span class="unit">만원 / 년</span>
+        </div>
+        <div class="calc-opts">
+          <label><input type="radio" name="calc-region" value="normal" checked> 비규제지역</label>
+          <label><input type="radio" name="calc-region" value="regulated"> 규제지역 <span class="calc-opts-sub">(강남3구·용산 등)</span></label>
+        </div>
+        <div class="calc-opts">
+          <label><input type="checkbox" id="calc-firsthome"> 생애최초 구입</label>
+        </div>
+        <details class="calc-adv">
+          <summary>금리·대출기간 직접 설정</summary>
+          <div class="price-range-row" style="margin-top:8px;">
+            <span class="price-label" style="width:auto;">금리</span>
+            <input type="number" id="calc-rate" min="0" max="20" step="0.1" value="4.5">
+            <span class="unit">%</span>
+            <input type="number" id="calc-years" min="1" max="50" step="1" value="30">
+            <span class="unit">년</span>
+          </div>
+        </details>
+        <div class="error" id="calc-error"></div>
+        <div class="calc-result" id="calc-result" hidden>
+          <div class="calc-result-amount" id="calc-result-amount"></div>
+          <div class="calc-result-detail" id="calc-result-detail"></div>
+          <button type="button" class="btn-secondary calc-apply" id="calc-apply">↑ 이 금액을 최대 가격으로</button>
+        </div>
+        <div class="calc-disclaimer">
+          <strong>2026-06 기준 추정치</strong>예요. LTV·DSR·규제는 수시로 바뀌고 실제 한도는
+          신용·주택수·소득증빙에 따라 달라져요. <strong>실제 한도는 은행에서 꼭 확인</strong>하세요.
+          <a href="https://www.fsc.go.kr/no010101/84824" target="_blank" rel="noopener">금융위 안내</a>
+        </div>
       </div>
     </section>
 
@@ -935,6 +1015,119 @@ function autofillMinFromMax() {
 });
 ['min-price-eok','min-price-man'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => { minAutoFilled = false; validatePrice(); });
+});
+
+// ── 매수가능액 계산기 (spec-36) ───────────────────────────────
+// 현행 규제 상수 (2026-06 스냅샷, 수시 변동 → 여기서만 조정). 출처: docs/specs/36.
+const AFFORD = {
+  LTV_NORMAL: 0.70,            // 비규제 무주택
+  LTV_REGULATED: 0.50,        // 규제지역 (가정)
+  LTV_FIRST_REGULATED: 0.70,  // 생애최초·규제·수도권 (’25 강화)
+  DSR: 0.40,                  // 1금융권
+  STRESS: 1.5,               // 스트레스 DSR 가산 %p
+  RATE_DEFAULT: 4.5,
+  YEARS_DEFAULT: 30,
+  CAPS: [[150000, 60000], [250000, 40000], [Infinity, 20000]], // [집값상한, 대출캡] 만원
+  SEARCH_MAX: 2000000,        // 검색 상한 200억(만원)
+};
+let calcResultMan = null;     // 계산된 매수가능액(만원) — 채우기 버튼용
+
+function _eokMan(eokId, manId) {
+  return (parseInt(document.getElementById(eokId).value) || 0) * 10000
+       + (parseInt(document.getElementById(manId).value) || 0);
+}
+function _fmtEok(man) {        // 만원 → "N억 M,M00만" 표기
+  const eok = Math.floor(man / 10000);
+  const rem = man % 10000;
+  if (eok > 0 && rem > 0) return `${eok}억 ${rem.toLocaleString()}만`;
+  if (eok > 0) return `${eok}억`;
+  return `${rem.toLocaleString()}만`;
+}
+// 규제지역: LTV + 절대 대출캡(집값 구간별) 동시 적용 → 최대 매수가능 집값(만원)
+function _regulatedMax(cash, ltv) {
+  const pLtv = cash / (1 - ltv);
+  let lo = 0, best = 0;
+  for (const [hi, cap] of AFFORD.CAPS) {
+    const p = Math.min(cash + cap, hi, pLtv); // 이 구간에서 가능한 최대 집값
+    if (p > lo) best = Math.max(best, p);     // 구간 하한보다 커야 유효
+    lo = hi;
+  }
+  return best;
+}
+function calcAffordability() {
+  const errEl = document.getElementById('calc-error');
+  const resBox = document.getElementById('calc-result');
+  errEl.classList.remove('show'); errEl.textContent = '';
+
+  const cash = _eokMan('calc-cash-eok', 'calc-cash-man');
+  const income = parseInt(document.getElementById('calc-income').value) || 0;
+  const region = (document.querySelector('input[name="calc-region"]:checked') || {}).value || 'normal';
+  const firstHome = document.getElementById('calc-firsthome').checked;
+  const rate = parseFloat(document.getElementById('calc-rate').value);
+  const years = parseInt(document.getElementById('calc-years').value) || AFFORD.YEARS_DEFAULT;
+  const realRate = (isNaN(rate) || rate < 0) ? AFFORD.RATE_DEFAULT : rate;
+
+  if (cash <= 0 && income <= 0) { resBox.hidden = true; calcResultMan = null; return; }
+
+  const notes = [];
+  // ① LTV 한도
+  let maxByLtv = Infinity;
+  if (cash > 0) {
+    if (region === 'regulated') {
+      const ltv = firstHome ? AFFORD.LTV_FIRST_REGULATED : AFFORD.LTV_REGULATED;
+      maxByLtv = _regulatedMax(cash, ltv);
+    } else {
+      maxByLtv = cash / (1 - AFFORD.LTV_NORMAL);
+    }
+  } else {
+    notes.push('현금 미입력 → 대출만으로 가정');
+  }
+  // ② DSR 한도 (스트레스 가산 심사금리)
+  let maxByDsr = Infinity;
+  if (income > 0) {
+    const mr = (realRate + AFFORD.STRESS) / 100 / 12;
+    const n = years * 12;
+    const monthlyCap = income * AFFORD.DSR / 12;
+    const loan = mr > 0 ? monthlyCap * (1 - Math.pow(1 + mr, -n)) / mr : monthlyCap * n;
+    maxByDsr = cash + loan;
+  } else {
+    notes.push('연소득 미입력 → DSR 미반영');
+  }
+
+  let result = Math.min(maxByLtv, maxByDsr);
+  if (!isFinite(result) || result <= 0) { resBox.hidden = true; calcResultMan = null; return; }
+  result = Math.min(result, AFFORD.SEARCH_MAX);
+  const resultMan = Math.floor(result / 1000) * 1000; // 천만 단위 내림 (검색 입력 단위)
+  calcResultMan = resultMan;
+
+  const binding = (maxByDsr < maxByLtv) ? 'DSR(소득)' : (region === 'regulated' ? 'LTV·대출한도' : 'LTV(현금)');
+  const regionLabel = region === 'regulated' ? '규제지역' : '비규제지역';
+  document.getElementById('calc-result-amount').textContent = `대략 ${_fmtEok(resultMan)}원까지`;
+  document.getElementById('calc-result-detail').innerHTML =
+    `${regionLabel}${firstHome ? ' · 생애최초' : ''} 기준 · 제약: ${binding}`
+    + (notes.length ? `<br>${notes.join(' · ')}` : '');
+  resBox.hidden = false;
+}
+// 토글
+document.getElementById('calc-toggle').addEventListener('click', () => {
+  const body = document.getElementById('calc-body');
+  const btn = document.getElementById('calc-toggle');
+  const open = body.hidden;
+  body.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+});
+// 입력 변경 시 자동 재계산
+['calc-cash-eok','calc-cash-man','calc-income','calc-firsthome','calc-rate','calc-years']
+  .forEach(id => document.getElementById(id).addEventListener('input', calcAffordability));
+document.querySelectorAll('input[name="calc-region"]')
+  .forEach(el => el.addEventListener('change', calcAffordability));
+// 채우기
+document.getElementById('calc-apply').addEventListener('click', () => {
+  if (!calcResultMan) return;
+  document.getElementById('price-eok').value = Math.floor(calcResultMan / 10000);
+  document.getElementById('price-man').value = calcResultMan % 10000;
+  autofillMinFromMax(); validatePrice();
+  document.getElementById('price-eok').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 
 // ── 폼 제출 ────────────────────────────────────────────────
