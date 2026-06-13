@@ -27,7 +27,8 @@
 API 키·운영 데이터 없이 전체 화면 플로우를 로컬에서 확인:
 
 ```bash
-bash scripts/run_demo.sh
+python scripts/run_demo.py        # Windows·macOS·Linux 공통
+# 또는 bash scripts/run_demo.sh   # macOS/Linux
 # → http://localhost:8000/ 에서 '강남역' 검색
 ```
 
