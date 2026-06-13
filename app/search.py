@@ -20,6 +20,66 @@ from config import cfg
 router = APIRouter()
 
 
+# ── 입지·구조 지표 라벨 변환 (spec-31) ───────────────────────
+# 경사: 도(°) 원본은 툴팁용으로만 두고, 본문엔 체감 라벨+한 줄 설명으로 번역.
+#   ⚠️ apt_slope_avg 단위가 도(°) 가정. 프로덕션 데이터로 단위 확인 시 임계값만 조정.
+def _slope_label(avg) -> tuple[str, str] | None:
+    """단지 평균 경사(도) → (라벨, 한 줄 체감 설명). 비정상값은 None."""
+    try:
+        v = float(avg)
+    except (TypeError, ValueError):
+        return None
+    if v < 0:
+        v = 0.0  # 음수 이상치는 평지 취급
+    if v < 3:
+        return ('평지', '걷기 편해요')
+    if v < 7:
+        return ('완만한 오르막', '살짝 오르막이에요')
+    if v < 12:
+        return ('언덕', '오르막이 확실히 느껴져요')
+    return ('가파른 언덕', '짐 들고 오르긴 부담돼요')
+
+
+def _far_level(far) -> str | None:
+    """용적률(%) → 낮은 편/보통/높은 편. 아파트 대개 200~250% 기준."""
+    try:
+        v = float(far)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    if v < 180:
+        return '낮은 편'
+    if v <= 280:
+        return '보통'
+    return '높은 편'
+
+
+def _bcr_level(bcr) -> str | None:
+    """건폐율(%) → 낮은 편(동 간격 여유)/보통/높은 편. 대개 15~25% 기준."""
+    try:
+        v = float(bcr)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    if v < 15:
+        return '낮은 편'
+    if v <= 25:
+        return '보통'
+    return '높은 편'
+
+
+def _approve_ym(use_apr_day) -> str | None:
+    """사용승인일 YYYYMMDD → 'YYYY.MM'. 형식 비정상은 None."""
+    s = str(use_apr_day or '').strip()
+    if len(s) >= 6 and s[:6].isdigit():
+        mm = s[4:6]
+        if '01' <= mm <= '12':
+            return f'{s[:4]}.{mm}'
+    return None
+
+
 # ── 요청 스키마 ──────────────────────────────────────────────
 _ALLOWED_PYEONG = {'10평미만', '10평대', '20평대', '30평대', '40평대', '50평대+'}
 
@@ -1005,6 +1065,65 @@ def apt_detail(apt_seq: str, wp_id: int, conn=Depends(get_db)):
         'subway_sta':   apt['subwayStation'],
         'subway_walk':  apt['kaptdWtimesub'],
     }
+
+    # ── 입지·구조 지표 (spec-31): apt_slope + building_register ──
+    # kaptCode 별도 조회 후 두 테이블을 각각 try/except 로 보호.
+    # ⚠️ 테이블 미존재/쿼리 실패 시 rollback 필수 (pgBouncer InFailedSqlTransaction 방지).
+    kapt_row = conn.execute(
+        'SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1', [apt_seq]
+    ).fetchone()
+    kapt_code = kapt_row['kaptCode'] if kapt_row else None
+
+    if kapt_code:
+        # 경사도 — 단지 평균만 사용 (주변 경사 미사용)
+        try:
+            srow = conn.execute(
+                'SELECT apt_slope_avg FROM apt_slope WHERE kaptCode = ?', [kapt_code]
+            ).fetchone()
+            if srow and srow['apt_slope_avg'] is not None:
+                labeled = _slope_label(srow['apt_slope_avg'])
+                if labeled:
+                    building_info['slope_avg'] = round(float(srow['apt_slope_avg']), 1)
+                    building_info['slope_label'] = labeled[0]
+                    building_info['slope_hint'] = labeled[1]
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+        # 재건축/구조 — building_register 단지당 동 여러 행 → Python 집계
+        try:
+            brows = conn.execute(
+                'SELECT vlRat, bcRat, strctCdNm, useAprDay '
+                'FROM building_register WHERE kaptCode = ?', [kapt_code]
+            ).fetchall()
+            if brows:
+                from collections import Counter
+                fars = [r['vlRat'] for r in brows if r['vlRat'] is not None]
+                bcrs = [r['bcRat'] for r in brows if r['bcRat'] is not None]
+                strs = [r['strctCdNm'] for r in brows if r['strctCdNm']]
+                days = [str(r['useAprDay']) for r in brows
+                        if r['useAprDay'] and str(r['useAprDay']).strip()]
+                if fars:
+                    far = round(sum(fars) / len(fars), 1)
+                    building_info['far'] = far
+                    building_info['far_level'] = _far_level(far)
+                if bcrs:
+                    bcr = round(sum(bcrs) / len(bcrs), 1)
+                    building_info['bcr'] = bcr
+                    building_info['bcr_level'] = _bcr_level(bcr)
+                if strs:
+                    building_info['structure'] = Counter(strs).most_common(1)[0][0]
+                if days:
+                    approve = _approve_ym(min(days))
+                    if approve:
+                        building_info['approve_ym'] = approve
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
     umd_nm = apt['umd_nm']
 

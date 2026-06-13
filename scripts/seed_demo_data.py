@@ -164,7 +164,40 @@ CREATE TABLE IF NOT EXISTS apt_walking_poi (
     distance_m   REAL,
     walking_min  INTEGER
 );
+CREATE TABLE IF NOT EXISTS apt_slope (
+    kaptCode       TEXT PRIMARY KEY,
+    apt_slope_avg  REAL,
+    apt_slope_low  REAL,
+    apt_slope_top  REAL,
+    ngbr_slope_avg REAL,
+    ngbr_slope_low REAL,
+    ngbr_slope_top REAL
+);
+CREATE TABLE IF NOT EXISTS building_register (
+    kaptCode     TEXT NOT NULL,
+    mgmBldrgstPk TEXT NOT NULL,
+    vlRat        REAL,
+    bcRat        REAL,
+    strctCdNm    TEXT,
+    useAprDay    TEXT,
+    PRIMARY KEY (kaptCode, mgmBldrgstPk)
+);
 """
+
+# 입지·구조 시드 (spec-31) — seq: (경사°, 용적률%, 건폐율%, 구조)
+# 경사: 평지/완만/언덕/가파른언덕, 용적률/건폐율: 낮은편/보통/높은편 다양하게 분포
+INFRA = {
+    'DEMO001': (2.0, 240, 22, '철근콘크리트구조'),
+    'DEMO002': (4.5, 210, 18, '철근콘크리트구조'),
+    'DEMO003': (1.5, 270, 24, '철근콘크리트구조'),
+    'DEMO004': (8.0, 190, 14, '철근콘크리트벽식구조'),
+    'DEMO005': (3.5, 250, 20, '철근콘크리트구조'),
+    'DEMO006': (13.0, 160, 12, '연와조'),
+    'DEMO007': (6.0, 220, 19, '철근콘크리트구조'),
+    'DEMO008': (1.0, 290, 26, '철근콘크리트구조'),
+    'DEMO009': (5.0, 230, 21, '철근콘크리트구조'),
+    'DEMO010': (9.5, 175, 13, '철근콘크리트구조'),
+}
 
 WP = {'lat': 37.4979, 'lng': 127.0276}  # 강남역
 
@@ -258,6 +291,8 @@ def main():
         conn.execute(f"DELETE FROM {t} WHERE apt_seq LIKE 'DEMO%'")
     conn.execute("DELETE FROM kapt_complexes WHERE kaptCode LIKE 'KDEMO%'")
     conn.execute("DELETE FROM apt_walking_poi WHERE kaptCode LIKE 'KDEMO%'")
+    conn.execute("DELETE FROM apt_slope WHERE kaptCode LIKE 'KDEMO%'")
+    conn.execute("DELETE FROM building_register WHERE kaptCode LIKE 'KDEMO%'")
     conn.execute('DELETE FROM transit_cache WHERE wp_id=1')
     conn.execute('DELETE FROM transit_routes WHERE wp_id=1')
 
@@ -349,6 +384,18 @@ def main():
                 'INSERT INTO apt_walking_poi (kaptCode, poi_lclas_cd, poi_mlsfc_cd,'
                 ' poi_nm, distance_m, walking_min) VALUES (?,?,?,?,?,?)',
                 (kapt, cat, sub, f'{umd} {poi_nm}', float(dist), walk))
+
+        # 입지·구조 (spec-31): 경사 1행 + 건축물대장 2개 동(집계 동작 확인용)
+        slope, far, bcr, strct = INFRA[seq]
+        conn.execute(
+            'INSERT INTO apt_slope (kaptCode, apt_slope_avg, apt_slope_low,'
+            ' apt_slope_top, ngbr_slope_avg) VALUES (?,?,?,?,?)',
+            (kapt, slope, max(slope - 1.5, 0), slope + 2.0, slope + 0.5))
+        for di, fdelta in enumerate((-3, 3)):  # 동별 용적률 살짝 차이 → AVG 검증
+            conn.execute(
+                'INSERT INTO building_register (kaptCode, mgmBldrgstPk, vlRat,'
+                ' bcRat, strctCdNm, useAprDay) VALUES (?,?,?,?,?,?)',
+                (kapt, f'{kapt}-{di+1}', far + fdelta, bcr, strct, f'{built}0301'))
 
     # why-tags 샘플 (저가 근거)
     conn.execute(

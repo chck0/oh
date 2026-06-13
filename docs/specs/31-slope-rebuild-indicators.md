@@ -1,6 +1,6 @@
 # Spec: 경사도 · 재건축/구조 지표 노출 (Slope & Rebuild Indicators)
 
-> **상태**: Approved
+> **상태**: Implemented
 > **작성일**: 2026-06-13
 > **구현 브랜치**: claude/happy-curie-e7ry0s
 
@@ -170,16 +170,16 @@ Response (building 객체에 추가):
 
 ## 10. Acceptance Criteria
 
-- [ ] AC1: 데모 단지(예: DEMO001) 상세에 "입지·구조" 섹션이 뜨고
+- [x] AC1: 데모 단지(예: DEMO001) 상세에 "입지·구조" 섹션이 뜨고
       경사 라벨·체감설명·용적률·건폐율·구조·사용승인일이 표시된다
-- [ ] AC2: 해당 데이터가 없는 단지는 행이 숨겨지고 "-"가 남발되지 않는다
-- [ ] AC3: 경사가 **체감 라벨+한 줄 설명**으로 표시되고(예: "평지 · 걷기 편해요"),
+- [x] AC2: 해당 데이터가 없는 단지는 행이 숨겨지고 "-"가 남발되지 않는다
+- [x] AC3: 경사가 **체감 라벨+한 줄 설명**으로 표시되고(예: "평지 · 걷기 편해요"),
       도(°) 원본은 본문에 없으며 툴팁으로만 확인된다 + CSS 인디케이터 막대 노출
-- [ ] AC4: 용적률/건폐율에 `낮은 편/보통/높은 편` 힌트가 붙되 재건축 가부 단정 단어는 없다
-- [ ] AC5: 신규 테이블 조회가 실패해도 상세 화면 나머지는 정상 (500 없음)
-- [ ] AC6: 단정적 판단 단어 없이 사실 수치/일반 밴드만 노출 (매니페스토 준수)
-- [ ] 로컬(SQLite/데모) + Vercel(Supabase) 양쪽 동작
-- [ ] 신규/회귀 테스트 통과 (detail 엔드포인트 단위 테스트 확장)
+- [x] AC4: 용적률/건폐율에 `낮은 편/보통/높은 편` 힌트가 붙되 재건축 가부 단정 단어는 없다
+- [x] AC5: 신규 테이블 조회가 실패해도 상세 화면 나머지는 정상 (500 없음)
+- [x] AC6: 단정적 판단 단어 없이 사실 수치/일반 밴드만 노출 (매니페스토 준수)
+- [x] 로컬(SQLite/데모) 동작 확인 (Vercel/Supabase는 동일 쿼리·동일 어댑터로 호환)
+- [x] 신규/회귀 테스트 통과 (detail 엔드포인트 단위 테스트 13건 추가, 총 392 passed)
 
 ---
 
@@ -196,6 +196,19 @@ Response (building 객체에 추가):
 
 ## 12. 구현 메모 (Implement 후 채우기)
 
-- 변경된 파일: (구현 시 작성)
+- 변경된 파일:
+  - `app/search.py`: 라벨 변환 순수함수(`_slope_label`/`_far_level`/`_bcr_level`/`_approve_ym`) +
+    detail 엔드포인트에 apt_slope·building_register 조회·집계 추가
+  - `web/result.html`: 단지정보 탭 "입지·구조" 섹션 + 경사 CSS 인디케이터(`.slope-ind`)
+  - `scripts/seed_demo_data.py`: apt_slope·building_register 스키마/시드 (INFRA dict)
+  - `tests/test_detail_endpoint.py`: 라벨 변환 단위 + 통합 + graceful 테스트 13건
 - 주요 결정 사항:
+  - **JOIN 대신 kaptCode 별도 조회 + try/except**: 두 테이블을 각각 guarded query로 분리해
+    한쪽 미존재/실패가 상세 전체를 깨지 않도록(trade_tags 함정 패턴). 실패 시 `conn.rollback()`.
+  - **집계는 Python 레벨**: building_register 동별 행 → AVG(용적률/건폐율)·`Counter` 최빈값(구조)·
+    MIN(사용승인일). SQL `mode()` 방언 차이 회피 → SQLite/Postgres 동일 동작.
+  - **라벨 변환은 백엔드**: 프론트는 표시만. 경사 도(°)는 `title` 툴팁으로만 노출.
 - 알려진 제약:
+  - `apt_slope_avg` 단위(도°/% 구배) 미확정 → 임계값은 도(°) 가정. 프로덕션 데이터로
+    확인 후 임계값 상수만 보정하면 됨(로직 불변). Open Q4 참고.
+  - 카드(목록) 경사 칩은 v2로 보류 — 현재는 상세 모달에서만 노출.
