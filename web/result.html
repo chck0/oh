@@ -2592,12 +2592,12 @@ function _renderDetail(d) {
       + (b.slope_hint ? ` <span class="detail-kv__sub">· ${escHtml(b.slope_hint)}</span>` : '')
       + `</div></div>`);
   }
-  if (b.far != null) {
+  if (b.far != null && b.far > 0) {
     const lvl = b.far_level ? ` <span class="detail-kv__sub">· ${escHtml(b.far_level)}</span>` : '';
     ihRows.push(`<div title="아파트 대개 200~250%"><div class="detail-kv__label">용적률</div>`
       + `<div class="detail-kv__value">${b.far}%${lvl}</div></div>`);
   }
-  if (b.bcr != null) {
+  if (b.bcr != null && b.bcr > 0) {
     const lvl = b.bcr_level ? ` <span class="detail-kv__sub">· ${escHtml(b.bcr_level)}</span>` : '';
     ihRows.push(`<div title="아파트 대개 15~25%"><div class="detail-kv__label">건폐율</div>`
       + `<div class="detail-kv__value">${b.bcr}%${lvl}</div></div>`);

@@ -417,8 +417,9 @@ async def apt_detail(apt_seq: str, wp_id: int):
             building_info['slope_level'] = labeled[2]
     if br_rows:
         from collections import Counter
-        fars = [r['vlRat'] for r in br_rows if r['vlRat'] is not None]
-        bcrs = [r['bcRat'] for r in br_rows if r['bcRat'] is not None]
+        # 0/음수는 건축물대장 미집계(누락)로 취급 → 행 숨김 (0% 오표시 방지)
+        fars = [r['vlRat'] for r in br_rows if r['vlRat'] is not None and r['vlRat'] > 0]
+        bcrs = [r['bcRat'] for r in br_rows if r['bcRat'] is not None and r['bcRat'] > 0]
         strs = [r['strctCdNm'] for r in br_rows if r['strctCdNm']]
         # YYYYMMDD 8자리만 후보 → min() 이 짧은 비정상값을 고르지 않도록
         days = [s for r in br_rows
