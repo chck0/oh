@@ -22,6 +22,11 @@ router = APIRouter()
 # ── 입지·구조 지표 라벨 변환 (spec-31) ───────────────────────
 # 경사: 도(°) 원본은 툴팁용으로만 두고, 본문엔 체감 라벨+한 줄 설명으로 번역.
 #   ⚠️ apt_slope_avg 단위가 도(°) 가정. 프로덕션 데이터로 단위 확인 시 임계값만 조정.
+#
+# 2026-06-13 임시 비활성: 운영에서 대부분 단지가 '언덕/가파른 언덕'으로 표기됨.
+# apt_slope_avg 단위(도°/% 구배) 미확정 → 라벨이 틀렸을 가능성 높음(잘못된 단정 = 신뢰 저하).
+# 실데이터 분포 검증 + 임계값 재보정 전까지 경사 행을 내림. (용적률/건폐율/구조/사용승인은 유지)
+SLOPE_LABEL_ENABLED = False
 def _slope_label(avg) -> tuple[str, str, int] | None:
     """단지 평균 경사(도) → (라벨, 한 줄 체감 설명, 레벨 1~4). 비정상값은 None.
 
@@ -408,7 +413,7 @@ async def apt_detail(apt_seq: str, wp_id: int):
 
     # ── 입지·구조 지표 병합 (spec-31) — 값 있는 항목만 추가 ──────
     slope_row, br_rows = infra
-    if slope_row and slope_row['apt_slope_avg'] is not None:
+    if SLOPE_LABEL_ENABLED and slope_row and slope_row['apt_slope_avg'] is not None:
         labeled = _slope_label(slope_row['apt_slope_avg'])
         if labeled:
             building_info['slope_avg'] = round(float(slope_row['apt_slope_avg']), 1)

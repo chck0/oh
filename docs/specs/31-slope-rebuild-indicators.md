@@ -1,8 +1,15 @@
 # Spec: 경사도 · 재건축/구조 지표 노출 (Slope & Rebuild Indicators)
 
-> **상태**: Implemented
+> **상태**: Implemented (경사 라벨은 2026-06-13 임시 비활성 — 아래 참고)
 > **작성일**: 2026-06-13
 > **구현 브랜치**: claude/happy-curie-e7ry0s
+
+> ⚠️ **2026-06-13 경사 라벨 임시 비활성** (`app/detail.py: SLOPE_LABEL_ENABLED=False`):
+> 운영에서 대부분 단지가 '언덕/가파른 언덕'으로 표기됨 → `apt_slope_avg` 단위(도°/% 구배)
+> 미확정으로 라벨이 부풀려진 것으로 추정(Q4). 잘못된 단정은 신뢰 저하라, 실데이터 분포
+> 검증 + 임계값 재보정 전까지 경사 행을 내림. **용적률·건폐율·구조·사용승인은 정상 유지.**
+> 재노출 조건: Supabase `apt_slope` 분포 확인 → 단위 확정 → `_slope_label` 임계값 보정
+> (필요 시 체감 문구 톤 완화) → `SLOPE_LABEL_ENABLED=True`.
 
 ---
 
