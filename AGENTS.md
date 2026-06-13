@@ -134,8 +134,9 @@ CLAUDE.md        # 기술 스택 + 환경변수 + 세부 작업 규칙
 
 ## 5. Spec 번호 현황
 
-다음 신규 Spec 번호: **32**
+다음 신규 Spec 번호: **34**
 
-완료 목록: spec-01~28, spec-30(로컬 데모 모드), spec-31(경사도·재건축/구조 지표 노출)
-(세부 내용 → `docs/specs/SPEC_GUIDE.md`)
-Draft: spec-29(실거래 데이터 자동 갱신)
+완료 목록: spec-01~28, spec-29(초등학교 POI), spec-30(POI 지도마커 수정),
+spec-31(경사도·재건축/구조 지표), spec-32(로컬 데모 모드)
+(세부 내용 → `docs/specs/_meta/GUIDE.md`)
+Draft: spec-33(실거래 데이터 자동 갱신)

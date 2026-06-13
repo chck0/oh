@@ -19,6 +19,69 @@ from config import cfg
 router = APIRouter()
 
 
+# ── 입지·구조 지표 라벨 변환 (spec-31) ───────────────────────
+# 경사: 도(°) 원본은 툴팁용으로만 두고, 본문엔 체감 라벨+한 줄 설명으로 번역.
+#   ⚠️ apt_slope_avg 단위가 도(°) 가정. 프로덕션 데이터로 단위 확인 시 임계값만 조정.
+def _slope_label(avg) -> tuple[str, str, int] | None:
+    """단지 평균 경사(도) → (라벨, 한 줄 체감 설명, 레벨 1~4). 비정상값은 None.
+
+    레벨은 프론트 인디케이터 칸 수와 직결 — 라벨 문자열에 의존하지 않도록 백엔드가 산출.
+    """
+    try:
+        v = float(avg)
+    except (TypeError, ValueError):
+        return None
+    if v < 0:
+        v = 0.0  # 음수 이상치는 평지 취급
+    if v < 3:
+        return ('평지', '걷기 편해요', 1)
+    if v < 7:
+        return ('완만한 오르막', '살짝 오르막이에요', 2)
+    if v < 12:
+        return ('언덕', '오르막이 확실히 느껴져요', 3)
+    return ('가파른 언덕', '짐 들고 오르긴 부담돼요', 4)
+
+
+def _far_level(far) -> str | None:
+    """용적률(%) → 낮은 편/보통/높은 편. 아파트 대개 200~250% 기준."""
+    try:
+        v = float(far)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    if v < 180:
+        return '낮은 편'
+    if v <= 280:
+        return '보통'
+    return '높은 편'
+
+
+def _bcr_level(bcr) -> str | None:
+    """건폐율(%) → 낮은 편(동 간격 여유)/보통/높은 편. 대개 15~25% 기준."""
+    try:
+        v = float(bcr)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    if v < 15:
+        return '낮은 편'
+    if v <= 25:
+        return '보통'
+    return '높은 편'
+
+
+def _approve_ym(use_apr_day) -> str | None:
+    """사용승인일 YYYYMMDD → 'YYYY.MM'. 형식 비정상은 None."""
+    s = str(use_apr_day or '').strip()
+    if len(s) >= 6 and s[:6].isdigit():
+        mm = s[4:6]
+        if '01' <= mm <= '12':
+            return f'{s[:4]}.{mm}'
+    return None
+
+
 # ── GET /api/apt/{apt_seq}/routes ────────────────────────────
 @router.get("/apt/{apt_seq}/routes")
 def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
@@ -260,15 +323,52 @@ async def apt_detail(apt_seq: str, wp_id: int):
         finally:
             c.close()
 
-    fc_rows, pyeong_tabs, chart_rows, dong_avg_rows, trade_rows, poi_rows = await asyncio.gather(
+    # 입지·구조 (spec-31): apt_slope(1행) + building_register(동별 다행).
+    # 각 테이블을 독립 try/except 로 보호 — 미존재/실패해도 상세 나머지는 정상.
+    # 전용 커넥션이라 실패 시 rollback 으로 상태 복구 (pgBouncer InFailedSqlTransaction 방지).
+    def _q_infra():
+        c = db_connect()
+        slope_row = None
+        br_rows = []
+        try:
+            try:
+                slope_row = c.execute(
+                    'SELECT apt_slope_avg FROM apt_slope WHERE kaptCode = '
+                    '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
+                    [apt_seq]
+                ).fetchone()
+            except Exception:
+                try:
+                    c.rollback()
+                except Exception:
+                    pass
+            try:
+                br_rows = c.execute(
+                    'SELECT vlRat, bcRat, strctCdNm, useAprDay FROM building_register '
+                    'WHERE kaptCode = '
+                    '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
+                    [apt_seq]
+                ).fetchall()
+            except Exception:
+                try:
+                    c.rollback()
+                except Exception:
+                    pass
+        finally:
+            c.close()
+        return slope_row, br_rows
+
+    (fc_rows, pyeong_tabs, chart_rows, dong_avg_rows, trade_rows, poi_rows,
+     infra) = await asyncio.gather(
         asyncio.to_thread(_q_fc),
         asyncio.to_thread(_q_tabs),
         asyncio.to_thread(_q_chart),
         asyncio.to_thread(_q_dong),
         asyncio.to_thread(_q_trades),
         asyncio.to_thread(_q_poi),
+        asyncio.to_thread(_q_infra),
     )
-    timings['parallel_6q'] = round((time.time()-t0)*1000)
+    timings['parallel_7q'] = round((time.time()-t0)*1000)
 
     # 주차대수: kaptdPcnt(지하) + kaptdPcntu(지상)
     def _to_int(v):
@@ -305,6 +405,38 @@ async def apt_detail(apt_seq: str, wp_id: int):
         'subway_sta':   apt['subwayStation'],
         'subway_walk':  apt['kaptdWtimesub'],
     }
+
+    # ── 입지·구조 지표 병합 (spec-31) — 값 있는 항목만 추가 ──────
+    slope_row, br_rows = infra
+    if slope_row and slope_row['apt_slope_avg'] is not None:
+        labeled = _slope_label(slope_row['apt_slope_avg'])
+        if labeled:
+            building_info['slope_avg'] = round(float(slope_row['apt_slope_avg']), 1)
+            building_info['slope_label'] = labeled[0]
+            building_info['slope_hint'] = labeled[1]
+            building_info['slope_level'] = labeled[2]
+    if br_rows:
+        from collections import Counter
+        fars = [r['vlRat'] for r in br_rows if r['vlRat'] is not None]
+        bcrs = [r['bcRat'] for r in br_rows if r['bcRat'] is not None]
+        strs = [r['strctCdNm'] for r in br_rows if r['strctCdNm']]
+        # YYYYMMDD 8자리만 후보 → min() 이 짧은 비정상값을 고르지 않도록
+        days = [s for r in br_rows
+                if (s := str(r['useAprDay'] or '').strip())[:8].isdigit() and len(s) >= 8]
+        if fars:
+            far = round(sum(fars) / len(fars), 1)
+            building_info['far'] = far
+            building_info['far_level'] = _far_level(far)
+        if bcrs:
+            bcr = round(sum(bcrs) / len(bcrs), 1)
+            building_info['bcr'] = bcr
+            building_info['bcr_level'] = _bcr_level(bcr)
+        if strs:
+            building_info['structure'] = Counter(strs).most_common(1)[0][0]
+        if days:
+            approve = _approve_ym(min(days))
+            if approve:
+                building_info['approve_ym'] = approve
 
     # ── 친구 한 마디 (detail은 단지 통합 → 가장 긴 코멘트 우선) ──
     friend_comment = fc_rows[0]['comment'] if fc_rows else None

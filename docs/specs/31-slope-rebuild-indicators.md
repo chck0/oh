@@ -197,8 +197,9 @@ Response (building 객체에 추가):
 ## 12. 구현 메모 (Implement 후 채우기)
 
 - 변경된 파일:
-  - `app/search.py`: 라벨 변환 순수함수(`_slope_label`/`_far_level`/`_bcr_level`/`_approve_ym`) +
-    detail 엔드포인트에 apt_slope·building_register 조회·집계 추가
+  - `app/detail.py`: 라벨 변환 순수함수(`_slope_label`/`_far_level`/`_bcr_level`/`_approve_ym`) +
+    apt_detail에 `_q_infra` 병렬 쿼리 추가(apt_slope·building_register 조회·집계).
+    (main 병합 시 search.py 분할로 detail 엔드포인트가 `app/detail.py`로 이동 → 이식)
   - `web/result.html`: 단지정보 탭 "입지·구조" 섹션 + 경사 CSS 인디케이터(`.slope-ind`)
   - `scripts/seed_demo_data.py`: apt_slope·building_register 스키마/시드 (INFRA dict)
   - `tests/test_detail_endpoint.py`: 라벨 변환 단위 + 통합 + graceful 테스트 13건

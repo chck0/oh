@@ -1,5 +1,5 @@
 """
-run_demo.py — 로컬 데모 모드 원커맨드 런처, 크로스 플랫폼 (spec-30)
+run_demo.py — 로컬 데모 모드 원커맨드 런처, 크로스 플랫폼 (spec-32)
 
 Windows(PowerShell/cmd)·macOS·Linux 공통:
 

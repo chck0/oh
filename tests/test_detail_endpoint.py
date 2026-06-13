@@ -355,47 +355,47 @@ class TestSlopeLabelHelpers:
     """경사/용적률/건폐율/승인일 라벨 변환 순수함수."""
 
     def test_slope_label_flat(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(2.0) == ('평지', '걷기 편해요', 1)
 
     def test_slope_label_gentle(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(5.0)[0] == '완만한 오르막'
         assert _slope_label(5.0)[2] == 2
 
     def test_slope_label_hill(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(9.0)[0] == '언덕'
         assert _slope_label(9.0)[2] == 3
 
     def test_slope_label_steep(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(13.0)[0] == '가파른 언덕'
         assert _slope_label(13.0)[2] == 4
 
     def test_slope_label_negative_treated_flat(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(-1.0)[0] == '평지'
 
     def test_slope_label_none(self):
-        from app.search import _slope_label
+        from app.detail import _slope_label
         assert _slope_label(None) is None
 
     def test_far_levels(self):
-        from app.search import _far_level
+        from app.detail import _far_level
         assert _far_level(160) == '낮은 편'
         assert _far_level(240) == '보통'
         assert _far_level(300) == '높은 편'
         assert _far_level(0) is None
 
     def test_bcr_levels(self):
-        from app.search import _bcr_level
+        from app.detail import _bcr_level
         assert _bcr_level(12) == '낮은 편'
         assert _bcr_level(20) == '보통'
         assert _bcr_level(30) == '높은 편'
 
     def test_approve_ym(self):
-        from app.search import _approve_ym
+        from app.detail import _approve_ym
         assert _approve_ym('20040517') == '2004.05'
         assert _approve_ym('2004') is None
         assert _approve_ym('20041350') is None  # 월 13 비정상

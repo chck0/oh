@@ -1,5 +1,6 @@
-# Spec: 로컬 데모 모드 (Local Demo Mode)
+# Spec 32: 로컬 데모 모드 (Local Demo Mode)
 
+> (구 spec-30 — main의 spec-30(POI 지도마커)과 충돌로 32로 재번호)
 > **상태**: Implemented
 > **작성일**: 2026-06-13
 > **구현 브랜치**: claude/happy-curie-e7ry0s

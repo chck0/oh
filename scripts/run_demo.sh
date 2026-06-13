@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_demo.sh — 로컬 데모 모드 원커맨드 런처 (spec-30)
+# run_demo.sh — 로컬 데모 모드 원커맨드 런처 (spec-32)
 #
 #   bash scripts/run_demo.sh
 #

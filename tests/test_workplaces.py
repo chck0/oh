@@ -130,7 +130,7 @@ class TestResolve:
         assert result['address_norm']  # 빈 문자열 아님
 
 
-# ── 데모 모드 게이트 (spec-30) ────────────────────────────────
+# ── 데모 모드 게이트 (spec-32) ────────────────────────────────
 
 class TestDemoModeGate:
     """BADUGI_DEMO=1 + 시드된 직장 → Kakao 호출 없이 DB 행 반환."""
@@ -166,7 +166,9 @@ class TestDemoModeGate:
         from app import workplaces
         monkeypatch.delenv('BADUGI_DEMO', raising=False)
         self._seed_wp(mem_db)
+        # 데모 게이트 미작동 → 캐시/DB 미스 주소는 정상 경로(resolve)로 진행.
+        # (main의 DB 캐시 계층이 시드된 '강남역'은 가로채므로, 미시드 주소로 검증)
         with patch.object(workplaces, 'resolve', return_value=None) as mock_resolve:
-            wp = workplaces.get_or_create(mem_db, '강남역')
+            wp = workplaces.get_or_create(mem_db, '없는주소xyz')
         mock_resolve.assert_called_once()
         assert wp is None
