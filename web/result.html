@@ -11,10 +11,10 @@
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- 카카오맵 SDK (클러스터러 제거 — 단지 단위 핀 직접 표시) -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=764855b79f6cfa586600499f333d624c&libraries=services&autoload=false"></script>
+  <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
+  <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
+  <script src="/api/kakao-sdk?libraries=services"></script>
 
   <style>
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
@@ -329,6 +329,39 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
+    /* sort-bar */
+    .sort-bar {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--color-border-light);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .sort-bar.visible { display: flex; }
+    .sort-bar__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 2px; }
+    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .sort-select-wrap label { font-size: 10px; color: var(--color-text-tertiary); font-weight: 600; }
+    .sort-select {
+      font-size: 12px; font-family: inherit;
+      padding: 4px 22px 4px 8px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 6px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 7px center;
+      appearance: none; cursor: pointer;
+      color: var(--color-text-primary);
+      width: 108px;
+    }
+    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
+    .sort-bar__reset {
+      margin-left: auto; font-size: 12px;
+      background: none; border: none; cursor: pointer;
+      color: var(--color-text-secondary); padding: 4px 6px;
+      white-space: nowrap;
+    }
+    .sort-bar__reset:hover { color: var(--color-brand-primary); }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -1485,25 +1518,6 @@
       color: var(--color-text-tertiary);
       font-style: italic;
     }
-    .pin-tooltip__cta {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--color-bg-subtle);
-      border-top: 1.5px solid var(--color-border-strong);
-      font-size: 13.5px; font-weight: 700;
-      color: var(--color-text-primary);
-      transition: background 120ms, color 120ms;
-    }
-    .pin-tooltip:hover .pin-tooltip__cta {
-      background: var(--color-brand-bg-subtle);
-      color: var(--color-brand-primary);
-    }
-    .pin-tooltip__cta-arrow {
-      font-size: 14px; transition: transform 200ms;
-    }
-    .pin-tooltip:hover .pin-tooltip__cta-arrow {
-      transform: translateX(3px);
-    }
 
     /* ════════════════════════════════════════════════════════
        [6] 상세 패널
@@ -1894,6 +1908,10 @@
     .dp-poi-name {
       flex: 1; color: var(--color-text-primary);
     }
+    .dp-poi-tag {
+      color: var(--color-text-tertiary);
+      font-size: 12px;
+    }
     .dp-poi-dist {
       font-size: 12.5px;
       color: var(--color-text-secondary);
@@ -1929,6 +1947,9 @@
   <div class="loading-head">
     <h2 id="loading-title">맞춤 매물 찾는 중…</h2>
     <p id="loading-subtitle">통근시간 분석 + AI 코멘트가 끝나는 동안 잠깐 음악 한 곡 어떠세요</p>
+    <!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) -->
+    <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--color-text-tertiary);">개발용으로 만든 타이머입니다 (최종때는 삭제)</div>
+    <div id="analysis-timer" style="margin-top:6px;display:inline-block;font-size:15px;font-weight:700;color:var(--color-brand-primary);background:var(--color-brand-bg-subtle);border:1px solid var(--color-brand-primary);border-radius:8px;padding:6px 14px;font-feature-settings:'tnum';font-variant-numeric:tabular-nums;">⏱ 0.0초</div>
   </div>
 
   <div class="progress-steps" id="progress-steps">
@@ -1971,6 +1992,14 @@
   </button>
 </div>
 
+<!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) — 페이지 로드 시점부터 카운트 -->
+<script>
+  window._analysisTimerInterval = setInterval(function(){
+    var el = document.getElementById('analysis-timer');
+    if (el) el.textContent = '⏱ ' + (performance.now() / 1000).toFixed(1) + '초';
+  }, 100);
+</script>
+
 <header>
   <a href="/" class="back-link">← 처음으로</a>
   <h1>BADUGI</h1>
@@ -1985,6 +2014,22 @@
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      </div>
+      <div class="sort-bar" id="sort-bar">
+        <span class="sort-bar__label">정렬순서</span>
+        <div class="sort-select-wrap">
+          <label>1순위</label>
+          <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+        </div>
+        <div class="sort-select-wrap">
+          <label>2순위</label>
+          <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+        </div>
+        <div class="sort-select-wrap">
+          <label>3순위</label>
+          <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+        </div>
+        <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -2073,7 +2118,7 @@
 </main>
 
 <!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
-<div class="pin-tooltip hidden" id="pin-tooltip" onclick="tooltipDetailClick()">
+<div class="pin-tooltip hidden" id="pin-tooltip">
   <div class="pin-tooltip__head">
     <div class="pin-tooltip__top">
       <span class="pin-tooltip__name" id="tt-apt-nm"></span>
@@ -2096,10 +2141,6 @@
       </div>
     </div>
     <div class="pin-tooltip__comment" id="tt-comment" style="display:none"></div>
-  </div>
-  <div class="pin-tooltip__cta">
-    <span>상세 보기</span>
-    <span class="pin-tooltip__cta-arrow">→</span>
   </div>
 </div>
 
@@ -2221,7 +2262,10 @@ function escHtml(s){
 //  검색 실행
 // ═══════════════════════════════════════════════════════
 const THIS_YEAR = new Date().getFullYear();
-let kakaoReady = new Promise(resolve => { kakao.maps.load(resolve); });
+
+let kakaoReady = new Promise(resolve => {
+  kakao.maps.load(resolve);
+});
 
 async function runSearch(){
   const ctrl = new AbortController();
@@ -2244,6 +2288,7 @@ async function runSearch(){
     }
   } catch(err){
     clearTimeout(_tid);
+    if(window._analysisTimerInterval){ clearInterval(window._analysisTimerInterval); window._analysisTimerInterval=null; }
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('main').style.display='flex';
     const msg = err.name === 'AbortError' ? '검색 시간이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요.' : err.message;
@@ -2313,8 +2358,11 @@ function onSearchDone(){
   document.getElementById('loading-subtitle').innerHTML =
     `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요.`;
   document.getElementById('done-btn').classList.add('show');
-  // 분석 완료 메시지 잠깐 보여준 뒤 자동 전환 (수동 클릭도 그대로 가능)
-  setTimeout(showResults, 1200);
+  // ⏱ 개발용 타이머 정지 + 최종 시간 표시 (배포 전 제거 예정)
+  if(window._analysisTimerInterval){ clearInterval(window._analysisTimerInterval); window._analysisTimerInterval=null; }
+  const _tEl = document.getElementById('analysis-timer');
+  if(_tEl) _tEl.textContent = '⏱ 분석 완료 — ' + (performance.now()/1000).toFixed(1) + '초';
+  // 자동 전환 제거 — 아래 '결과 보기' 버튼을 눌러야 결과로 넘어감
 }
 function showResults(){
   if(document.getElementById('loading').classList.contains('hidden')) return;
@@ -3058,10 +3106,11 @@ function showPoiMarker(poiName, walkMin, distM) {
   // 실제 거리 + 여유분으로 동적 반경 (최소 600m, 최대 2000m)
   const searchRadius = Math.min(Math.max(distM + 300, 600), 2000);
 
+  const loc = new kakao.maps.LatLng(card.lat, card.lng);
   const ps = new kakao.maps.services.Places();
-  ps.keywordSearch(poiName, (data, status) => {
-    if (status !== kakao.maps.services.Status.OK || !data.length) return;
-    const doc = data[0];
+  const opts = { location: loc, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE };
+
+  function place(doc) {
     const pos = new kakao.maps.LatLng(parseFloat(doc.y), parseFloat(doc.x));
     _poiMarker = new kakao.maps.CustomOverlay({
       position: pos,
@@ -3079,11 +3128,18 @@ function showPoiMarker(poiName, walkMin, distM) {
     kakaoMap.setLevel(4);
     kakaoMap.setCenter(pos);
     kakaoMap.panBy(-160, -100);
-  }, {
-    location: new kakao.maps.LatLng(card.lat, card.lng),
-    radius: searchRadius,
-    size: 1
-  });
+  }
+
+  // 풀네임 검색 → 실패 시 앞 6글자로 폴백 (validateAndFilterPois와 동일 전략).
+  // "구리여중고교"처럼 축약·결합된 시설명도 마커가 찍히도록 함.
+  ps.keywordSearch(poiName, (data, status) => {
+    if (status === kakao.maps.services.Status.OK && data.length) { place(data[0]); return; }
+    if (poiName.length > 4) {
+      ps.keywordSearch(poiName.substring(0, 6), (d2, s2) => {
+        if (s2 === kakao.maps.services.Status.OK && d2.length) place(d2[0]);
+      }, opts);
+    }
+  }, opts);
 }
 
 // ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
@@ -3679,6 +3735,7 @@ function renderCards(data){
   // 전역 상태 저장 (탭 전환 / 재렌더 시 참조)
   window._lastSearchData = data;
   window._lastCards      = data.cards || [];
+  window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
 
@@ -3805,6 +3862,7 @@ function renderCards(data){
   }
 
   panel.innerHTML = html;
+  initSortBar(data.cards);
 }
 
 function toggleBucket(headEl){
@@ -3912,7 +3970,6 @@ function zoomLevelFor(min){
 // ═══════════════════════════════════════════════════════
 const tooltip = document.getElementById('pin-tooltip');
 let tooltipTimer = null;
-let tooltipCurrentSeq = null;
 
 // 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
 let _ttGroup = null;
@@ -3923,8 +3980,6 @@ function showTooltip(pinEl, group, wpId){
   clearTimeout(tooltipTimer);
   _ttGroup = group;
   _ttActivePtIdx = 0;
-  _tooltipWpId = wpId;
-  tooltipCurrentSeq = group.apt_seq;
 
   // 상단: 단지명 + 배지
   document.getElementById('tt-apt-nm').textContent = group.apt_nm;
@@ -4012,20 +4067,13 @@ function renderTooltipPt(idx){
   }
 }
 function scheduleHideTooltip(){ tooltipTimer = setTimeout(hideTooltip, 250); }
-function hideTooltip(){ tooltip.classList.add('hidden'); tooltipCurrentSeq=null; }
+function hideTooltip(){ tooltip.classList.add('hidden'); }
 tooltip.addEventListener('mouseenter', ()=>clearTimeout(tooltipTimer));
 tooltip.addEventListener('mouseleave', ()=>scheduleHideTooltip());
 
 // ═══════════════════════════════════════════════════════
 //  상세 패널
 // ═══════════════════════════════════════════════════════
-let _tooltipWpId = null;
-function tooltipDetailClick(){
-  if(tooltipCurrentSeq && _tooltipWpId != null){
-    hideTooltip();
-    showDetail(tooltipCurrentSeq, _tooltipWpId);
-  }
-}
 
 async function showDetail(aptSeq, wpId){
   panelMode='detail';
@@ -4389,6 +4437,11 @@ function getChartSeries(key){
 function initDetailChart(key, aptNm, umdNm){
   const canvas = document.getElementById('dp-chart');
   if(!canvas) return;
+  // Chart.js가 아직 로드 안 됐으면 대기 후 재시도
+  if(typeof Chart === 'undefined'){
+    setTimeout(() => initDetailChart(key, aptNm, umdNm), 100);
+    return;
+  }
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   const {labels,complexData,dongData} = getChartSeries(key);
   // 데이터 포인트가 적으면 점만, 충분하면 선+점
@@ -4462,7 +4515,7 @@ function renderTradesHTML(trades){
 
 // ── POI (카테고리별 그룹, 중요도순) ──────────────────────────
 // poi_lclas_cd 실제 코드 (Supabase apt_walking_poi 확인 2026-05-25):
-// A=학교(중고등), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
+// A=학교(초중고), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
 // E=쇼핑/편의(백화점·마트·편의점), F=의료(병원·약국),
 // G=음식점, H=공공기관(구청·경찰·소방), I=공원/녹지,
 // J=문화/여가(영화관·박물관·도서관·J01~J04), K=스포츠(헬스장·수영장), L=금융(은행·ATM)
@@ -4480,6 +4533,9 @@ const POI_ALLOWED_SUBS = {
   L: new Set(['L01','L02']),
   J: new Set(['J01','J02','J03','J04']),
 };
+// 교통(D) 항목 표시용 접미사 — 학교명 등 정류장/출구가 시설명으로 보여 헷갈리는 것 방지.
+// (검색용 data-poi-name은 원본 유지하고, 보이는 이름에만 붙임)
+const POI_SUB_LABEL = { D01: '지하철역', D02: '버스정류장' };
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
@@ -4500,10 +4556,124 @@ function renderPOIHTML(poi){
         data-walk-min="${p.walking_min||0}"
         data-dist-m="${Math.round(p.distance_m||0)}"
         onclick="togglePoiMarker(this)">
-        <div class="dp-poi-name">${escHtml(p.name)}</div>
+        <div class="dp-poi-name">${escHtml(p.name)}${POI_SUB_LABEL[p.sub_category] ? ` <span class="dp-poi-tag">(${POI_SUB_LABEL[p.sub_category]})</span>` : ''}</div>
         <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
       </div>`).join('')}`;
   }).join('');
+}
+
+// ── 다중 우선순위 정렬 (spec-20) ────────────────────────────
+const SORT_OPTIONS = [
+  { value: '',                             label: '선택 안 함',        group: '' },
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
+  { value: 'build_year:desc',              label: '준공연도 신축순',   group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',   group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',     group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '집→대중교통 도보',  group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',         group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',       group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',     group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',   group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
+];
+
+function _buildSelectHTML(excludeValues) {
+  let html = '';
+  let lastGroup = '';
+  for (const o of SORT_OPTIONS) {
+    if (o.group && o.group !== lastGroup) {
+      if (lastGroup !== '') html += '</optgroup>';
+      html += `<optgroup label="${o.group}">`;
+      lastGroup = o.group;
+    }
+    const disabled = o.value && excludeValues.has(o.value) ? ' disabled' : '';
+    html += `<option value="${o.value}"${disabled}>${o.label}</option>`;
+  }
+  if (lastGroup !== '') html += '</optgroup>';
+  return html;
+}
+
+function initSortBar(cards) {
+  if (!cards || !cards.length) return;
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+  });
+  document.getElementById('sort-bar').classList.add('visible');
+}
+
+function updateSortDropdowns() {
+  const v1 = document.getElementById('sort-1').value;
+  const v2 = document.getElementById('sort-2').value;
+  const v3 = document.getElementById('sort-3').value;
+
+  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
+  const sel2 = document.getElementById('sort-2');
+  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
+  sel2.value = (v2 && v2 !== v1) ? v2 : '';
+  const newV2 = sel2.value;
+
+  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
+  const sel3 = document.getElementById('sort-3');
+  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
+  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
+}
+
+function onSortChange() {
+  updateSortDropdowns();
+  applySortOrder();
+}
+
+function applySortOrder() {
+  const keys = ['sort-1','sort-2','sort-3']
+    .map(id => document.getElementById(id).value)
+    .filter(v => v);
+
+  if (!keys.length) {
+    if (window._lastSearchData) renderCards(window._lastSearchData);
+    return;
+  }
+
+  const cards = [...(window._lastCards || [])];
+  cards.sort((a, b) => {
+    for (const key of keys) {
+      const [field, dir] = key.split(':');
+      const av = a[field] ?? null;
+      const bv = b[field] ?? null;
+      if (av === null && bv === null) continue;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const diff = dir === 'desc' ? bv - av : av - bv;
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  _renderSortedFlat(cards);
+}
+
+function _renderSortedFlat(cards) {
+  const data = window._lastSearchData;
+  if (!data) return;
+  const panel = document.getElementById('cards-panel');
+  const wpId = data.wp_id;
+  let html = renderStatsPanel(data);
+  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
+  panel.innerHTML = html;
+  _updateFavTab();
+}
+
+function resetSort() {
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  updateSortDropdowns();
+  if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
 // ── 실행 ─────────────────────────────────────────────────────

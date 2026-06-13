@@ -46,8 +46,8 @@
 
 <div id="map"></div>
 
-<!-- 카카오맵 JS SDK -->
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=764855b79f6cfa586600499f333d624c&autoload=false"></script>
+<!-- 카카오맵 JS SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
+<script src="/api/kakao-sdk"></script>
 
 <script>
 const t0 = performance.now();

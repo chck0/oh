@@ -25,23 +25,27 @@ AI 친구가 각 단지를 솔직하게 한 줄로 설명해준다.
 ## 폴더 구조
 
 ```
-app/           # FastAPI 백엔드 (핵심 비즈니스 로직)
-  main.py      # FastAPI 진입점 + 미들웨어 + 진단 엔드포인트
-  search.py    # 검색·상세·채팅 API 라우터
-  ai.py        # 추천 로직 + Claude 코멘트 생성
-  transit.py   # ODsay 멀티키 병렬 호출 + DB 캐싱
-  workplaces.py# Kakao 주소 정규화 + wp_id 발급
-  db.py        # SQLite ↔ Postgres 이중 어댑터
-  portable.py  # DB 비호환 로직 Python 구현
+app/            # FastAPI 백엔드 (핵심 비즈니스 로직)
+  main.py       # FastAPI 진입점 + 미들웨어 + 정적 서빙 + 진단 엔드포인트
+  search.py     # 검색·상세·채팅 API 라우터
+  ai.py         # 추천 로직 + Claude 코멘트 생성
+  transit.py    # ODsay 멀티키 병렬 호출 + DB 캐싱
+  workplaces.py # Kakao 주소 정규화 + wp_id 발급
+  db.py         # SQLite ↔ Postgres 이중 어댑터 (+ 커넥션 풀)
+  portable.py   # DB 비호환 로직 Python 구현
+  models.py     # Pydantic 요청/응답 모델
 
-api/           # Vercel 서버리스 진입점 (api/index.py)
-web/           # 프론트엔드 (Vanilla JS + Kakao Maps)
-  search.html  # 검색 조건 입력 화면
-  result.html  # 지도 + 카드 + 친구 채팅 패널
-scripts/       # 데이터 파이프라인 + DB 마이그레이션
-docs/          # 설계 문서 (spec, manifesto, premortem, whytree)
-config.py      # 중앙 환경변수 관리
-vercel.json    # Vercel 배포 설정
+api/            # Vercel 서버리스 진입점 (api/index.py)
+web/            # 프론트엔드 (Vanilla JS + Kakao Maps)
+  index.html    # 소개(랜딩) 페이지 — 루트("/")에서 서빙
+  search.html   # 검색 조건 입력 화면
+  result.html   # 지도 + 카드 + 친구 채팅 패널
+  static/       # 정적 자산
+scripts/        # 데이터 파이프라인 + DB 마이그레이션 (+ supabase_schema.sql)
+docs/           # 설계 문서 (spec, manifesto, premortem) + worklog(협업 작업일지)
+run.py          # 로컬 실행 런처 (IPv4/IPv6 듀얼스택, 기본 포트 3000)
+config.py       # 중앙 환경변수 관리
+vercel.json     # Vercel 배포 설정
 requirements.txt
 ```
 
@@ -63,9 +67,15 @@ export ANTHROPIC_API_KEY=...
 # 3) 검증
 python config.py
 
-# 4) 서버 기동
-uvicorn app.main:app --reload --port 8000
-# http://localhost:8000/
+# 4) 서버 기동 (권장 — IPv4/IPv6 듀얼스택, 포트 3000)
+python run.py
+#   → 권장 접속(IPv4): http://127.0.0.1:3000   (localhost:3000 도 동작)
+#   → 다른 포트: python run.py 8080
+
+# (대안) 코드 자동 리로드가 필요할 때:
+#   uvicorn app.main:app --reload --port 3000
+#   단, 이 경우 브라우저는 http://127.0.0.1:3000 으로 접속해야 빠름
+#   (localhost 는 Windows 에서 IPv6 우선 해석으로 ~2초 지연될 수 있음)
 ```
 
 ---
@@ -116,8 +126,21 @@ MOLIT_API_KEY=...
 
 ```bash
 python -m pytest --tb=short -q
-# 387 tests (2026-05-31 기준)
+# 388 passed (2026-06-01 기준)
 ```
+
+---
+
+## 협업 — 작업 일지 (worklog)
+
+나눠서 개발한 뒤 합칠 때, "누가 무슨 의도로 어떻게 바꿨는지"를 자동으로 남겨 머지를 쉽게 한다.
+
+- **처음 한 번**: Claude가 이름을 묻고 `docs/worklog/.author`에 저장. Claude Code의 "훅 허용?" 창을 한 번 승인하면 끝.
+- **작업 중(자동)**: 컨텍스트 압축 시 요청·작업 흐름이 `docs/worklog/.raw/<이름>.md`에, DB 변경 명령/SQL이 `.raw/<이름>-db.md`에 자동 적립 (LLM 없이, 토큰 0).
+- **"깃에 올려줘" 시**: Claude가 위 기록 + `git diff`를 종합해 `docs/worklog/<이름>_<날짜>.md`(날짜별 파일)에 정리하고 함께 커밋.
+- **공유 규칙**: 정리된 `<이름>_<날짜>.md`만 git에 올라감(개인 `.author`·`.raw/`는 로컬). DB 변경은 가능하면 `scripts/*.sql`로 수행.
+
+훅·설정 파일: `.claude/settings.json`, `.claude/hooks/worklog_backup.py`(PreCompact), `.claude/hooks/db_logger.py`(PostToolUse).
 
 ---
 

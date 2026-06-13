@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -174,7 +174,7 @@ def run(conn, apt_seq_filter: str | None = None) -> int:
     Returns:
         저장된 태그 행 수
     """
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     tags: list[tuple] = []
 
     # ── 1. floor 태그 ──────────────────────────────────────────
