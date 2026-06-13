@@ -1,5 +1,5 @@
 # ── 데이터 파이프라인 (scripts/) ─────────────────────────────
-aiohttp>=3.9
+aiohttp>=3.9,<3.14   # 상한: aioresponses 0.7.8이 aiohttp 3.14의 ClientResponse(stream_writer 필수)와 비호환
 python-dotenv>=1.0
 requests>=2.31
 
