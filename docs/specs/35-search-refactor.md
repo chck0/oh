@@ -1,5 +1,6 @@
-# Spec 28: search.py 모듈 분할 리팩토링
+# Spec 35: search.py 모듈 분할 리팩토링
 
+> (구 spec-28 — 28-commute-economics와 번호 충돌로 35로 재배정)
 > 상태: Implemented ✅ | 작성일: 2026-06-04 | 브랜치: chck0527/search-refactor
 
 ## 1. Why (왜)
