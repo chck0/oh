@@ -488,3 +488,48 @@ class TestMinPriceFilter:
         """AC3 변형: min_price > max_price → 422."""
         r = self._post(full_client, {'min_price': 110000, 'max_price': 100000})
         assert r.status_code == 422
+
+
+# ── apt_walking_poi 미존재 graceful (POI 정렬 가드) ──────────────
+
+class TestPoiTableMissingGraceful:
+    """apt_walking_poi 테이블이 없어도 검색이 500 없이 정상 동작."""
+
+    def _client_without_poi(self):
+        from app.main import app
+        from app.db import get_db
+        conn = sqlite3.connect(':memory:', check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.executescript(_FULL_SCHEMA)
+        _seed_db(conn)
+        conn.execute('DROP TABLE apt_walking_poi')
+        conn.commit()
+
+        def _override():
+            yield conn
+
+        app.dependency_overrides[get_db] = _override
+        from fastapi.testclient import TestClient
+        return TestClient(app), conn
+
+    def _post(self, client):
+        with (
+            patch('app.search.get_or_create', return_value=_FAKE_WP),
+            patch('app.search._generate_comments_bg', new=AsyncMock()),
+        ):
+            return client.post('/api/search', json={
+                'workplace_address': '강남역', 'max_minutes': 60,
+                'max_price': 50000, 'pyeong_types': ['20평대'],
+            })
+
+    def test_returns_200_without_poi_table(self):
+        from app.main import app
+        c, conn = self._client_without_poi()
+        try:
+            with c:
+                resp = self._post(c)
+        finally:
+            app.dependency_overrides.clear()
+            conn.close()
+        assert resp.status_code == 200
+        assert len(resp.json()['cards']) >= 1
