@@ -139,7 +139,11 @@ async def _lifespan(app: FastAPI):
             except Exception as e:
                 log.warning('cache warm failed (non-fatal): %s', e)
 
-        _asyncio.create_task(_warm_caches())
+        # 테스트 환경에서는 워밍을 끈다(BADUGI_NO_WARM): 이 태스크가 라우팅 안 된
+        # 실 db_connect()로 모듈 캐시(_apt_cache/_wp_mem_cache)를 채워, conftest의
+        # 캐시 리셋 직후 요청 처리 중 비동기로 재오염시키는 레이스를 유발한다.
+        if not os.getenv('BADUGI_NO_WARM'):
+            _asyncio.create_task(_warm_caches())
 
     yield
 

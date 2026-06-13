@@ -1187,6 +1187,18 @@
     .detail-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
     .detail-kv__label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
     .detail-kv__value { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+    .detail-kv__sub { font-size: 12px; font-weight: 500; color: #8A857E; }
+    /* spec-31: 경사 인디케이터 — 이모지 금지, CSS 막대 4단계 */
+    .slope-ind { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 6px; }
+    .slope-ind > i { width: 4px; background: #E8E6E3; border-radius: 1px; display: inline-block; }
+    .slope-ind > i:nth-child(1) { height: 4px; }
+    .slope-ind > i:nth-child(2) { height: 7px; }
+    .slope-ind > i:nth-child(3) { height: 10px; }
+    .slope-ind > i:nth-child(4) { height: 12px; }
+    .slope-ind[data-lv="1"] > i:nth-child(-n+1),
+    .slope-ind[data-lv="2"] > i:nth-child(-n+2),
+    .slope-ind[data-lv="3"] > i:nth-child(-n+3),
+    .slope-ind[data-lv="4"] > i:nth-child(-n+4) { background: #A82E1B; }
     .detail-trade-row {
       display: grid; grid-template-columns: 90px 1fr 1fr 40px;
       gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
@@ -2569,6 +2581,40 @@ function _renderDetail(d) {
     ? `${escHtml(b.subway_line)} ${escHtml(b.subway_sta)}${b.subway_walk ? ` (도보 ${b.subway_walk}분)` : ''}`
     : '-';
 
+  // ── 입지·구조 (spec-31): 데이터 있는 행만 노출 ──────────────
+  const ihRows = [];
+  if (b.slope_label) {
+    const lv = b.slope_level || 1;  // 레벨은 백엔드 산출값 사용 (라벨 문자열 결합 제거)
+    const ind = `<span class="slope-ind" data-lv="${lv}"><i></i><i></i><i></i><i></i></span>`;
+    const tip = b.slope_avg != null ? ` title="평균 경사 ${b.slope_avg}°"` : '';
+    ihRows.push(`<div${tip}><div class="detail-kv__label">경사</div>`
+      + `<div class="detail-kv__value">${ind}${escHtml(b.slope_label)}`
+      + (b.slope_hint ? ` <span class="detail-kv__sub">· ${escHtml(b.slope_hint)}</span>` : '')
+      + `</div></div>`);
+  }
+  if (b.far != null) {
+    const lvl = b.far_level ? ` <span class="detail-kv__sub">· ${escHtml(b.far_level)}</span>` : '';
+    ihRows.push(`<div title="아파트 대개 200~250%"><div class="detail-kv__label">용적률</div>`
+      + `<div class="detail-kv__value">${b.far}%${lvl}</div></div>`);
+  }
+  if (b.bcr != null) {
+    const lvl = b.bcr_level ? ` <span class="detail-kv__sub">· ${escHtml(b.bcr_level)}</span>` : '';
+    ihRows.push(`<div title="아파트 대개 15~25%"><div class="detail-kv__label">건폐율</div>`
+      + `<div class="detail-kv__value">${b.bcr}%${lvl}</div></div>`);
+  }
+  if (b.structure) {
+    ihRows.push(`<div><div class="detail-kv__label">구조</div>`
+      + `<div class="detail-kv__value">${escHtml(b.structure)}</div></div>`);
+  }
+  if (b.approve_ym) {
+    ihRows.push(`<div><div class="detail-kv__label">사용승인</div>`
+      + `<div class="detail-kv__value">${escHtml(b.approve_ym)}</div></div>`);
+  }
+  const infraSection = ihRows.length
+    ? `<div class="detail-section"><div class="detail-section__title">입지·구조</div>`
+      + `<div class="detail-kv">${ihRows.join('')}</div></div>`
+    : '';
+
   const ps = d.price_summary || {};
   let psBadge = '-';
   if (ps.change_6m_pct != null) {
@@ -2594,6 +2640,7 @@ function _renderDetail(d) {
         <div><div class="detail-kv__label">현관</div><div class="detail-kv__value">${hall}</div></div>
       </div>
     </div>
+    ${infraSection}
     <div class="detail-section">
       <div class="detail-section__title">가까운 지하철</div>
       <div style="font-size:14px;font-weight:600;">${subway}</div>
