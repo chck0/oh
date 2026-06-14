@@ -1085,14 +1085,34 @@
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
-      background: white; border: 1px solid #e5e7eb; border-radius: 10px;
-      padding: 14px 20px; font-size: 14px; font-family: 'Pretendard', sans-serif;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12); pointer-events: none;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 16px 24px; min-width: 180px;
+      font-size: 14px; font-family: 'Pretendard', sans-serif;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.30); pointer-events: none;
     }
-    #map-legend .lg-title { font-weight: 700; font-size: 14px; color: #374151; margin-bottom: 10px; }
-    #map-legend .lg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; line-height: 1.4; }
-    #map-legend .lg-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+    #map-legend .lg-title {
+      font-weight: 700; font-size: 13px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    #map-legend .lg-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 9px; line-height: 1.4;
+      color: #fff; font-size: 14px; font-weight: 500;
+    }
+    #map-legend .lg-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.2);
+    }
     #map-legend .lg-row:last-child { margin-bottom: 0; }
+    #map-legend .lg-divider {
+      border: none; border-top: 1px solid rgba(255,255,255,0.12);
+      margin: 10px 0;
+    }
 
     /* ════════════════════════════════════════════════════════
        [spec-14] 즐겨찾기 비교
@@ -2145,6 +2165,7 @@
         <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
         <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
         <div class="lg-row"><div class="lg-dot" style="background:#ef4444"></div><span>61분 이상</span></div>
+        <hr class="lg-divider">
         <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
       </div>
     </div>
