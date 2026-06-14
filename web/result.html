@@ -333,39 +333,77 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
-    /* sort-bar */
+    /* sort toggle button (combined-bar 우측) */
     .sort-bar {
       display: none;
       align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      background: #fff;
       border-left: 1px solid var(--color-border-strong);
       flex-shrink: 0;
-      flex-wrap: wrap;
     }
     .sort-bar.visible { display: flex; }
-    .sort-bar__label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 4px; font-weight: 600; }
-    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sort-select-wrap label { font-size: 11px; color: var(--color-text-tertiary); font-weight: 600; }
-    .sort-select {
-      font-size: 13px; font-family: inherit;
-      padding: 6px 26px 6px 10px;
-      border: 1px solid var(--color-border-strong);
-      border-radius: 6px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
-      appearance: none; cursor: pointer;
+    .sort-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 18px; height: 100%;
+      font-size: 13px; font-weight: 600; font-family: inherit;
       color: var(--color-text-primary);
-      width: 128px;
-    }
-    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
-    .sort-bar__reset {
-      margin-left: auto; font-size: 12px;
       background: none; border: none; cursor: pointer;
-      color: var(--color-text-secondary); padding: 4px 6px;
       white-space: nowrap;
     }
-    .sort-bar__reset:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn .sort-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; border-radius: 9px;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 0 4px;
+    }
+    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
+
+    /* sort-panel: left-panel 안 칩 패널 */
+    .sort-panel {
+      display: none; flex-direction: column;
+      background: #fff; flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+    }
+    .sort-panel.open { display: flex; }
+    .sort-chips-wrap {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 10px 14px 8px;
+    }
+    .sort-check-item {
+      display: flex; align-items: center; gap: 5px;
+      cursor: pointer; padding: 5px 11px; border-radius: 20px;
+      border: 1px solid var(--color-border-strong);
+      font-size: 12px; font-weight: 500; color: var(--color-text-secondary);
+      background: #fff; user-select: none; transition: all .15s;
+      white-space: nowrap;
+    }
+    .sort-check-item:hover { border-color: #94a3b8; color: var(--color-text-primary); }
+    .sort-check-item.checked {
+      background: #1e293b; color: #fff; border-color: #1e293b;
+    }
+    .sort-check-item .rank-badge {
+      display: none; width: 15px; height: 15px; border-radius: 50%;
+      background: #7c3aed; color: #fff;
+      font-size: 10px; font-weight: 700; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sort-check-item.checked .rank-badge { display: inline-flex; }
+    .sort-hint {
+      padding: 0 14px 10px;
+      font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
+      min-height: 28px;
+    }
+    .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
+    .sort-panel-footer {
+      display: flex; justify-content: flex-end;
+      padding: 0 14px 10px;
+    }
+    .sort-panel-reset {
+      font-size: 11px; color: var(--color-text-tertiary);
+      background: none; border: none; cursor: pointer; padding: 2px 4px;
+    }
+    .sort-panel-reset:hover { color: var(--color-brand-primary); }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -2077,29 +2115,27 @@
   <div class="combined-bar">
     <div class="summary-bar" id="summary"></div>
     <div class="sort-bar" id="sort-bar">
-      <span class="sort-bar__label">정렬순서</span>
-      <div class="sort-select-wrap">
-        <label>1순위</label>
-        <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
-      </div>
-      <div class="sort-select-wrap">
-        <label>2순위</label>
-        <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-      </div>
-      <div class="sort-select-wrap">
-        <label>3순위</label>
-        <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-      </div>
-      <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+      <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()">
+        정렬 기준
+        <span class="sort-badge" id="sort-badge" style="display:none"></span>
+        <span class="sort-arrow">▾</span>
+      </button>
     </div>
   </div>
 
   <div class="result-layout">
-    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
+    <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      </div>
+      <div class="sort-panel" id="sort-panel">
+        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+        <div class="sort-hint" id="sort-hint">클릭 순서대로 1순위 → 2순위 → 3순위 자동 지정</div>
+        <div class="sort-panel-footer">
+          <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
+        </div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -4664,9 +4700,8 @@ function renderPOIHTML(poi){
   }).join('');
 }
 
-// ── 다중 우선순위 정렬 (spec-34, 구 spec-20) ────────────────
+// ── 체크박스 정렬 패널 ────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: '',                             label: '선택 안 함',        group: '' },
   { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
   { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
   { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
@@ -4683,57 +4718,80 @@ const SORT_OPTIONS = [
   { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
 ];
 
-function _buildSelectHTML(excludeValues) {
-  let html = '';
-  let lastGroup = '';
-  for (const o of SORT_OPTIONS) {
-    if (o.group && o.group !== lastGroup) {
-      if (lastGroup !== '') html += '</optgroup>';
-      html += `<optgroup label="${o.group}">`;
-      lastGroup = o.group;
-    }
-    const disabled = o.value && excludeValues.has(o.value) ? ' disabled' : '';
-    html += `<option value="${o.value}"${disabled}>${o.label}</option>`;
-  }
-  if (lastGroup !== '') html += '</optgroup>';
-  return html;
-}
+// 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
+let _sortChecked = []; // e.g. ['total_time_min:asc', 'price_low:asc']
 
 function initSortBar(cards) {
   if (!cards || !cards.length) return;
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+
+  const wrap = document.getElementById('sort-chips-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SORT_OPTIONS.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'sort-check-item';
+    el.dataset.value = o.value;
+    el.innerHTML = `<span class="rank-badge"></span>${o.label}`;
+    el.addEventListener('click', () => onSortCheckClick(o.value));
+    wrap.appendChild(el);
   });
+
   document.getElementById('sort-bar').classList.add('visible');
 }
 
-function updateSortDropdowns() {
-  const v1 = document.getElementById('sort-1').value;
-  const v2 = document.getElementById('sort-2').value;
-  const v3 = document.getElementById('sort-3').value;
-
-  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
-  const sel2 = document.getElementById('sort-2');
-  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
-  sel2.value = (v2 && v2 !== v1) ? v2 : '';
-  const newV2 = sel2.value;
-
-  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
-  const sel3 = document.getElementById('sort-3');
-  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
-  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
-}
-
-function onSortChange() {
-  updateSortDropdowns();
+function onSortCheckClick(value) {
+  const idx = _sortChecked.indexOf(value);
+  if (idx === -1) {
+    _sortChecked.push(value);
+  } else {
+    _sortChecked.splice(idx, 1);
+  }
+  _refreshSortUI();
   applySortOrder();
 }
 
+function _refreshSortUI() {
+  document.querySelectorAll('.sort-check-item').forEach(el => {
+    const rank = _sortChecked.indexOf(el.dataset.value);
+    el.classList.toggle('checked', rank !== -1);
+    const badge = el.querySelector('.rank-badge');
+    if (badge) badge.textContent = rank !== -1 ? rank + 1 : '';
+  });
+
+  // 토글 버튼 배지
+  const badge = document.getElementById('sort-badge');
+  if (badge) {
+    badge.textContent = _sortChecked.length || '';
+    badge.style.display = _sortChecked.length ? 'inline-flex' : 'none';
+  }
+
+  // 힌트 텍스트: "1순위 통근 짧은순 → 2순위 가격 낮은순"
+  const hint = document.getElementById('sort-hint');
+  if (!hint) return;
+  if (!_sortChecked.length) {
+    hint.innerHTML = '클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정';
+    return;
+  }
+  const labelMap = Object.fromEntries(SORT_OPTIONS.map(o => [o.value, o.label]));
+  const parts = _sortChecked.map((v, i) =>
+    `<span class="hint-order">${i+1}순위</span> ${labelMap[v] || v}`
+  );
+  hint.innerHTML = parts.join(' &nbsp;→&nbsp; ');
+}
+
+function toggleSortPanel() {
+  const panel = document.getElementById('sort-panel');
+  const btn = document.getElementById('sort-toggle-btn');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+// 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
+function updateSortDropdowns() {}
+function onSortChange() { applySortOrder(); }
+
 function applySortOrder() {
-  const keys = ['sort-1','sort-2','sort-3']
-    .map(id => document.getElementById(id).value)
-    .filter(v => v);
+  const keys = _sortChecked;
 
   if (!keys.length) {
     if (window._lastSearchData) renderCards(window._lastSearchData);
@@ -4771,10 +4829,8 @@ function _renderSortedFlat(cards) {
 }
 
 function resetSort() {
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  updateSortDropdowns();
+  _sortChecked = [];
+  _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
