@@ -3188,6 +3188,30 @@ function clearRoutePolylines() {
   _routePolylines = [];
 }
 
+// Douglas-Peucker 단순화 — OSM 점 잔떨림·역쌍 이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
+function simplifyPath(pts, tol) {
+  if (pts.length < 3) return pts;
+  const P = pts.map(p => [p.getLng(), p.getLat()]);
+  const keep = new Array(P.length).fill(false);
+  keep[0] = keep[P.length - 1] = true;
+  const stack = [[0, P.length - 1]];
+  while (stack.length) {
+    const seg = stack.pop(), a = seg[0], b = seg[1];
+    const ax = P[a][0], ay = P[a][1], bx = P[b][0], by = P[b][1];
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1e-12;
+    let maxD = 0, idx = -1;
+    for (let i = a + 1; i < b; i++) {
+      const px = P[i][0], py = P[i][1];
+      const t = ((px - ax) * dx + (py - ay) * dy) / len2;
+      const cx = ax + t * dx, cy = ay + t * dy;
+      const d = Math.hypot(px - cx, py - cy);
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > tol && idx > -1) { keep[idx] = true; stack.push([a, idx], [idx, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
 // Chaikin 코너 컷팅 — 직선 분절이 만나는 각진 모서리를 둥근 곡선으로 스무딩
 function smoothPath(pts, iterations) {
   let cur = pts;
@@ -3232,7 +3256,9 @@ function drawRoutePolylines(options, color) {
     });
     if (pts.length < 2) return;
     const isWalk = step.type === '도보' || step.type === '환승도보';
-    segs.push({ path: isWalk ? pts : smoothPath(pts, 2), isWalk, mode: STEP_MODE_COLOR[step.type] });
+    // 단순화로 잔떨림 제거 → 스무딩. 두꺼운 선이 매끈해짐
+    const clean = simplifyPath(pts, 0.00006);
+    segs.push({ path: isWalk ? clean : smoothPath(clean, 3), isWalk, mode: STEP_MODE_COLOR[step.type] });
   });
   // 레이어 패스 — 연속된 흰 케이싱이 끊기지 않도록 같은 겹끼리 모아 그림
   segs.forEach(s => { if (!s.isWalk) _addRouteLine(s.path, 18, '#FFFFFF'); });   // 흰 외곽
