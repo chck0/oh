@@ -13,7 +13,6 @@
 
   <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
   <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
   <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
   <script src="/api/kakao-sdk?libraries=services"></script>
 
@@ -1032,24 +1031,6 @@
       border-color: var(--color-pin-recommended-bg);
       box-shadow: var(--shadow-pin-recommended);
     }
-    /* 통근시간 색상 핀 */
-    .pin-t1 { background:#16a34a; color:#fff; border-color:#15803d; }
-    .pin-t2 { background:#2563eb; color:#fff; border-color:#1d4ed8; }
-    .pin-t3 { background:#ea580c; color:#fff; border-color:#c2410c; }
-    .pin-t4 { background:#dc2626; color:#fff; border-color:#b91c1c; }
-    /* 지도 통근시간 범례 */
-    #map-legend {
-      position: absolute; top: 10px; right: 46px; z-index: 200;
-      background: white; border: 1px solid #e5e7eb; border-radius: 8px;
-      padding: 8px 12px; font-size: 11px; font-family: 'Pretendard', sans-serif;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12); pointer-events: none;
-    }
-    #map-legend .lg-title { font-weight: 700; font-size: 11px; color: #374151; margin-bottom: 5px; }
-    #map-legend .lg-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
-    #map-legend .lg-dot {
-      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    }
-    #map-legend .lg-row:last-child { margin-bottom: 0; }
     .pin-lookup {
       background: #f59e0b; color: #fff;
       border-color: #d97706; font-weight: 700;
@@ -1957,56 +1938,6 @@
     .bucket-body {
       background: #FAF9F7;  /* 매우 살짝 톤 다운 */
     }
-
-    /* ── 필터 패널 ─────────────────────────────────────────── */
-    .fp-panel {
-      flex-shrink: 0;
-      padding: 14px 16px 10px;
-      border-bottom: 1px solid var(--color-border-strong);
-      background: white;
-    }
-    .fp-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .fp-count {
-      font-size: 16px; font-weight: 700;
-      color: var(--color-text-primary);
-      font-feature-settings: 'tnum';
-    }
-    .fp-rerun {
-      font-size: 12px; font-weight: 600;
-      color: var(--color-text-secondary);
-      text-decoration: none;
-      padding: 4px 10px;
-      border: 1px solid var(--color-border-default);
-      border-radius: 6px;
-    }
-    .fp-rerun:hover { color: var(--color-brand-primary); border-color: var(--color-brand-primary); }
-    .fp-section { margin-bottom: 12px; }
-    .fp-label {
-      font-size: 11px; font-weight: 700;
-      color: var(--color-text-tertiary);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-    .fp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .fp-chip {
-      padding: 7px 14px;
-      border-radius: 999px;
-      border: 1.5px solid var(--color-border-strong);
-      background: var(--color-bg-subtle);
-      font-size: 13px; font-weight: 600;
-      color: var(--color-text-secondary);
-      cursor: pointer; font-family: inherit;
-      transition: all 120ms;
-    }
-    .fp-chip:hover { border-color: var(--color-text-secondary); color: var(--color-text-primary); }
-    .fp-chip.on {
-      background: var(--color-text-primary);
-      color: white;
-      border-color: var(--color-text-primary);
-    }
   </style>
 </head>
 <body>
@@ -2077,58 +2008,30 @@
 
 <main id="main" style="display:none;">
   <div class="summary-bar" id="summary"></div>
+  <div class="sort-bar" id="sort-bar">
+    <span class="sort-bar__label">정렬순서</span>
+    <div class="sort-select-wrap">
+      <label>1순위</label>
+      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>2순위</label>
+      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>3순위</label>
+      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+    </div>
+    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+  </div>
   <div class="result-layout">
-    <!-- 좌측: 필터 패널 + fav-tabs + cards-panel -->
+    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
     <div class="left-panel">
-      <!-- 필터 패널 -->
-      <div class="fp-panel" id="fp-panel" style="display:none">
-        <div class="fp-header">
-          <span class="fp-count" id="fp-count">0곳</span>
-          <a class="fp-rerun" id="fp-rerun" href="/search.html">조건 변경</a>
-        </div>
-        <div class="fp-section">
-          <div class="fp-label">평형</div>
-          <div class="fp-chips" id="fp-pyeong-chips">
-            <button class="fp-chip on" data-val="" onclick="fpFilter('pyeong',this)">전체</button>
-          </div>
-        </div>
-        <div class="fp-section">
-          <div class="fp-label">세대수</div>
-          <div class="fp-chips" id="fp-mincnt-chips">
-            <button class="fp-chip on" data-val="0" onclick="fpFilter('mincnt',this)">전체</button>
-            <button class="fp-chip" data-val="300" onclick="fpFilter('mincnt',this)">300+</button>
-            <button class="fp-chip" data-val="500" onclick="fpFilter('mincnt',this)">500+</button>
-            <button class="fp-chip" data-val="1000" onclick="fpFilter('mincnt',this)">1000+</button>
-            <button class="fp-chip" data-val="1500" onclick="fpFilter('mincnt',this)">1500+</button>
-          </div>
-        </div>
-        <div class="fp-section">
-          <div class="fp-label">건축연도</div>
-          <div class="fp-chips" id="fp-year-chips">
-            <button class="fp-chip on" data-val="0" onclick="fpFilter('year',this)">전체</button>
-            <button class="fp-chip" data-val="2000" onclick="fpFilter('year',this)">2000년~</button>
-            <button class="fp-chip" data-val="2010" onclick="fpFilter('year',this)">2010년~</button>
-            <button class="fp-chip" data-val="2015" onclick="fpFilter('year',this)">2015년~</button>
-            <button class="fp-chip" data-val="2020" onclick="fpFilter('year',this)">2020년~</button>
-          </div>
-        </div>
-        <div class="fp-section">
-          <div class="fp-label">정렬</div>
-          <div class="fp-chips" id="fp-sort-chips">
-            <button class="fp-chip on" data-val="recommended" onclick="fpSort(this)">추천순</button>
-            <button class="fp-chip" data-val="commute" onclick="fpSort(this)">통근시간</button>
-            <button class="fp-chip" data-val="price" onclick="fpSort(this)">가격낮은순</button>
-            <button class="fp-chip" data-val="new" onclick="fpSort(this)">신축순</button>
-          </div>
-        </div>
-      </div>
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
-      <div class="cards-panel" id="cards-panel">
-        <div id="cards-list"></div>
-      </div>
+      <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
       <div class="compare-bar hidden" id="compare-bar">
         <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
@@ -2208,15 +2111,8 @@
     <!-- spec-19: 드래그 리사이즈 핸들 -->
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
-    <div class="map-panel" style="position:relative">
+    <div class="map-panel">
       <div id="map"></div>
-      <div id="map-legend">
-        <div class="lg-title">통근시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#2563eb"></div><span>31–45분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#ea580c"></div><span>46–60분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#dc2626"></div><span>61분 이상</span></div>
-      </div>
     </div>
   </div>
 </main>
@@ -2300,7 +2196,7 @@ playVideo(0);
 // ═══════════════════════════════════════════════════════
 const params = new URLSearchParams(location.search);
 // 필수 파라미터 누락 시 검색 폼으로 redirect
-if(!params.get('workplace_address')){
+if(!params.get('workplace_address') || !params.get('pyeong_types')){
   location.replace('/search.html');
   throw new Error('redirect');
 }
@@ -2308,13 +2204,14 @@ if(!params.get('workplace_address')){
 document.querySelectorAll('a[href="/search.html"]').forEach(a => {
   a.href = '/search.html' + location.search;
 });
-const ALL_PYEONG = ['10평미만','10평대','20평대','30평대','40평대','50평대+'];
 const reqBody = {
   workplace_address: params.get('workplace_address'),
   max_price: parseInt(params.get('max_price'), 10),
   max_minutes: parseInt(params.get('max_minutes'), 10),
-  pyeong_types: ALL_PYEONG,
+  pyeong_types: params.get('pyeong_types').split(','),
 };
+if(params.get('min_kaptdaCnt')) reqBody.min_kaptdaCnt=parseInt(params.get('min_kaptdaCnt'), 10);
+if(params.get('build_year_min')) reqBody.build_year_min=parseInt(params.get('build_year_min'), 10);
 if(params.get('min_price')) reqBody.min_price=parseInt(params.get('min_price'), 10);
 if(params.get('workplace_address_2')) reqBody.workplace_address_2 = params.get('workplace_address_2');
 const dualMode = !!reqBody.workplace_address_2;
@@ -2333,6 +2230,9 @@ let _currentAptSeq = null;
 let currentTabKey = null;
 let currentDetailCard = null;
 
+// 핀 pyeong 레이블 (검색 조건 첫 번째)
+const pyeongLabel = (reqBody.pyeong_types[0]||'')
+  .replace('평대+','평+').replace('평대','평').replace('10평미만','<10평');
 
 // ═══════════════════════════════════════════════════════
 //  헬퍼 함수
@@ -2484,6 +2384,10 @@ function renderSummary(data){
     <span>${reqBody.min_price ? fmtPrice(reqBody.min_price)+'~'+fmtPrice(reqBody.max_price) : fmtPrice(reqBody.max_price)+' 이하'}</span>
     <span class="sep">·</span>
     <span>${reqBody.max_minutes}분 이내</span>
+    <span class="sep">·</span>
+    <span>${reqBody.pyeong_types.join(', ')}</span>
+    ${reqBody.min_kaptdaCnt?`<span class="sep">·</span><span>${reqBody.min_kaptdaCnt.toLocaleString()}세대 이상</span>`:''}
+    ${reqBody.build_year_min?`<span class="sep">·</span><span>${reqBody.build_year_min}년 이후</span>`:''}
     <span class="stats">총 ${(data.stats.total||0).toLocaleString()}개 (평형 분리)</span>`;
 }
 
@@ -3527,7 +3431,7 @@ function switchFavTab(tab) {
     // 전체 카드 다시 렌더 + 전체 핀 복원
     filterMapPins(null);
     clearCompare();  // spec-14: 탭 전환 시 비교 선택 초기화
-    if(window._allCards) applyClientFilters();
+    if(window._lastSearchData) renderCards(window._lastSearchData);
   } else {
     // 관심 단지만 필터 렌더
     const cards = window._lastCards.filter(c => favs.has(favId(c.apt_seq, c.pyeong_type)));
@@ -3826,15 +3730,16 @@ function renderListCard(c, wpId, cmpMode=false){
 
 function renderCards(data){
   panelMode='list';
+  const panel=document.getElementById('cards-panel');
 
-  // 전역 상태 저장
+  // 전역 상태 저장 (탭 전환 / 재렌더 시 참조)
   window._lastSearchData = data;
-  window._allCards       = data.cards || [];
-  window._allCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
+  window._lastCards      = data.cards || [];
+  window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
 
-  // 탭 패널 표시
+  // 탭 패널 표시 + 카운트 초기화
   const tabsEl = document.getElementById('fav-tabs');
   if(tabsEl && data.cards.length) {
     tabsEl.style.display = 'flex';
@@ -3844,7 +3749,6 @@ function renderCards(data){
     _updateFavTab();
   }
 
-  const panel = document.getElementById('cards-panel');
   if(!data.cards.length){
     const emptyMsg = dualMode
       ? `<div class="error-box">
@@ -3856,15 +3760,24 @@ function renderCards(data){
       : `<div class="error-box"><h2>조건에 맞는 매물이 없어요</h2>
            <p style="margin-top:16px"><a href="/search.html${location.search}">← 조건 다시 입력</a></p>
          </div>`;
-    document.getElementById('cards-list').innerHTML = emptyMsg;
+    panel.innerHTML = emptyMsg;
     return;
   }
 
+  const recommended = data.cards.filter(c=>c.is_recommended);
+  const rest        = data.cards.filter(c=>!c.is_recommended);
+  const wpId = data.wp_id;
+  const totalRest = rest.length || 1;
+
+  // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
   const partialBanner = data.meta?.partial
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
-  document.getElementById('cards-list').innerHTML = partialBanner + `
+  let html = partialBanner + renderStatsPanel(data);
+
+  // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
+  html += `
     <div class="apt-search-bar">
       <div class="apt-search-input-wrap">
         <input type="text" id="apt-search-input"
@@ -3877,8 +3790,79 @@ function renderCards(data){
     </div>
     <div id="apt-search-result"></div>`;
 
-  initFilterPanel(data);
-  applyClientFilters();
+  // 추천 섹션
+  if(recommended.length){
+    html += `<div class="rec-section-head">
+      <h3>추천 ${recommended.length}곳</h3>
+      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+    </div>`;
+    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
+  }
+
+  // 버킷별 접힘 섹션
+  if(rest.length){
+    const buckets = data.buckets || [];
+    html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
+    buckets.forEach(b=>{
+      const inBucket = rest.filter(c=>c.bucket_idx===b.idx);
+      if(!inBucket.length) return;
+
+      // 집계: 가격 최저/최고/평균
+      const prices = inBucket.map(c=>c.price_low).filter(p=>p>0);
+      const minP = prices.length ? Math.min(...prices) : 0;
+      const maxP = prices.length ? Math.max(...prices) : 0;
+      const avgP = prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : 0;
+
+      // 평형별 카운트
+      const byPt = {};
+      inBucket.forEach(c=>{ byPt[c.pyeong_type]=(byPt[c.pyeong_type]||0)+1; });
+      const ptChips = Object.entries(byPt)
+        .sort((a,b)=>a[0].localeCompare(b[0],'ko'))
+        .map(([pt, cnt])=>`<span class="bucket-pt-chip">${escHtml(pt)} <strong class="num">${cnt}</strong></span>`)
+        .join('');
+
+      // 전체 대비 비율
+      const ratioPct = Math.round(inBucket.length/totalRest*100);
+
+      // 본문 (펼친 상태)
+      const byPtList = {};
+      inBucket.forEach(c=>{ (byPtList[c.pyeong_type]=byPtList[c.pyeong_type]||[]).push(c); });
+      let body = '';
+      Object.entries(byPtList).sort((a,b)=>a[0].localeCompare(b[0],'ko')).forEach(([pt, items])=>{
+        items.sort((a,b)=>a.price_low - b.price_low);
+        body += `<div class="bucket-pt-label">${escHtml(pt)} · ${items.length}곳 · 가격순</div>`;
+        body += items.map(c=>renderListCard(c, wpId)).join('');
+      });
+
+      html += `<div class="bucket-section">
+        <div class="bucket-head" onclick="toggleBucket(this)">
+          <div class="bucket-head__top">
+            <div class="bucket-head__title">
+              <span class="bucket-head__time">${escHtml(b.label)}</span>
+              <span class="bucket-head__cnt num">${inBucket.length}곳</span>
+            </div>
+            <div class="bucket-head__chev">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          ${prices.length ? `<div class="bucket-head__bottom">
+            <span class="bucket-head__price">
+              <strong class="num">${shortPrice(minP)}</strong><span class="price-sep">~</span><strong class="num">${shortPrice(maxP)}</strong>
+              <span style="color:var(--color-text-tertiary);margin-left:6px;">· 평균 <span class="num">${shortPrice(avgP)}</span></span>
+            </span>
+          </div>` : ''}
+          <div class="bucket-head__bottom">
+            <div class="bucket-head__pts">${ptChips}</div>
+          </div>
+          <div class="bucket-head__ratio"><div class="bucket-head__ratio-fill" style="width:${ratioPct}%"></div></div>
+        </div>
+        <div class="bucket-body">${body}</div>
+      </div>`;
+    });
+  }
+
+  panel.innerHTML = html;
+  initSortBar(data.cards);
 }
 
 function toggleBucket(headEl){
@@ -3941,12 +3925,10 @@ async function initMap(data){
     group.cards.sort((a,b)=>a.price_low - b.price_low);
     const main = group.cards[0];
     const ptCount = group.cards.length;
-    const t = main.total_time_min || 999;
-    const tCls = t <= 30 ? 'pin-t1' : t <= 45 ? 'pin-t2' : t <= 60 ? 'pin-t3' : 'pin-t4';
-    const cls = group.any_recommended ? 'pin-best' : tCls;
+    const cls = group.any_recommended ? 'pin-best' : '';
     const z = group.any_recommended ? 50 : 5;
     const multiMark = ptCount > 1 ? `<span class="pin-multi-mark">${ptCount}</span>` : '';
-    const pinText = t < 999 ? `${t}분` : '?분';
+    const pinText = `${escHtml(main.pyeong_type||'')} ${shortPrice(main.price_low)} ${main.total_time_min}분`;
     const overlay = new kakao.maps.CustomOverlay({
       position: pos,
       content: `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${pinText}${multiMark}</div>`,
@@ -4129,7 +4111,7 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
-  if(window._allCards) applyClientFilters();
+  if(resultData) renderCards(resultData);
 }
 
 function renderDetailPanel(d, routes, wpId){
@@ -4615,90 +4597,83 @@ function _buildSelectHTML(excludeValues) {
   return html;
 }
 
-function initFilterPanel(data) {
-  window._allCards = data.cards || [];
-  window._clientFilters = { pyeong: null, mincnt: 0, year: 0, sort: 'recommended' };
+function initSortBar(cards) {
+  if (!cards || !cards.length) return;
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+  });
+  document.getElementById('sort-bar').classList.add('visible');
+}
 
-  // 평형 칩 동적 생성
-  const pyeongSet = [...new Set(data.cards.map(c => c.pyeong_type).filter(Boolean))];
-  const pyeongOrder = ['10평미만','10평대','20평대','30평대','40평대','50평대+'];
-  pyeongSet.sort((a,b) => pyeongOrder.indexOf(a) - pyeongOrder.indexOf(b));
-  const pyeongChips = document.getElementById('fp-pyeong-chips');
-  pyeongChips.innerHTML = `<button class="fp-chip on" data-val="" onclick="fpFilter('pyeong',this)">전체</button>`;
-  pyeongSet.forEach(pt => {
-    const btn = document.createElement('button');
-    btn.className = 'fp-chip';
-    btn.dataset.val = pt;
-    btn.textContent = pt;
-    btn.onclick = function(){ fpFilter('pyeong', this); };
-    pyeongChips.appendChild(btn);
+function updateSortDropdowns() {
+  const v1 = document.getElementById('sort-1').value;
+  const v2 = document.getElementById('sort-2').value;
+  const v3 = document.getElementById('sort-3').value;
+
+  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
+  const sel2 = document.getElementById('sort-2');
+  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
+  sel2.value = (v2 && v2 !== v1) ? v2 : '';
+  const newV2 = sel2.value;
+
+  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
+  const sel3 = document.getElementById('sort-3');
+  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
+  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
+}
+
+function onSortChange() {
+  updateSortDropdowns();
+  applySortOrder();
+}
+
+function applySortOrder() {
+  const keys = ['sort-1','sort-2','sort-3']
+    .map(id => document.getElementById(id).value)
+    .filter(v => v);
+
+  if (!keys.length) {
+    if (window._lastSearchData) renderCards(window._lastSearchData);
+    return;
+  }
+
+  const cards = [...(window._lastCards || [])];
+  cards.sort((a, b) => {
+    for (const key of keys) {
+      const [field, dir] = key.split(':');
+      const av = a[field] ?? null;
+      const bv = b[field] ?? null;
+      if (av === null && bv === null) continue;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const diff = dir === 'desc' ? bv - av : av - bv;
+      if (diff !== 0) return diff;
+    }
+    return 0;
   });
 
-  // 필터 패널 표시 + 카운트 + 조건변경 링크
-  document.getElementById('fp-panel').style.display = 'block';
-  document.getElementById('fp-count').textContent = `${data.cards.length}곳`;
-  document.getElementById('fp-rerun').href = '/search.html' + location.search;
-}
-
-function fpFilter(type, btn) {
-  const group = btn.parentElement;
-  group.querySelectorAll('.fp-chip').forEach(c => c.classList.remove('on'));
-  btn.classList.add('on');
-  const val = btn.dataset.val;
-  if (type === 'pyeong') window._clientFilters.pyeong = val || null;
-  else if (type === 'mincnt') window._clientFilters.mincnt = parseInt(val, 10) || 0;
-  else if (type === 'year') window._clientFilters.year = parseInt(val, 10) || 0;
-  applyClientFilters();
-}
-
-function fpSort(btn) {
-  document.getElementById('fp-sort-chips').querySelectorAll('.fp-chip').forEach(c => c.classList.remove('on'));
-  btn.classList.add('on');
-  window._clientFilters.sort = btn.dataset.val;
-  applyClientFilters();
-}
-
-function _sortCards(cards, key) {
-  const s = [...cards];
-  if (key === 'commute') s.sort((a,b) => (a.total_time_min||999) - (b.total_time_min||999));
-  else if (key === 'price') s.sort((a,b) => (a.price_low||9999999) - (b.price_low||9999999));
-  else if (key === 'new') s.sort((a,b) => (b.build_year||0) - (a.build_year||0));
-  else s.sort((a,b) => {
-    if (b.is_recommended !== a.is_recommended) return b.is_recommended ? 1 : -1;
-    return (a.total_time_min||999) - (b.total_time_min||999);
-  });
-  return s;
-}
-
-function applyClientFilters() {
-  const { pyeong, mincnt, year, sort } = window._clientFilters || {};
-  let cards = [...(window._allCards || [])];
-  if (pyeong) cards = cards.filter(c => c.pyeong_type === pyeong);
-  if (mincnt) cards = cards.filter(c => (c.kaptdaCnt || 0) >= mincnt);
-  if (year)   cards = cards.filter(c => (c.build_year || 0) >= year);
-  cards = _sortCards(cards, sort || 'recommended');
-  window._lastCards = cards;
   _renderSortedFlat(cards);
-  if (window.filterMapPins) window.filterMapPins(cards.map(c => c.apt_seq));
 }
 
 function _renderSortedFlat(cards) {
   const data = window._lastSearchData;
   if (!data) return;
+  const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  const list = document.getElementById('cards-list');
-  if (!list) return;
-
-  // apt-search-bar와 apt-search-result는 유지하고 그 뒤에 카드 추가
-  let existingSearch = list.querySelector('.apt-search-bar')?.outerHTML || '';
-  let existingResult = list.querySelector('#apt-search-result')?.outerHTML || '<div id="apt-search-result"></div>';
-
-  let html = existingSearch + existingResult;
-  html += cards.map(c => renderListCard(c, wpId)).join('');
-  list.innerHTML = html;
-
-  document.getElementById('fp-count').textContent = `${cards.length}곳`;
+  let html = renderStatsPanel(data);
+  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
+  panel.innerHTML = html;
   _updateFavTab();
+}
+
+function resetSort() {
+  ['sort-1','sort-2','sort-3'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  updateSortDropdowns();
+  if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
 // ── 실행 ─────────────────────────────────────────────────────
