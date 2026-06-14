@@ -2072,6 +2072,22 @@
 
 <main id="main" style="display:none;">
   <div class="summary-bar" id="summary"></div>
+  <div class="sort-bar" id="sort-bar">
+    <span class="sort-bar__label">정렬순서</span>
+    <div class="sort-select-wrap">
+      <label>1순위</label>
+      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>2순위</label>
+      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+    </div>
+    <div class="sort-select-wrap">
+      <label>3순위</label>
+      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+    </div>
+    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+  </div>
 
   <div class="result-layout">
     <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
@@ -4675,7 +4691,7 @@ function initSortBar(cards) {
     const sel = document.getElementById(id);
     if (sel) sel.innerHTML = _buildSelectHTML(new Set());
   });
-  document.getElementById('sort-bar')?.classList.add('visible');
+  document.getElementById('sort-bar').classList.add('visible');
 }
 
 function updateSortDropdowns() {
