@@ -460,6 +460,32 @@
       color: var(--color-brand-primary);
     }
 
+    /* ─── spec-37: 상세조건 접이식 ──────────────────────── */
+    .adv-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+    }
+    .adv-toggle__title { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
+    .adv-toggle__opt { font-weight: 600; font-size: 13.5px; color: var(--color-text-secondary); margin-left: 4px; }
+    .adv-toggle__hint { font-size: 12px; color: var(--color-text-tertiary); }
+    .adv-chevron { margin-left: auto; font-size: 13px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .adv-toggle[aria-expanded="true"] .adv-chevron { transform: rotate(180deg); }
+    .adv-body { margin-top: 18px; }
+    .adv-field { margin-bottom: 18px; }
+    .adv-field:last-child { margin-bottom: 0; }
+    .adv-field__label { font-size: 13px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 8px; }
+    .adv-field__sub { font-weight: 600; font-size: 12px; color: var(--color-text-tertiary); margin-left: 4px; }
+    /* 상세조건 칩: 한 줄에 들어가도록 컴팩트 (좁으면 가로 스크롤) */
+    .adv-section .check-chips {
+      flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 2px;
+      scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+    }
+    .adv-section .check-chip {
+      flex: 0 0 auto; padding: 7px 12px; gap: 0;
+      font-size: 13px; white-space: nowrap;
+    }
+    .adv-section .check-chip__box { display: none; }
+
     /* ─── spec-15: 최근 검색 히스토리 칩 ─────────────────── */
     .recent-searches {
       margin-top: 10px;
@@ -664,6 +690,48 @@
       <div class="hint">선택한 시간 이하로 출근 가능한 매물만 보여드려요.</div>
     </section>
 
+    <!-- 상세조건 (선택, spec-37) — 기본 접힘 -->
+    <section class="section adv-section">
+      <button type="button" class="adv-toggle" id="adv-toggle" aria-expanded="false" aria-controls="adv-body">
+        <span class="adv-toggle__title">상세조건<span class="adv-toggle__opt">선택</span></span>
+        <span class="adv-toggle__hint">평형 · 준공연도 · 세대수</span>
+        <span class="adv-chevron" id="adv-chevron">▾</span>
+      </button>
+      <div class="adv-body" id="adv-body" hidden>
+        <div class="adv-field">
+          <div class="adv-field__label">평형 <span class="adv-field__sub">복수 선택</span></div>
+          <div class="check-chips">
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="10평미만" checked><span class="check-chip__box"></span>10평 미만</label>
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="10평대" checked><span class="check-chip__box"></span>10평대</label>
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="20평대" checked><span class="check-chip__box"></span>20평대</label>
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="30평대" checked><span class="check-chip__box"></span>30평대</label>
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="40평대" checked><span class="check-chip__box"></span>40평대</label>
+            <label class="check-chip"><input type="checkbox" name="pyeong" value="50평대+" checked><span class="check-chip__box"></span>50평대+</label>
+          </div>
+        </div>
+        <div class="adv-field">
+          <div class="adv-field__label">준공연도</div>
+          <div class="check-chips">
+            <label class="check-chip"><input type="radio" name="build_year_min" value="" checked><span class="check-chip__box"></span>제한없음</label>
+            <label class="check-chip"><input type="radio" name="build_year_min" value="2000"><span class="check-chip__box"></span>2000년 이후</label>
+            <label class="check-chip"><input type="radio" name="build_year_min" value="2010"><span class="check-chip__box"></span>2010년 이후</label>
+            <label class="check-chip"><input type="radio" name="build_year_min" value="2015"><span class="check-chip__box"></span>2015년 이후</label>
+            <label class="check-chip"><input type="radio" name="build_year_min" value="2020"><span class="check-chip__box"></span>2020년 이후</label>
+          </div>
+        </div>
+        <div class="adv-field">
+          <div class="adv-field__label">세대수</div>
+          <div class="check-chips">
+            <label class="check-chip"><input type="radio" name="mincnt" value="" checked><span class="check-chip__box"></span>제한없음</label>
+            <label class="check-chip"><input type="radio" name="mincnt" value="300"><span class="check-chip__box"></span>300세대+</label>
+            <label class="check-chip"><input type="radio" name="mincnt" value="500"><span class="check-chip__box"></span>500세대+</label>
+            <label class="check-chip"><input type="radio" name="mincnt" value="1000"><span class="check-chip__box"></span>1,000세대+</label>
+            <label class="check-chip"><input type="radio" name="mincnt" value="1500"><span class="check-chip__box"></span>1,500세대+</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="submit-zone">
       <p class="submit-note">분석에 약 <strong style="color:var(--color-text-secondary);font-weight:600;" class="num">30초~1분</strong> 정도 걸려요</p>
       <button type="submit" class="submit-btn" id="submit-btn">
@@ -682,6 +750,15 @@ document.querySelectorAll('#commute-chips .chip').forEach(chip => {
     document.querySelectorAll('#commute-chips .chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
   });
+});
+
+// ── spec-37: 상세조건 펼침 토글 ───────────────────────────
+function setAdvOpen(open) {
+  document.getElementById('adv-body').hidden = !open;
+  document.getElementById('adv-toggle').setAttribute('aria-expanded', String(open));
+}
+document.getElementById('adv-toggle').addEventListener('click', () => {
+  setAdvOpen(document.getElementById('adv-body').hidden);
 });
 
 // ── spec-15 + 확장: 최근 검색 히스토리 칩 (W1/W2 공용) ──────
@@ -777,6 +854,10 @@ const PRICE_MAX_MAN = 200000;
   const buildYear = p.get('build_year_min') || '';
   const byEl = document.querySelector(`input[name=build_year_min][value="${buildYear}"]`);
   if (byEl) byEl.checked = true;
+
+  // 상세조건이 기본값과 다르면 섹션 자동 펼침 (복원값이 보이도록)
+  const advUsed = buildYear || mincnt || (pyeongTypes.length && pyeongTypes.length < 6);
+  if (advUsed) setAdvOpen(true);
 })();
 
 // ── Daum Postcode ─────────────────────────────────────────
@@ -897,14 +978,23 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     }
   }
 
+  // 상세조건(spec-37): 평형 실제 선택분 (0개면 전체 폴백)
+  const ALL_PYEONG = ['10평미만', '10평대', '20평대', '30평대', '40평대', '50평대+'];
+  let pyeong = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(c => c.value);
+  if (pyeong.length === 0) pyeong = ALL_PYEONG;
+
   const params = new URLSearchParams({
     workplace_address: address,
     max_price: String(maxPrice),
     max_minutes: String(maxMinutes),
-    pyeong_types: '10평미만,10평대,20평대,30평대,40평대,50평대+',
+    pyeong_types: pyeong.join(','),
   });
   if (minPrice !== null) params.set('min_price', String(minPrice));
   if (address2) params.set('workplace_address_2', address2);
+  const buildYear = document.querySelector('input[name=build_year_min]:checked')?.value;
+  if (buildYear) params.set('build_year_min', buildYear);
+  const minCnt = document.querySelector('input[name=mincnt]:checked')?.value;
+  if (minCnt) params.set('min_kaptdaCnt', minCnt);
 
   window.location.href = '/result.html?' + params.toString();
 });
