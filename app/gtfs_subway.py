@@ -33,14 +33,15 @@ _line_pts: dict[str, list[tuple]] | None = None              # line_norm → [(s
 _pair: dict[tuple, str] | None = None                        # (line_norm, region, a, b) → linestring
 _osm_keys: dict[str, list[str]] | None = None                # line_norm → [osm_line_key, ...] (line_map)
 _station_norm: dict[str, str] | None = None                  # stop_id → name_norm (역명 매칭용)
+_pair_byname: dict[tuple, str] | None = None                 # (line_norm, region, name_a, name_b) → ls (중복 stop_id 보정)
 
 
 def _load() -> None:
-    global _stations, _line_routes, _line_pts, _pair, _osm_keys, _station_norm
+    global _stations, _line_routes, _line_pts, _pair, _osm_keys, _station_norm, _pair_byname
     if _stations is not None:
         return
     _stations, _line_routes, _line_pts, _pair = {}, {}, {}, {}
-    _osm_keys, _station_norm = {}, {}
+    _osm_keys, _station_norm, _pair_byname = {}, {}, {}
     conn = connect()
     try:
         for stop_id, name_norm, lng, lat in conn.execute(
@@ -74,6 +75,9 @@ def _load() -> None:
             'FROM subway_pair_geom'
         ):
             _pair[(line_norm, region, a, b)] = ls
+            na, nb = _station_norm.get(a), _station_norm.get(b)
+            if na and nb:
+                _pair_byname[(line_norm, region, na, nb)] = ls
 
         # line_map: line_norm → OSM 키 (권역 병합, OSM은 좌표로 구분)
         for line_norm, key in conn.execute(
@@ -126,6 +130,16 @@ def _pair_points(line_norm: str, region: str, a: str, b: str) -> list[tuple[floa
     if rev:
         pts = [(float(x), float(y)) for x, y in (p.split(',') for p in rev.split())]
         return pts[::-1]
+    # 역명 폴백: 환승역 등 같은 역에 stop_id가 여러 개라 정확 매칭 실패 시
+    na, nb = _station_norm.get(a), _station_norm.get(b)
+    if na and nb:
+        ls = _pair_byname.get((line_norm, region, na, nb))
+        if ls:
+            return [(float(x), float(y)) for x, y in (p.split(',') for p in ls.split())]
+        ls = _pair_byname.get((line_norm, region, nb, na))
+        if ls:
+            pts = [(float(x), float(y)) for x, y in (p.split(',') for p in ls.split())]
+            return pts[::-1]
     # 직선 fallback
     pa, pb = _stations.get(a), _stations.get(b)
     if pa and pb:

@@ -39,12 +39,18 @@ def main() -> None:
         for k in range(MAX_STEPS):
             off = 3 + k * 5
             stype, line, frm, to, ls = r[off], r[off + 1], r[off + 2], r[off + 3], r[off + 4]
-            if stype == '지하철' and not ls and line:
-                new = build_subway_by_name(line, frm, to)
-                if new:
-                    updates[k + 1] = new
-                else:
-                    still_null += 1
+            if stype != '지하철' or not line:
+                continue
+            # NULL이거나 2pt 직선(곡선 미적용)인 step만 재시도
+            cur_n = len(ls.split()) if ls else 0
+            if cur_n > 2:
+                continue
+            new = build_subway_by_name(line, frm, to)
+            # 곡선(>2pt)일 때만 갱신 — 직선 fallback은 굳이 덮지 않음
+            if new and len(new.split()) > max(cur_n, 2):
+                updates[k + 1] = new
+            elif not ls:
+                still_null += 1
         if updates:
             set_clause = ', '.join(f'step{n}_linestring=?' for n in updates)
             vals = list(updates.values()) + [oc, wp, rank]

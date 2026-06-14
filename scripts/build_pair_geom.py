@@ -9,6 +9,7 @@ line_map이 지정한 OSM 계통 키 중 좌표(bbox)로 맞는 곡선을 골라
     python scripts/build_pair_geom.py
 """
 from __future__ import annotations
+import json
 import sys
 import time
 from pathlib import Path
@@ -77,6 +78,34 @@ def _load_route_sequences(conn):
     return result
 
 
+_OVERRIDES_PATH = Path('data/subway_pair_overrides.json')
+
+
+def _apply_overrides(conn) -> int:
+    """
+    OSM 자동 추출이 불가한 역쌍의 수동 보정 곡선을 적용 (재빌드해도 유지).
+    예: 6호선 응암루프 응암↔역촌 — OSM이 왕복 선로를 뭉쳐놔 직접 구간 추출 불가.
+    키 형식: "line_norm|region|from_stop_id|to_stop_id" → linestring.
+    """
+    if not _OVERRIDES_PATH.exists():
+        return 0
+    data = json.loads(_OVERRIDES_PATH.read_text(encoding='utf-8'))
+    rows = []
+    for key, ls in data.items():
+        parts = key.split('|')
+        if len(parts) != 4 or not ls:
+            continue
+        rows.append((parts[0], parts[1], parts[2], parts[3], ls))
+    if rows:
+        conn.executemany(
+            'INSERT OR REPLACE INTO subway_pair_geom '
+            '(line_norm, region, from_stop_id, to_stop_id, linestring) '
+            'VALUES (?, ?, ?, ?, ?)',
+            rows,
+        )
+    return len(rows)
+
+
 def main() -> None:
     t0 = time.time()
     conn = connect()
@@ -117,6 +146,7 @@ def main() -> None:
             'VALUES (?, ?, ?, ?, ?)',
             rows,
         )
+        n_override = _apply_overrides(conn)
         conn.commit()
 
         # ── 리포트 ──
@@ -124,6 +154,7 @@ def main() -> None:
         print(f'고유 인접 역쌍: {total}개')
         print(f'곡선 생성: {len(rows)}개 ({len(rows) * 100 // max(total, 1)}%)')
         print(f'곡선 누락: {len(missing)}개')
+        print(f'수동 보정(override) 적용: {n_override}개')
         if no_keys:
             print(f'  line_map 키 없음(권역 커버리지 밖): {sorted(no_keys)}')
 
