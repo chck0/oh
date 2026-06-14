@@ -4648,7 +4648,7 @@ function initSortBar(cards) {
     const sel = document.getElementById(id);
     if (sel) sel.innerHTML = _buildSelectHTML(new Set());
   });
-  document.getElementById('sort-bar').classList.add('visible');
+  document.getElementById('sort-bar')?.classList.add('visible');
 }
 
 function updateSortDropdowns() {
