@@ -20,7 +20,7 @@ _STRIP_PREFIX = re.compile(
     r'인천\s*도시철도|부산\s*도시철도|대구\s*도시철도|대전\s*도시철도|경기\s*철도)'
 )
 _STRIP_DIRECTION = re.compile(r':.*$')          # ": 문산 → 용문" 제거
-_STRIP_SPECIAL = re.compile(r'[·\s\-_\(\)\[\]·]')  # 점·공백·특수문자
+_STRIP_SPECIAL = re.compile(r'[·.\s\-_/,\(\)\[\]·]')  # 가운뎃점·마침표·슬래시·공백·특수문자
 
 
 def _norm(name: str) -> str:

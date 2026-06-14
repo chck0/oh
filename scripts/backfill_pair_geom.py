@@ -26,7 +26,7 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 from app.db import connect
 from app.transit import to_steps, step_cols, MAX_STEPS
-from app.gtfs_subway import build_subway_linestring
+from app.gtfs_subway import build_subway_linestring, enrich_odsay_pairs
 
 RAW_ROOT = Path('data/raw/odsay/workplaces')
 
@@ -44,6 +44,10 @@ def _final_ls(step_type: str, line: str, odsay_ls: str | None) -> str | None:
             stitched = build_subway_linestring(line, blng, blat, alng, alat)
             if stitched:
                 return stitched
+            # 2차: GTFS에 없는 노선(별내선·GTX-A 북부)은 ODsay 순서+OSM 곡선
+            enriched = enrich_odsay_pairs(line, odsay_ls)
+            if enriched:
+                return enriched
     return odsay_ls
 
 

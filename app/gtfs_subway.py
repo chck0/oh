@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Optional
 
 from app.db import connect
-from app.subway_shapes import _norm
+from app.subway_shapes import _norm, get_segment_by_keys
 
 # ODsay 노선명에서 운행종별 접미사 제거 → GTFS line_norm과 매칭.
 # 예: "수도권 9호선(급행)" → _norm → "9호선급행" → "9호선" (급행도 같은 선로 주행)
@@ -31,19 +31,23 @@ _stations: dict[str, tuple[float, float]] | None = None      # stop_id → (lng,
 _line_routes: dict[str, list[tuple]] | None = None           # line_norm → [(route_id, region, [stop_id,...])]
 _line_pts: dict[str, list[tuple]] | None = None              # line_norm → [(stop_id, lng, lat)]
 _pair: dict[tuple, str] | None = None                        # (line_norm, region, a, b) → linestring
+_osm_keys: dict[str, list[str]] | None = None                # line_norm → [osm_line_key, ...] (line_map)
+_station_norm: dict[str, str] | None = None                  # stop_id → name_norm (역명 매칭용)
 
 
 def _load() -> None:
-    global _stations, _line_routes, _line_pts, _pair
+    global _stations, _line_routes, _line_pts, _pair, _osm_keys, _station_norm
     if _stations is not None:
         return
     _stations, _line_routes, _line_pts, _pair = {}, {}, {}, {}
+    _osm_keys, _station_norm = {}, {}
     conn = connect()
     try:
-        for stop_id, lng, lat in conn.execute(
-            'SELECT stop_id, lng, lat FROM gtfs_subway_station'
+        for stop_id, name_norm, lng, lat in conn.execute(
+            'SELECT stop_id, name_norm, lng, lat FROM gtfs_subway_station'
         ):
             _stations[stop_id] = (lng, lat)
+            _station_norm[stop_id] = name_norm
 
         # 노선별 정차 순서
         routes = conn.execute(
@@ -70,6 +74,14 @@ def _load() -> None:
             'FROM subway_pair_geom'
         ):
             _pair[(line_norm, region, a, b)] = ls
+
+        # line_map: line_norm → OSM 키 (권역 병합, OSM은 좌표로 구분)
+        for line_norm, key in conn.execute(
+            'SELECT DISTINCT gtfs_line_norm, osm_line_key FROM line_map'
+        ):
+            lst = _osm_keys.setdefault(line_norm, [])
+            if key not in lst:
+                lst.append(key)
     finally:
         conn.close()
 
@@ -165,3 +177,104 @@ def build_subway_linestring(
     if len(out) < 2:
         return None
     return ' '.join(f'{lng},{lat}' for lng, lat in out)
+
+
+def _curve_ok(cand: list[tuple[float, float]],
+              a: tuple[float, float], b: tuple[float, float]) -> bool:
+    """ODsay 역쌍에 붙인 OSM 곡선이 두 역을 제대로 잇는지 검증 (텔레포트/우회/미span 컷)."""
+    if len(cand) < 2:
+        return False
+    straight = ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+    if straight <= 0:
+        return False
+    # 곡선 끝점이 두 역에 닿아야 함 (~0.5km)
+    if ((cand[0][0] - a[0]) ** 2 + (cand[0][1] - a[1]) ** 2 > 0.006 ** 2 or
+            (cand[-1][0] - b[0]) ** 2 + (cand[-1][1] - b[1]) ** 2 > 0.006 ** 2):
+        return False
+    gap_limit = straight * 1.1 + 0.002
+    plen = 0.0
+    for x, y in zip(cand, cand[1:]):
+        g = ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5
+        if g > gap_limit:                    # 내부 텔레포트
+            return False
+        plen += g
+    if plen > 2.2 * straight + 0.003:        # 우회로
+        return False
+    if plen < 0.5 * straight:                # 구간을 안 span (ratio 0.1 류)
+        return False
+    return True
+
+
+def enrich_odsay_pairs(line_name: str, odsay_ls: str) -> Optional[str]:
+    """
+    GTFS에 없는 노선(별내선·GTX-A 북부 등)을 ODsay 역 순서 + OSM 곡선으로 스티칭.
+    ODsay passStopList 좌표를 인접 역쌍으로 분해해 각 쌍을 OSM 곡선으로 교체,
+    실패한 쌍은 직선. 곡선을 하나도 못 붙이면 None(호출측이 ODsay 원본 유지).
+    """
+    _load()
+    keys = _osm_keys.get(_line_key(line_name))
+    if not keys or not odsay_ls:
+        return None
+    try:
+        pts = [(float(x), float(y))
+               for x, y in (p.split(',') for p in odsay_ls.split())]
+    except ValueError:
+        return None
+    if len(pts) < 2:
+        return None
+
+    out: list[tuple[float, float]] = []
+    enriched = 0
+    for a, b in zip(pts, pts[1:]):
+        straight = ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+        seg = get_segment_by_keys(
+            keys, a[0], a[1], b[0], b[1], max(0.015, straight * 0.6))
+        cand = None
+        if seg:
+            parsed = [(float(x), float(y))
+                      for x, y in (p.split(',') for p in seg.split())]
+            if _curve_ok(parsed, a, b):
+                cand = parsed
+                enriched += 1
+        if cand is None:
+            cand = [a, b]
+        if out and out[-1] == cand[0]:
+            out.extend(cand[1:])
+        else:
+            out.extend(cand)
+
+    if enriched == 0 or len(out) < 2:
+        return None
+    return ' '.join(f'{x},{y}' for x, y in out)
+
+
+def _station_coord_on_line(line_key: str, name: str) -> Optional[tuple[float, float]]:
+    """노선의 GTFS 역 중 이름이 일치(정확→부분)하는 역의 좌표."""
+    pts = _line_pts.get(line_key)
+    if not pts:
+        return None
+    nn = _norm(name or '')
+    if not nn:
+        return None
+    for sid, lng, lat in pts:                 # 정확 일치
+        if _station_norm.get(sid) == nn:
+            return (lng, lat)
+    for sid, lng, lat in pts:                 # 부분 일치 (이수 ↔ 총신대입구이수)
+        snn = _station_norm.get(sid, '')
+        if snn and (nn in snn or snn in nn):
+            return (lng, lat)
+    return None
+
+
+def build_subway_by_name(line_name: str, from_name: str, to_name: str) -> Optional[str]:
+    """
+    역명(transit_routes 출발/도착)으로 GTFS 좌표를 찾아 스티칭.
+    raw ODsay JSON이 없는 셀의 NULL 지하철 step을 채우는 용도.
+    """
+    _load()
+    lk = _line_key(line_name)
+    c1 = _station_coord_on_line(lk, from_name)
+    c2 = _station_coord_on_line(lk, to_name)
+    if not c1 or not c2:
+        return None
+    return build_subway_linestring(line_name, c1[0], c1[1], c2[0], c2[1])
