@@ -29,7 +29,6 @@ from app.subway_shapes import _norm
 
 GTFS_DIR = Path('data/2025-TM-PT-GTFS 대중교통GTFS(2024년 기준)/202403_GTFS_DataSet')
 SUBWAY_ROUTE_TYPE = '1'   # 도시철도/경전철
-REP_ORD = '_Ord001'        # 노선당 대표 운행회차
 
 # route_id 예: RR_ACC1_S-1-4-4D → region=S-1, 분기/방향 끝의 D/U
 _REGION_RE = re.compile(r'_(S-\d+)-')
@@ -111,35 +110,45 @@ def load_stops(conn) -> None:
 
 def load_sequences(conn, route_ids: list[str]) -> tuple[int, list[str]]:
     """
-    stop_times.txt 스트리밍 → 노선당 대표회차(_Ord001) stop 순서만 수집.
+    stop_times.txt 스트리밍 → 노선당 '정차 최다' 트립(전구간 운행) stop 순서 수집.
+    _Ord001은 단축운행일 수 있어(예: 7호선 _Ord001=12역 vs 전구간=53역) 노선 일부만
+    담길 위험이 있으므로, 해당 노선의 모든 트립 중 정차역이 가장 많은 트립을 대표로 쓴다.
     반환: (적재 행 수, 시퀀스 없는 route_id 목록)
     """
-    target_trips = {rid + REP_ORD: rid for rid in route_ids}
-    seq_rows: list[tuple] = []
-    seen_routes: set[str] = set()
+    route_set = set(route_ids)
+    # trip_id → [(seq, stop_id), ...]  (RR 철도 트립만 메모리 보관, ~수십만행)
+    trip_stops: dict[str, list[tuple[int, str]]] = {}
 
     path = GTFS_DIR / 'stop_times.txt'
     with path.open(encoding='utf-8-sig', newline='') as f:
-        header = f.readline()  # 헤더 스킵
-        # 컬럼 인덱스: trip_id, arrival_time, departure_time, stop_id, stop_sequence, ...
+        f.readline()  # 헤더 스킵
         for line in f:
-            # 버스(BR_) 등 비철도 라인 빠른 스킵
-            if not line.startswith('RR'):
+            if not line.startswith('RR'):   # 버스 등 빠른 스킵
                 continue
             parts = line.rstrip('\n').split(',')
             if len(parts) < 5:
                 continue
             trip_id = parts[0]
-            rid = target_trips.get(trip_id)
-            if rid is None:
+            rid = trip_id.rsplit('_Ord', 1)[0]
+            if rid not in route_set:
                 continue
-            stop_id = parts[3]
             try:
                 seq = int(parts[4])
             except ValueError:
                 continue
+            trip_stops.setdefault(trip_id, []).append((seq, parts[3]))
+
+    # 노선별 정차 최다 트립 선택
+    best: dict[str, tuple[int, str]] = {}   # rid → (정차수, trip_id)
+    for trip_id, stops in trip_stops.items():
+        rid = trip_id.rsplit('_Ord', 1)[0]
+        if rid not in best or len(stops) > best[rid][0]:
+            best[rid] = (len(stops), trip_id)
+
+    seq_rows: list[tuple] = []
+    for rid, (_, trip_id) in best.items():
+        for seq, stop_id in sorted(trip_stops[trip_id]):
             seq_rows.append((rid, seq, stop_id))
-            seen_routes.add(rid)
 
     conn.execute('DELETE FROM gtfs_subway_seq')
     conn.executemany(
@@ -147,7 +156,7 @@ def load_sequences(conn, route_ids: list[str]) -> tuple[int, list[str]]:
         'VALUES (?, ?, ?)',
         seq_rows,
     )
-    missing = [rid for rid in route_ids if rid not in seen_routes]
+    missing = [rid for rid in route_ids if rid not in best]
     return len(seq_rows), missing
 
 
@@ -170,7 +179,7 @@ def main() -> None:
         n_seq, missing = load_sequences(conn, route_ids)
         print(f'③ gtfs_subway_seq: {n_seq}행 적재 ({len(route_ids) - len(missing)}개 노선)')
         if missing:
-            print(f'   ⚠ 대표회차({REP_ORD}) 없는 노선 {len(missing)}개: {missing[:10]}')
+            print(f'   ⚠ 시퀀스 없는 노선 {len(missing)}개: {missing[:10]}')
 
         conn.commit()
     finally:
