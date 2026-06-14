@@ -51,9 +51,10 @@ class TestMakeBuckets:
         bs = make_buckets(30)
         assert bs == [(0, 30)]
 
-    def test_60_minutes_generates_4_buckets(self):
+    def test_60_minutes_generates_3_buckets(self):
+        # 3구간 고정: ≤30 / 31~45 / 46~max (범례와 통일)
         bs = make_buckets(60)
-        assert bs == [(0, 30), (30, 40), (40, 50), (50, 60)]
+        assert bs == [(0, 30), (30, 45), (45, 60)]
 
     def test_last_bucket_ends_at_max(self):
         bs = make_buckets(45)
@@ -76,15 +77,14 @@ class TestMakeBuckets:
 # ── bucket_label ──────────────────────────────────────────────
 
 class TestBucketLabel:
-    def test_zero_start_shows_N분_이내(self):
-        assert bucket_label(0, 30) == '30분 이내'
+    def test_zero_start_shows_30분_이하(self):
+        assert bucket_label(0, 30) == '30분 이하'
 
-    def test_nonzero_start_shows_range(self):
-        assert bucket_label(30, 40) == '30~40분'
-        assert bucket_label(40, 50) == '40~50분'
+    def test_second_bucket_fixed_range(self):
+        assert bucket_label(30, 45) == '31~45분'
 
     def test_last_bucket_format(self):
-        assert bucket_label(50, 60) == '50~60분'
+        assert bucket_label(45, 60) == '46~60분'
 
 
 # ── assign_bucket ─────────────────────────────────────────────
@@ -92,7 +92,7 @@ class TestBucketLabel:
 class TestAssignBucket:
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.bs = make_buckets(60)  # [(0,30),(30,40),(40,50),(50,60)]
+        self.bs = make_buckets(60)  # [(0,30),(30,45),(45,60)]
 
     def test_zero_goes_to_first_bucket(self):
         assert assign_bucket(0, self.bs) == 0
@@ -103,14 +103,17 @@ class TestAssignBucket:
     def test_just_over_first_boundary(self):
         assert assign_bucket(31, self.bs) == 1
 
-    def test_exactly_at_second_boundary(self):
+    def test_within_second_bucket(self):
         assert assign_bucket(40, self.bs) == 1
 
+    def test_second_boundary_stays_in_second(self):
+        assert assign_bucket(45, self.bs) == 1
+
     def test_third_bucket(self):
-        assert assign_bucket(45, self.bs) == 2
+        assert assign_bucket(50, self.bs) == 2
 
     def test_last_bucket_boundary(self):
-        assert assign_bucket(60, self.bs) == 3
+        assert assign_bucket(60, self.bs) == 2
 
     def test_over_max_goes_to_last(self):
         assert assign_bucket(999, self.bs) == len(self.bs) - 1
@@ -177,7 +180,7 @@ class TestBuildRecommendations:
     def test_buckets_generated(self):
         cards = [_card('A001', '20평대', 30_000, 20)]
         result = build_recommendations(cards, 60)
-        assert len(result['buckets']) == 4
+        assert len(result['buckets']) == 3
 
     def test_cheapest_per_slot_is_recommended(self):
         cards = [
@@ -210,7 +213,7 @@ class TestBuildRecommendations:
     def test_bucket_label_assigned(self):
         cards = [_card('A001', '20평대', 30_000, 20)]
         result = build_recommendations(cards, 60)
-        assert result['cards'][0]['bucket_label'] == '30분 이내'
+        assert result['cards'][0]['bucket_label'] == '30분 이하'
 
     def test_non_recommended_flag_set_to_false(self):
         cards = [

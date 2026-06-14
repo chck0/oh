@@ -726,6 +726,10 @@ function fillAddress(addr, targetId) {
 // 페이지 로드 시 자동 실행
 loadRecentSearches();
 
+// 가격 슬라이더 상한(만원). onPriceSlider가 참조하므로 prefill 호출 전에 정의해야 함
+// (이전엔 정의가 prefill 뒤에 있어 TDZ ReferenceError로 prefill이 중단 → 가격/통근 복원 실패).
+const PRICE_MAX_MAN = 200000;
+
 // ── 이전 검색 조건 복원 (result.html → "조건 다시 입력" 클릭 시) ──
 (function prefillFromParams() {
   const p = new URLSearchParams(location.search);
@@ -800,7 +804,6 @@ function removeWp2() {
 }
 
 // ── 가격 슬라이더 ─────────────────────────────────────────
-const PRICE_MAX_MAN = 200000;
 
 function _priceLabel(val) {
   if (val <= 0) return '제한없음';
