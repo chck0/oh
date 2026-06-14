@@ -11,6 +11,21 @@ from typing import Optional
 from app.db import connect
 from app.subway_shapes import _norm
 
+# ODsay 노선명에서 운행종별 접미사 제거 → GTFS line_norm과 매칭.
+# 예: "수도권 9호선(급행)" → _norm → "9호선급행" → "9호선" (급행도 같은 선로 주행)
+_VARIANT_SUFFIX = ('급행', '특급', '직통', '완행', '천원')
+_SNAP_TOL2 = 0.006 ** 2   # 역 스냅 허용오차(약 0.5km) 제곱 — 초과 시 GTFS에 없는 역으로 간주
+
+
+def _line_key(line_name: str) -> str:
+    n = _norm(line_name or '')
+    for suf in _VARIANT_SUFFIX:
+        if n.endswith(suf):
+            n = n[: -len(suf)]
+            break
+    return n
+
+
 # ── 메모리 인덱스 (lazy) ───────────────────────────────────────
 _stations: dict[str, tuple[float, float]] | None = None      # stop_id → (lng, lat)
 _line_routes: dict[str, list[tuple]] | None = None           # line_norm → [(route_id, region, [stop_id,...])]
@@ -116,13 +131,20 @@ def build_subway_linestring(
     매칭 실패 시 None (호출측이 ODsay 원본 linestring 유지).
     """
     _load()
-    line_norm = _norm(line_name or '')
+    line_norm = _line_key(line_name)
     if not line_norm:
         return None
 
     board = _nearest_station(line_norm, board_lng, board_lat)
     alight = _nearest_station(line_norm, alight_lng, alight_lat)
     if not board or not alight or board == alight:
+        return None
+
+    # 역이 GTFS에 없으면(신설 연장 등) 먼 역으로 스냅됨 → 잘못 스티칭 말고
+    # ODsay 원본 좌표 유지 (예: 8호선 별내선은 KTDB 2024.3 데이터에 없음).
+    bp, ap = _stations[board], _stations[alight]
+    if ((bp[0] - board_lng) ** 2 + (bp[1] - board_lat) ** 2 > _SNAP_TOL2 or
+            (ap[0] - alight_lng) ** 2 + (ap[1] - alight_lat) ** 2 > _SNAP_TOL2):
         return None
 
     found = _find_route(line_norm, board, alight)

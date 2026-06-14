@@ -45,13 +45,58 @@ def _load_index() -> dict[str, list[dict]]:
     return _index
 
 
+_CHAIN_EPS = 1e-6   # way 끝점 일치 판정 허용오차(약 0.1m)
+
+
+def _chain_ways(ways: list[list[tuple[float, float]]]) -> list[tuple[float, float]]:
+    """
+    way 조각들을 끝점 매칭으로 순서대로 이어붙여 연속 폴리라인 생성.
+    OSM relation의 way가 저장 순서대로면 그냥 concat되지만, 순서가 섞여 있으면
+    naive concat은 수 km 텔레포트를 만든다. 가장 긴 way에서 시작해 양방향으로
+    끝점이 맞는 way를 (필요시 뒤집어) 붙인다. 연결 안 되는 조각(분기/실제 공백)은
+    버린다 → 메인 선형만 남음.
+    """
+    segs = [w for w in ways if len(w) >= 2]
+    if not segs:
+        return []
+    used = [False] * len(segs)
+    start = max(range(len(segs)), key=lambda i: len(segs[i]))
+    chain = list(segs[start])
+    used[start] = True
+
+    def near(a, b) -> bool:
+        return abs(a[0] - b[0]) < _CHAIN_EPS and abs(a[1] - b[1]) < _CHAIN_EPS
+
+    changed = True
+    while changed:
+        changed = False
+        for i, w in enumerate(segs):
+            if used[i]:
+                continue
+            if near(chain[-1], w[0]):
+                chain.extend(w[1:])
+            elif near(chain[-1], w[-1]):
+                chain.extend(reversed(w[:-1]))
+            elif near(chain[0], w[-1]):
+                chain[:0] = w[:-1]
+            elif near(chain[0], w[0]):
+                chain[:0] = list(reversed(w))[:-1]
+            else:
+                continue
+            used[i] = True
+            changed = True
+    return chain
+
+
 def _flat_pts(shape: dict) -> list[tuple[float, float]]:
-    """shape의 모든 way를 순서대로 합친 (lng, lat) 리스트"""
-    pts: list[tuple[float, float]] = []
-    for way in shape.get('ways', []):
-        for p in way:
-            pts.append((p['lng'], p['lat']))
-    return pts
+    """shape의 way들을 끝점 매칭으로 순서대로 이은 (lng, lat) 리스트 (shape별 메모이즈)."""
+    cached = shape.get('_chain')
+    if cached is not None:
+        return cached
+    ways = [[(p['lng'], p['lat']) for p in way] for way in shape.get('ways', [])]
+    chain = _chain_ways(ways)
+    shape['_chain'] = chain
+    return chain
 
 
 def _dist2(ax: float, ay: float, bx: float, by: float) -> float:
