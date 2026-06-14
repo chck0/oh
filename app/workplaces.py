@@ -122,6 +122,12 @@ def get_or_create(conn, addr_input: str) -> dict | None:
             resolved['lat'], resolved['lng'], '',
             now, now, 1, 0,
         ]
+        # SQLite: wp_id는 NOT NULL이지만 PK가 아니므로 자동 할당 안 됨 → 수동 계산
+        from app.portable import USE_PG
+        if not USE_PG:
+            next_id = (conn.execute('SELECT COALESCE(MAX(wp_id),0)+1 FROM workplaces').fetchone()[0])
+            ins_cols = ['wp_id'] + ins_cols
+            ins_vals = [next_id] + ins_vals
         try:
             cur = conn.execute(
                 insert_returning_id('workplaces', ins_cols, 'wp_id'),
