@@ -3188,6 +3188,23 @@ function clearRoutePolylines() {
   _routePolylines = [];
 }
 
+// Chaikin 코너 컷팅 — 직선 분절이 만나는 각진 모서리를 둥근 곡선으로 스무딩
+function smoothPath(pts, iterations) {
+  let cur = pts;
+  for (let it = 0; it < iterations && cur.length >= 3; it++) {
+    const out = [cur[0]];
+    for (let i = 0; i < cur.length - 1; i++) {
+      const aLat = cur[i].getLat(),   aLng = cur[i].getLng();
+      const bLat = cur[i + 1].getLat(), bLng = cur[i + 1].getLng();
+      out.push(new kakao.maps.LatLng(aLat * 0.75 + bLat * 0.25, aLng * 0.75 + bLng * 0.25));
+      out.push(new kakao.maps.LatLng(aLat * 0.25 + bLat * 0.75, aLng * 0.25 + bLng * 0.75));
+    }
+    out.push(cur[cur.length - 1]);
+    cur = out;
+  }
+  return cur;
+}
+
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
@@ -3201,8 +3218,10 @@ function drawRoutePolylines(options, color) {
     });
     if (pts.length < 2) return;
     const isWalk = step.type === '도보' || step.type === '환승도보';
+    // 지하철·버스 선만 모서리 스무딩 (도보는 짧은 점선이라 그대로)
+    const path = isWalk ? pts : smoothPath(pts, 2);
     const line = new kakao.maps.Polyline({
-      path: pts,
+      path: path,
       strokeWeight: isWalk ? 3 : 5,
       strokeColor: isWalk ? '#9CA3AF' : color,
       strokeOpacity: isWalk ? 0.7 : 0.9,
