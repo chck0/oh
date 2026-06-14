@@ -187,11 +187,82 @@ def _pg_columns(pg: "psycopg.Connection", table: str) -> list[str]:
         return [row[0] for row in cur.fetchall()]
 
 
+def _sqlite_type(pg_type: str) -> str:
+    """Postgres data_type → SQLite affinity 매핑 (단순화)."""
+    pg_type = pg_type.lower()
+    if "int" in pg_type:
+        return "INTEGER"
+    if any(x in pg_type for x in ("float", "double", "numeric", "decimal", "real")):
+        return "REAL"
+    if "bool" in pg_type:
+        return "INTEGER"
+    return "TEXT"
+
+
+def _pg_pk_columns(pg: "psycopg.Connection", table: str) -> list[str]:
+    """테이블의 PRIMARY KEY 컬럼명 목록(ordinal 순). PK 없으면 빈 리스트."""
+    with pg.cursor() as cur:
+        cur.execute(
+            """
+            SELECT kc.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kc
+              ON tc.constraint_name = kc.constraint_name
+             AND tc.table_schema    = kc.table_schema
+             AND tc.table_name      = kc.table_name
+            WHERE tc.table_schema = 'public'
+              AND tc.table_name   = %s
+              AND tc.constraint_type = 'PRIMARY KEY'
+            ORDER BY kc.ordinal_position
+            """,
+            (table,),
+        )
+        return [row[0] for row in cur.fetchall()]
+
+
+def _build_create_stmt(table: str, col_rows: list[tuple], pk_cols: list[str]) -> str:
+    """
+    순수 함수: 컬럼 메타 + PK 컬럼 리스트로 SQLite CREATE TABLE 문 생성.
+
+    파라미터:
+        col_rows: information_schema.columns 결과
+                  [(column_name, data_type, is_nullable, column_default), ...]
+        pk_cols:  PK 컬럼명 ordinal 순 리스트
+
+    규칙:
+        - 단일 컬럼 PK + INTEGER + SERIAL(default에 'nextval' 포함)
+            → "col INTEGER PRIMARY KEY AUTOINCREMENT"
+        - 단일 컬럼 PK 그 외
+            → "col <type> PRIMARY KEY"
+        - 복합 PK → 컬럼별 NOT NULL 유지 + 테이블 끝에 "PRIMARY KEY (a, b)"
+        - PK 없음 → 기존처럼 컬럼별 NOT NULL만
+    """
+    col_defs: list[str] = []
+    single_pk_inline = (len(pk_cols) == 1)
+
+    for col_name, data_type, nullable, default in col_rows:
+        sqlite_type = _sqlite_type(data_type)
+        is_serial = bool(default) and 'nextval' in str(default).lower()
+
+        if single_pk_inline and col_name == pk_cols[0]:
+            # NOT NULL은 INTEGER PRIMARY KEY에서 자동 보장 → 생략.
+            if sqlite_type == "INTEGER" and is_serial:
+                col_defs.append(f'    "{col_name}" INTEGER PRIMARY KEY AUTOINCREMENT')
+            else:
+                col_defs.append(f'    "{col_name}" {sqlite_type} PRIMARY KEY')
+        else:
+            not_null = " NOT NULL" if nullable == "NO" else ""
+            col_defs.append(f'    "{col_name}" {sqlite_type}{not_null}')
+
+    if pk_cols and not single_pk_inline:
+        pk_list = ", ".join(f'"{c}"' for c in pk_cols)
+        col_defs.append(f'    PRIMARY KEY ({pk_list})')
+
+    return f'CREATE TABLE IF NOT EXISTS "{table}" (\n' + ",\n".join(col_defs) + "\n)"
+
+
 def _pg_create_stmt(pg: "psycopg.Connection", table: str) -> str:
-    """
-    Postgres 컬럼 정보로 SQLite CREATE TABLE 문 생성.
-    Postgres 타입 → SQLite 타입 매핑 (단순화).
-    """
+    """Postgres 컬럼·PK 정보로 SQLite CREATE TABLE 문 생성."""
     with pg.cursor() as cur:
         cur.execute(
             """
@@ -202,25 +273,9 @@ def _pg_create_stmt(pg: "psycopg.Connection", table: str) -> str:
             """,
             (table,),
         )
-        rows = cur.fetchall()
-
-    def _sqlite_type(pg_type: str) -> str:
-        pg_type = pg_type.lower()
-        if "int" in pg_type:
-            return "INTEGER"
-        if any(x in pg_type for x in ("float", "double", "numeric", "decimal", "real")):
-            return "REAL"
-        if "bool" in pg_type:
-            return "INTEGER"
-        return "TEXT"
-
-    col_defs = []
-    for col_name, data_type, nullable, default in rows:
-        sqlite_type = _sqlite_type(data_type)
-        not_null = " NOT NULL" if nullable == "NO" else ""
-        col_defs.append(f'    "{col_name}" {sqlite_type}{not_null}')
-
-    return f'CREATE TABLE IF NOT EXISTS "{table}" (\n' + ",\n".join(col_defs) + "\n)"
+        col_rows = cur.fetchall()
+    pk_cols = _pg_pk_columns(pg, table)
+    return _build_create_stmt(table, col_rows, pk_cols)
 
 
 def _fmt_time(secs: float) -> str:

@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends
 
 from app.db import get_db, connect as db_connect
 from app.portable import year_minus
+from app.subway_shapes import enrich_linestring
 from config import cfg
 
 router = APIRouter()
@@ -33,11 +34,11 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
 
     rows = conn.execute("""
         SELECT rank, total_time_min, bus_cnt, subway_cnt,
-               step1_type, step1_time_min, step1_dist_m, step1_노선, step1_출발, step1_도착,
-               step2_type, step2_time_min, step2_dist_m, step2_노선, step2_출발, step2_도착,
-               step3_type, step3_time_min, step3_dist_m, step3_노선, step3_출발, step3_도착,
-               step4_type, step4_time_min, step4_dist_m, step4_노선, step4_출발, step4_도착,
-               step5_type, step5_time_min, step5_dist_m, step5_노선, step5_출발, step5_도착
+               step1_type, step1_time_min, step1_dist_m, step1_노선, step1_출발, step1_도착, step1_linestring,
+               step2_type, step2_time_min, step2_dist_m, step2_노선, step2_출발, step2_도착, step2_linestring,
+               step3_type, step3_time_min, step3_dist_m, step3_노선, step3_출발, step3_도착, step3_linestring,
+               step4_type, step4_time_min, step4_dist_m, step4_노선, step4_출발, step4_도착, step4_linestring,
+               step5_type, step5_time_min, step5_dist_m, step5_노선, step5_출발, step5_도착, step5_linestring
         FROM transit_routes
         WHERE origin_cell=? AND wp_id=?
         ORDER BY rank
@@ -47,17 +48,18 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
     for r in rows:
         steps = []
         for i in range(5):
-            off = 4 + i*6   # 각 step당 6개 컬럼 (type, time_min, dist_m, 노선, 출발, 도착)
+            off = 4 + i*7   # 각 step당 7개 컬럼 (type, time_min, dist_m, 노선, 출발, 도착, linestring)
             t = r[off]
             if not t:
                 continue
             steps.append({
-                'type': t,
-                'time_min': r[off+1],
-                'dist_m':   r[off+2],
-                'line':     r[off+3],
-                'from':     r[off+4],
-                'to':       r[off+5],
+                'type':       t,
+                'time_min':   r[off+1],
+                'dist_m':     r[off+2],
+                'line':       r[off+3],
+                'from':       r[off+4],
+                'to':         r[off+5],
+                'linestring': enrich_linestring(t, r[off+3], r[off+6]),
             })
         options.append({
             'rank': r['rank'],

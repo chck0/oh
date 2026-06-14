@@ -11,6 +11,9 @@
 *.db-shm
 data/backup/
 data/raw/
+data/subway_shapes.json
+data/*.db
+data/2025-TM-PT-GTFS*/
 logs/
 *.log
 

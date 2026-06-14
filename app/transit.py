@@ -21,11 +21,15 @@ log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
 ODSAY_URL           = "https://api.odsay.com/v1/api/searchPubTransPathT"
-# 동시성 2→4, 슬립 300→100 — Vercel 60s 한도 내 더 많은 셀 처리.
-# ODsay 키 4개 × 4 = 16 병렬, rate limit 측면에선 키당 4req/s 정도라 안전권.
-PER_KEY_CONCURRENCY = 4
-ROUND_SLEEP_MS      = 100
+# 실측(scripts/bench_odsay_sleep.py) 기반 권장값:
+#   1키 단독 한도 = 동시 1, 동시 2면 sleep 300ms 필요해야 100% 성공.
+#   7키 분산 시 동시 2 + sleep 200ms = 99.3% 성공, 19.8 RPS.
+# 이전 4/100ms는 실측 시 83% 실패 → 검색 결과 손실 + 캐시 오염.
+PER_KEY_CONCURRENCY = 2
+ROUND_SLEEP_MS      = 200
 HTTP_TIMEOUT        = 15
+# 429 백오프: ODsay는 1초만 쉬면 즉시 복구됨(실측). 1회만 재시도.
+RETRY_BACKOFF_S     = 1.0
 
 ALLOWED_COMBOS    = {(0,1),(0,2),(1,0),(2,0),(1,1)}
 WALK_ONLY_MAX_MIN = 15
@@ -37,7 +41,7 @@ KEYS = [{'owner': f'key{i+1}', **k} for i, k in enumerate(cfg.ODSAY_KEYS)]
 # ── transit_routes 컬럼 구조 ─────────────────────────────────
 # step이 추가될 때는 MAX_STEPS 숫자만 바꾸면 INSERT/SELECT 자동 반영.
 MAX_STEPS = 5
-_STEP_FIELDS = ('type', 'time_min', 'dist_m', '노선', '출발', '도착')
+_STEP_FIELDS = ('type', 'time_min', 'dist_m', '노선', '출발', '도착', 'linestring')
 _ROUTE_BASE_COLS = ['origin_cell', 'wp_id', 'rank',
                     'total_time_min', 'bus_cnt', 'subway_cnt']
 _ROUTE_STEP_COLS = [f'step{n}_{f}' for n in range(1, MAX_STEPS + 1)
@@ -110,66 +114,131 @@ def to_steps(subpath_list):
         d = sp.get('distance', 0)
         if tt == 3:
             if d == 0:
-                steps.append({'type':'환승도보','time':t,'dist':0, 'line':'','from':'','to':''})
+                steps.append({'type':'환승도보','time':t,'dist':0,'line':'','from':'','to':'','linestring':None})
             else:
-                steps.append({'type':'도보','time':t,'dist':d, 'line':'','from':'','to':''})
-        elif tt == 1:
+                # 도보: 시작·끝 좌표만 직선
+                sx, sy = sp.get('startX'), sp.get('startY')
+                ex, ey = sp.get('endX'), sp.get('endY')
+                ls = f'{sx},{sy} {ex},{ey}' if sx and sy and ex and ey else None
+                steps.append({'type':'도보','time':t,'dist':d,'line':'','from':'','to':'','linestring':ls})
+        elif tt in (1, 2):
             lane = sp.get('lane', [{}])[0]
-            steps.append({'type':'지하철','time':t,'dist':d,
-                          'line': lane.get('name',''),
-                          'from': sp.get('startName',''), 'to': sp.get('endName','')})
-        elif tt == 2:
-            lane = sp.get('lane', [{}])[0]
-            steps.append({'type':'버스','time':t,'dist':d,
-                          'line': lane.get('busNo',''),
-                          'from': sp.get('startName',''), 'to': sp.get('endName','')})
+            # passStopList.stations 좌표 배열로 linestring 생성
+            stations = sp.get('passStopList', {}).get('stations', [])
+            if stations:
+                ls = ' '.join(f"{s['x']},{s['y']}" for s in stations if s.get('x') and s.get('y'))
+            else:
+                # fallback: 시작·끝 좌표만
+                sx, sy = sp.get('startX'), sp.get('startY')
+                ex, ey = sp.get('endX'), sp.get('endY')
+                ls = f'{sx},{sy} {ex},{ey}' if sx and sy and ex and ey else None
+            if tt == 1:
+                steps.append({'type':'지하철','time':t,'dist':d,
+                              'line': lane.get('name',''),
+                              'from': sp.get('startName',''), 'to': sp.get('endName',''),
+                              'linestring': ls})
+            else:
+                steps.append({'type':'버스','time':t,'dist':d,
+                              'line': lane.get('busNo',''),
+                              'from': sp.get('startName',''), 'to': sp.get('endName',''),
+                              'linestring': ls})
     return steps[:5]
 
 
 def step_cols(steps, n):
     if n <= len(steps):
         s = steps[n-1]
-        return s['type'], s['time'], s['dist'], s['line'], s['from'], s['to']
-    return '', None, None, '', '', ''
+        return s['type'], s['time'], s['dist'], s['line'], s['from'], s['to'], s.get('linestring')
+    return '', None, None, '', '', '', None
 
 
 # ── ODsay 호출 ───────────────────────────────────────────────
+# 키별 동시성 제한을 보장하는 모듈 전역 세마포어.
+# fetch_cells가 동시에 N개 호출돼도(예: dual workplace) 같은 키에 대해
+# 동시 in-flight 호출 수는 PER_KEY_CONCURRENCY 이하로 유지된다.
+# asyncio.Semaphore는 이벤트 루프 종속이라 lazy로 생성.
+_KEY_SEMAPHORES: dict[str, asyncio.Semaphore] | None = None
+
+
+def _get_key_sems() -> dict[str, asyncio.Semaphore]:
+    global _KEY_SEMAPHORES
+    if _KEY_SEMAPHORES is None:
+        _KEY_SEMAPHORES = {k['owner']: asyncio.Semaphore(PER_KEY_CONCURRENCY)
+                           for k in KEYS}
+    return _KEY_SEMAPHORES
+
+
+def _parse_err_msg(data) -> tuple[str, str]:
+    """ODsay 에러 응답에서 (code, message) 추출. 없으면 ('', '')."""
+    err = data.get('error')
+    if isinstance(err, list) and err:
+        err = err[0]
+    if isinstance(err, dict):
+        return str(err.get('code', '')), str(err.get('message', ''))
+    return '', ''
+
+
+async def _do_call(session, key_info, origin_cell, dest_lat, dest_lng):
+    """단일 HTTP 호출 — 재시도/세마포어 없이 raw 응답만 돌려준다."""
+    o_lat, o_lng = cell_center(origin_cell)
+    params = {
+        'apiKey': key_info['key'],
+        'SX': o_lng, 'SY': o_lat, 'EX': dest_lng, 'EY': dest_lat,
+        'lang': 0, 'OPT': 0,
+    }
+    headers = {'Referer': key_info['referer']}
+    async with session.get(
+        ODSAY_URL, params=params, headers=headers,
+        timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
+    ) as r:
+        raw = await r.text()
+        return raw, r.status
+
+
 async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
-    async with sem:
-        o_lat, o_lng = cell_center(origin_cell)
-        params = {
-            'apiKey': key_info['key'],
-            'SX': o_lng, 'SY': o_lat, 'EX': dest_lng, 'EY': dest_lat,
-            'lang': 0, 'OPT': 0
-        }
-        headers = {'Referer': key_info['referer']}
+    """
+    한 셀에 대해 ODsay 호출 + 429 백오프 1회 재시도.
+
+    반환 규칙 (세 번째 raw 필드가 캐시 여부 신호):
+      - raw == ''   → 캐시 X (인증 실패, 429, 네트워크 예외 — 다음 검색 재시도)
+      - raw != ''   → 캐시 O (정상 응답: 통근 가능 or 진짜 통근 불가)
+    """
+    for attempt in (0, 1):
         try:
-            async with session.get(
-                ODSAY_URL, params=params, headers=headers,
-                timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
-            ) as r:
-                raw  = await r.text()
-                data = json.loads(raw)
-                if 'result' not in data:
-                    log.warning(
-                        'ODsay no-result [%s] key=%s status=%d body=%s',
-                        origin_cell, key_info['owner'], r.status, raw[:300],
-                    )
-                    # ApiKey 인증 실패 → 캐시 절대 X. raw='' 반환 → 호출자가
-                    # response_size=0 으로 저장 → 다음 검색에서 다른 키로 재시도.
-                    err = data.get('error')
-                    err_msg = ''
-                    if isinstance(err, list) and err:
-                        err_msg = str(err[0].get('message', ''))
-                    elif isinstance(err, dict):
-                        err_msg = str(err.get('message', ''))
-                    if 'ApiKeyAuthFailed' in err_msg or 'apikey' in err_msg.lower():
-                        return origin_cell, [], ''  # 캐시 X
-                    return origin_cell, [], raw    # 캐시 O (legit no-transit)
+            async with sem:
+                raw, status = await _do_call(
+                    session, key_info, origin_cell, dest_lat, dest_lng,
+                )
+            data = json.loads(raw)
+            if 'result' in data:
                 return origin_cell, rank_paths(data['result'].get('path', [])), raw
+
+            code, err_msg = _parse_err_msg(data)
+            is_429 = code == '429' or '429' in err_msg or 'Too Many' in err_msg
+            is_auth_fail = ('ApiKeyAuthFailed' in err_msg
+                            or 'apikey' in err_msg.lower())
+
+            if is_429 and attempt == 0:
+                # 다른 호출에 슬롯 양보하고 1초 쉰 뒤 재시도.
+                await asyncio.sleep(RETRY_BACKOFF_S)
+                continue
+
+            log.warning(
+                'ODsay no-result [%s] key=%s status=%d body=%s',
+                origin_cell, key_info['owner'], status, raw[:300],
+            )
+            # 429 / 인증실패는 캐시 X(다음 검색에서 재시도). 그 외는 캐시 O.
+            if is_429 or is_auth_fail:
+                return origin_cell, [], ''
+            return origin_cell, [], raw
         except Exception as e:
-            log.error('ODsay exception [%s] key=%s: %s', origin_cell, key_info['owner'], e)
+            log.error('ODsay exception [%s] key=%s attempt=%d: %s',
+                      origin_cell, key_info['owner'], attempt, e)
+            if attempt == 0:
+                await asyncio.sleep(RETRY_BACKOFF_S)
+                continue
             return origin_cell, [], ''
+    return origin_cell, [], ''
 
 
 async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
@@ -184,7 +253,9 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     dest_lat = wp_row['lat']
     dest_lng = wp_row['lng']
 
-    sems = {k['owner']: asyncio.Semaphore(PER_KEY_CONCURRENCY) for k in KEYS}
+    # 모듈 전역 세마포어 사용 → 동시에 여러 fetch_cells(예: dual workplace)가
+    # 호출돼도 키별 동시 in-flight 호출 수가 PER_KEY_CONCURRENCY 이하로 유지됨.
+    sems = _get_key_sems()
     ROUND_SIZE = len(KEYS) * PER_KEY_CONCURRENCY
     rounds = (len(cells_to_fetch) + ROUND_SIZE - 1) // ROUND_SIZE
 

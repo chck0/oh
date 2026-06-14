@@ -1066,8 +1066,9 @@
     /* spec-18: 경로 상세 팝업 */
     .route-overlay {
       position: fixed; inset: 0; z-index: 700;
-      background: rgba(0,0,0,0.48);
+      background: transparent;
       display: flex; align-items: flex-end; justify-content: center;
+      pointer-events: none;
     }
     .route-overlay.hidden { display: none; }
     .route-panel {
@@ -1075,6 +1076,8 @@
       width: 100%; max-width: 640px;
       max-height: 70vh; display: flex; flex-direction: column;
       overflow: hidden;
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.22);
+      pointer-events: all;
     }
     .route-panel__drag {
       width: 40px; height: 4px; background: #ddd; border-radius: 2px;
@@ -1979,7 +1982,7 @@
       </div>
     </div>
     <!-- spec-18: 경로 상세 팝업 -->
-    <div class="route-overlay hidden" id="route-overlay" onclick="closeRouteOnBg(event)">
+    <div class="route-overlay hidden" id="route-overlay">
       <div class="route-panel" id="route-panel">
         <div class="route-panel__drag"></div>
         <div class="route-panel__header">
@@ -3178,9 +3181,41 @@ document.addEventListener('keydown', e => {
 
 // ── spec-18: 경로 상세 팝업 ─────────────────────────────────────
 const _routeCache = {};
+let _routePolylines = [];
+
+function clearRoutePolylines() {
+  _routePolylines.forEach(p => p.setMap(null));
+  _routePolylines = [];
+}
+
+function drawRoutePolylines(options, color) {
+  if (!kakaoMap || !options || !options.length) return;
+  const best = options[0]; // rank 1 경로만 표시
+  best.steps.forEach(step => {
+    if (!step.linestring) return;
+    const pts = step.linestring.trim().split(' ').flatMap(pair => {
+      const parts = pair.split(',');
+      if (parts.length < 2) return [];
+      const lng = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+      return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
+    });
+    if (pts.length < 2) return;
+    const isWalk = step.type === '도보' || step.type === '환승도보';
+    const line = new kakao.maps.Polyline({
+      path: pts,
+      strokeWeight: isWalk ? 3 : 5,
+      strokeColor: isWalk ? '#9CA3AF' : color,
+      strokeOpacity: isWalk ? 0.7 : 0.9,
+      strokeStyle: isWalk ? 'shortdash' : 'solid',
+    });
+    line.setMap(kakaoMap);
+    _routePolylines.push(line);
+  });
+}
 
 async function openRoute(aptSeq, wpId, aptNm, event) {
   if (event) event.stopPropagation();
+  clearRoutePolylines();
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -3213,6 +3248,8 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
       `<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
     return;
   }
+  drawRoutePolylines(routes1, '#2563EB');
+  if (routes2) drawRoutePolylines(routes2, '#DC2626');
   _renderRoutePanel(routes1, routes2);
 }
 
@@ -3994,15 +4031,22 @@ async function showDetail(aptSeq, wpId){
     }
   }
 
+  clearRoutePolylines();
   try{
-    const [dRes, rRes] = await Promise.all([
+    const wpId2 = window._lastWpId2 || null;
+    const fetches = [
       fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
       fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-    ]);
-    const detail = await dRes.json();
-    const routes = (await rRes.json()).options || [];
+    ];
+    if (wpId2) fetches.push(fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}));
+    const results = await Promise.all(fetches);
+    const detail = await results[0].json();
+    const routes = (await results[1].json()).options || [];
+    const routes2 = wpId2 ? ((await results[2].json()).options || []) : null;
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
     renderDetailPanel(detail, routes, wpId);
+    drawRoutePolylines(routes, '#2563EB');
+    if (routes2) drawRoutePolylines(routes2, '#DC2626');
     if (kakaoMap) validateAndFilterPois();
   } catch(e){
     panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
