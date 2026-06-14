@@ -359,6 +359,10 @@
     }
     .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
     .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
+    /* 접힘 시 정렬 칩·힌트 숨김 → 매물 공간 확보 */
+    .sort-panel:not(.open) .sort-chips-wrap,
+    .sort-panel:not(.open) .sort-hint { display: none; }
+    .sort-panel:not(.open) { padding-bottom: 9px; }
 
     /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
     .sort-panel {
@@ -2143,7 +2147,10 @@
       </div>
       <div class="sort-panel" id="sort-panel">
         <div class="sort-panel-header">
-          <span class="sort-panel-title">정렬 기준</span>
+          <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:0;height:auto;gap:6px">
+            <span class="sort-panel-title">정렬 기준</span>
+            <span class="sort-arrow">▾</span>
+          </button>
           <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
         </div>
         <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
@@ -4798,6 +4805,15 @@ function initSortBar(cards) {
   });
 
   document.getElementById('sort-bar').classList.add('visible');
+
+  // 정렬 패널 접힘 상태 초기화 (localStorage 기억, 기본 펼침)
+  const _sp = document.getElementById('sort-panel');
+  const _stb = document.getElementById('sort-toggle-btn');
+  let _open = true;
+  try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
+  _sp.classList.toggle('open', _open);
+  _stb.classList.toggle('open', _open);
+  _stb.setAttribute('aria-expanded', String(_open));
 }
 
 function onSortCheckClick(value) {
@@ -4845,6 +4861,8 @@ function toggleSortPanel() {
   const btn = document.getElementById('sort-toggle-btn');
   const open = panel.classList.toggle('open');
   btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', String(open));
+  try { localStorage.setItem('sortPanelOpen', open ? '1' : '0'); } catch (e) {}
 }
 
 // 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
