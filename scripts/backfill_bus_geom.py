@@ -53,7 +53,7 @@ def main() -> None:
 
     set_sql = ', '.join(f'step{n}_linestring=?' for n in range(1, MAX_STEPS + 1))
     sel = ', '.join(
-        f'step{n}_노선, step{n}_linestring' for n in range(1, MAX_STEPS + 1))
+        f'step{n}_type, step{n}_linestring' for n in range(1, MAX_STEPS + 1))
     rows = conn.execute(
         f'SELECT origin_cell, wp_id, rank, {sel} FROM transit_routes').fetchall()
 
@@ -64,9 +64,9 @@ def main() -> None:
         new_ls = []
         row_changed = False
         for k in range(MAX_STEPS):
-            line = r[3 + k * 2]
+            typ = r[3 + k * 2]
             ls = r[4 + k * 2]
-            if line and '호선' not in str(line) and ls:
+            if typ == '버스' and ls:
                 stops = ls.split()
                 stitched = _stitch(cache, stops)
                 if stitched:

@@ -21,13 +21,13 @@ def main() -> None:
     pairs: set[tuple[str, str]] = set()
     rows = conn.execute(
         'SELECT ' + ', '.join(
-            f'step{n}_노선, step{n}_linestring' for n in range(1, 6)
+            f'step{n}_type, step{n}_linestring' for n in range(1, 6)
         ) + ' FROM transit_routes'
     ).fetchall()
     for r in rows:
         for k in range(5):
-            line, ls = r[k * 2], r[k * 2 + 1]
-            if not line or '호선' in str(line) or not ls:
+            typ, ls = r[k * 2], r[k * 2 + 1]
+            if typ != '버스' or not ls:
                 continue
             pts = ls.split()
             for a, b in zip(pts, pts[1:]):

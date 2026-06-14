@@ -41,14 +41,12 @@ def main() -> None:
             stype, line, frm, to, ls = r[off], r[off + 1], r[off + 2], r[off + 3], r[off + 4]
             if stype != '지하철' or not line:
                 continue
-            # NULL이거나 2pt 직선(곡선 미적용)인 step만 재시도
-            cur_n = len(ls.split()) if ls else 0
-            if cur_n > 2:
-                continue
+            # 모든 지하철 step을 GTFS 트랙으로 재도출(멱등) — 버스 backfill이
+            # 비-호선 철도(신림선·경의중앙선 등)를 도로좌표로 덮은 것도 복원.
             new = build_subway_by_name(line, frm, to)
-            # 곡선(>2pt)일 때만 갱신 — 직선 fallback은 굳이 덮지 않음
-            if new and len(new.split()) > max(cur_n, 2):
-                updates[k + 1] = new
+            if new and len(new.split()) >= 2:
+                if new != ls:
+                    updates[k + 1] = new
             elif not ls:
                 still_null += 1
         if updates:
