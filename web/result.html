@@ -3907,7 +3907,7 @@ function renderCards(data){
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
-  let html = partialBanner + renderStatsPanel(data);
+  let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
   html += `
@@ -3923,17 +3923,15 @@ function renderCards(data){
     </div>
     <div id="apt-search-result"></div>`;
 
-  // 추천 섹션
+  // 추천 요약 헤더만 표시 (개별 카드 없음)
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
     </div>`;
-    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
   }
 
-  // 버킷별 접힘 섹션
-  if(rest.length){
+  if(false && rest.length){
     const buckets = data.buckets || [];
     html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
     buckets.forEach(b=>{
@@ -4821,8 +4819,7 @@ function _renderSortedFlat(cards) {
   if (!data) return;
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  let html = renderStatsPanel(data);
-  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
   _updateFavTab();
