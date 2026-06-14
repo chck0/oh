@@ -898,6 +898,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     workplace_address: address,
     max_price: String(maxPrice),
     max_minutes: String(maxMinutes),
+    pyeong_types: '10평미만,10평대,20평대,30평대,40평대,50평대+',
   });
   if (minPrice !== null) params.set('min_price', String(minPrice));
   if (address2) params.set('workplace_address_2', address2);
