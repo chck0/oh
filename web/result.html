@@ -1080,42 +1080,11 @@
       background:#f59e0b; color:#fff; border:1px solid #d97706;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
+    /* 오피스 마커 — 원형 위치핀 SVG 픽토그램, 집핀과 완전히 다른 형태 */
     .pin-workplace-wrap, .pin-workplace-2-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+      cursor: pointer;
     }
-    /* 오피스 마커 — 집핀과 같은 구조(지붕+몸체+꼬리), 흰 배경으로 채도 핀들과 조화 */
-    .pin-workplace-body, .pin-workplace-2-body {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 16px; border-radius: 6px;
-      font-size: 15px; font-weight: 800; white-space: nowrap;
-      letter-spacing: -0.01em; line-height: 1;
-      background: #fff;
-      position: relative;
-    }
-    .pin-workplace-body {
-      color: #1e293b;
-      border: 2.5px solid #1e293b;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .pin-workplace-2-body {
-      color: #1e293b;
-      border: 2.5px solid #64748b;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .pin-workplace-tail {
-      width: 0; height: 0;
-      border-left: 9px solid transparent;
-      border-right: 9px solid transparent;
-      border-top: 11px solid #1e293b;
-    }
-    .pin-workplace-2-tail {
-      width: 0; height: 0;
-      border-left: 9px solid transparent;
-      border-right: 9px solid transparent;
-      border-top: 11px solid #64748b;
-    }
-    .pin-workplace-icon { font-size: 16px; line-height: 1; }
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
@@ -3986,15 +3955,15 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin-workplace-wrap"><div class="pin-workplace-body"><span class="pin-workplace-icon">🏢</span>${dualMode ? '오피스 1' : '오피스'}</div><div class="pin-workplace-tail"></div></div>`,
+    content: `<div class="pin-workplace-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="22" height="18" rx="1" fill="white"/><rect x="21" y="15" width="14" height="8" rx="1" fill="white"/><rect x="25" y="11" width="6" height="6" rx="1" fill="white"/><rect x="19" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="19" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="23" y="34" width="10" height="5" rx="0.5" fill="#0f172a"/>${dualMode ? '<circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">1</text>' : ''}</svg></div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
 
-  // spec-13: W2 직장 핀 (파란색)
+  // spec-13: W2 직장 핀
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin-workplace-2-wrap"><div class="pin-workplace-2-body"><span class="pin-workplace-icon">🏢</span>오피스 2</div><div class="pin-workplace-2-tail"></div></div>',
+      content: '<div class="pin-workplace-2-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="20" y="22" width="16" height="20" rx="1" fill="white"/><rect x="15" y="28" width="26" height="14" rx="1" fill="white"/><rect x="25" y="14" width="6" height="10" rx="1" fill="white"/><rect x="22" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="30" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">2</text></svg></div>',
       yAnchor: 1, zIndex: 100,
     }).setMap(kakaoMap);
   }
