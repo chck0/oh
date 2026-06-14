@@ -475,6 +475,16 @@
     .adv-field:last-child { margin-bottom: 0; }
     .adv-field__label { font-size: 13px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 8px; }
     .adv-field__sub { font-weight: 600; font-size: 12px; color: var(--color-text-tertiary); margin-left: 4px; }
+    /* 상세조건 칩: 한 줄에 들어가도록 컴팩트 (좁으면 가로 스크롤) */
+    .adv-section .check-chips {
+      flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 2px;
+      scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+    }
+    .adv-section .check-chip {
+      flex: 0 0 auto; padding: 7px 12px; gap: 0;
+      font-size: 13px; white-space: nowrap;
+    }
+    .adv-section .check-chip__box { display: none; }
 
     /* ─── spec-15: 최근 검색 히스토리 칩 ─────────────────── */
     .recent-searches {
