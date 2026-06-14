@@ -13,6 +13,7 @@
 
   <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
   <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
   <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
   <script src="/api/kakao-sdk?libraries=services"></script>
 
@@ -276,10 +277,14 @@
        메인 결과 레이아웃
        ════════════════════════════════════════════════════════ */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .summary-bar {
-      flex-shrink: 0; background: white;
-      padding: 14px 22px;
+    .combined-bar {
+      display: flex; align-items: center; flex-shrink: 0;
+      background: white;
       border-bottom: 1px solid var(--color-border-strong);
+    }
+    .summary-bar {
+      flex: 1; min-width: 0; background: white;
+      padding: 14px 22px;
       font-size: 14px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
       font-feature-settings: 'tnum';
@@ -329,39 +334,92 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
-    /* sort-bar */
+    /* sort toggle button (combined-bar 우측) */
     .sort-bar {
       display: none;
       align-items: center;
-      gap: 10px;
-      padding: 10px 22px;
-      background: #fff;
-      border-bottom: 1px solid var(--color-border-strong);
+      border-left: 1px solid var(--color-border-strong);
       flex-shrink: 0;
-      flex-wrap: wrap;
     }
     .sort-bar.visible { display: flex; }
-    .sort-bar__label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 4px; font-weight: 600; }
-    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sort-select-wrap label { font-size: 11px; color: var(--color-text-tertiary); font-weight: 600; }
-    .sort-select {
-      font-size: 13px; font-family: inherit;
-      padding: 6px 26px 6px 10px;
-      border: 1px solid var(--color-border-strong);
-      border-radius: 6px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
-      appearance: none; cursor: pointer;
+    .sort-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 18px; height: 100%;
+      font-size: 13px; font-weight: 600; font-family: inherit;
       color: var(--color-text-primary);
-      width: 128px;
-    }
-    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
-    .sort-bar__reset {
-      margin-left: auto; font-size: 12px;
       background: none; border: none; cursor: pointer;
-      color: var(--color-text-secondary); padding: 4px 6px;
       white-space: nowrap;
     }
-    .sort-bar__reset:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn .sort-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; border-radius: 9px;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 0 4px;
+    }
+    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
+
+    /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
+    .sort-panel {
+      display: flex; flex-direction: column;
+      background: #f8fafc; flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+      padding: 11px 13px 9px;
+      gap: 8px;
+    }
+    .sort-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sort-panel-title {
+      font-size: 13px; font-weight: 700; color: var(--color-text-primary);
+      letter-spacing: .02em;
+    }
+    .sort-panel-reset {
+      font-size: 12px; color: var(--color-text-tertiary);
+      background: none; border: none; cursor: pointer; padding: 2px 6px;
+    }
+    .sort-panel-reset:hover { color: var(--color-brand-primary); }
+    .sort-chips-wrap {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px;
+    }
+    .sort-check-item {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 10px;
+      cursor: pointer; padding: 10px 12px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      background: #fff; user-select: none; transition: all .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      position: relative;
+    }
+    .sort-check-item .icon-bubble {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s; background: #f8fafc;
+    }
+    .sort-check-item i { font-size: 18px; line-height: 1; color: #e57373; }
+    .sort-check-item:hover { border-color: #e57373; box-shadow: 0 2px 8px rgba(229,115,115,.2); }
+    .sort-check-item:hover .icon-bubble { background: #fff1f2; }
+    .sort-check-item.checked { border-color: #e57373; background: #fff1f2; }
+    .sort-check-item.checked .icon-bubble { background: #fee2e2; }
+    .sort-chip-label {
+      font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.3;
+      word-break: keep-all; text-align: left; letter-spacing: -.01em;
+    }
+    .sort-check-item.checked .sort-chip-label { color: #c0392b; }
+    .sort-check-item .rank-badge {
+      display: none; position: absolute; top: -8px; right: -8px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #e57373; color: #fff; border: 2px solid #fff;
+      font-size: 12px; font-weight: 800;
+      align-items: center; justify-content: center; line-height: 1;
+    }
+    .sort-check-item.checked .rank-badge { display: inline-flex; }
+    .sort-hint {
+      font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
+      padding: 0 2px;
+    }
+    .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -431,10 +489,13 @@
 
     .minibar-row {
       display: grid;
-      grid-template-columns: 76px 1fr 56px;
-      align-items: center; gap: 12px;
+      grid-template-columns: 12px 80px 1fr 56px;
+      align-items: center; gap: 8px;
       padding: 5px 0; font-size: 13.5px;
       font-feature-settings: 'tnum';
+    }
+    .minibar-row__dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
     .minibar-row__label {
       color: var(--color-text-primary);
@@ -448,11 +509,7 @@
     }
     .minibar-row__fill {
       position: absolute; left: 0; top: 0; bottom: 0;
-      background: var(--color-text-secondary);
       border-radius: 3px;
-    }
-    .minibar-row.cheap .minibar-row__fill {
-      background: var(--color-brand-primary);
     }
     .minibar-row__value {
       text-align: right; font-weight: 700;
@@ -1152,13 +1209,7 @@
       background: white; color: var(--color-text-secondary);
       font-size: 12px; cursor: pointer;
     }
-    /* ── 단지 상세 모달 (spec-17) ────────────────────────────── */
-    .detail-overlay {
-      position: fixed; inset: 0; z-index: 600;
-      background: rgba(0,0,0,0.48);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .detail-overlay.hidden { display: none; }
+    /* ── 단지 상세 사이드 패널 (spec-17) ─────────────────────── */
 
     /* spec-18: 경로 상세 팝업 */
     .route-overlay {
@@ -1211,24 +1262,27 @@
     }
 
     .detail-panel {
-      background: white; border-radius: 20px 20px 0 0;
-      width: 100%; max-width: 640px;
-      max-height: 85vh; display: flex; flex-direction: column;
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.22);
+      background: white;
+      width: 0; min-width: 0; overflow: hidden;
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-left: none;
+      transition: width .25s ease, border .25s ease;
     }
-    .detail-panel__drag {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #ddd; margin: 12px auto 0; flex-shrink: 0;
+    .detail-panel.open {
+      width: 420px; min-width: 240px;
+      border-left: 1px solid var(--color-border-strong);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 10px 20px 0;
-      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+      padding: 14px 16px 0;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
-    .detail-panel__title { font-size: 18px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
     .detail-panel__close {
-      flex-shrink: 0; padding: 4px 10px; border-radius: 6px;
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
       border: 1px solid var(--color-border-default); background: white;
-      cursor: pointer; font-size: 13px; color: var(--color-text-secondary);
+      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
       display: flex; padding: 10px 20px 0; flex-shrink: 0;
@@ -1589,8 +1643,8 @@
     .dp__header {
       position: sticky; top: 0; z-index: 10;
       background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
-      padding: 14px 16px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
       box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
     }
     .dp__back {
@@ -1609,7 +1663,7 @@
       border-color: rgba(255, 255, 255, 0.5);
     }
     .dp__name {
-      font-size: 17px; font-weight: 700;
+      font-size: 15px; font-weight: 700;
       letter-spacing: -0.01em;
       color: white;
       flex: 1; min-width: 0;
@@ -1624,54 +1678,54 @@
     }
 
     .dp__hero {
-      padding: 18px 16px 16px;
+      padding: 13px 14px 13px;
       background: white;
       border-bottom: 1.5px solid var(--color-border-strong);
     }
     .dp__meta {
-      font-size: 13.5px;
-      color: var(--color-text-primary);
+      font-size: 12.5px;
+      color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 12px;
+      margin-bottom: 9px;
       font-weight: 500;
     }
     .dp__commute {
-      font-size: 14px; font-weight: 700;
+      font-size: 13px; font-weight: 700;
       color: var(--blue-700);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px;
-      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
       background: var(--blue-100);
-      padding: 7px 13px;
+      padding: 5px 11px;
       border-radius: var(--radius-pill);
     }
     .dp__friend {
-      display: flex; gap: 12px; align-items: flex-start;
+      display: flex; gap: 10px; align-items: flex-start;
       background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
       border-radius: 10px;
-      padding: 13px 14px 14px;
+      padding: 11px 12px 12px;
     }
     .dp__friend.empty {
       background: var(--color-bg-subtle);
     }
     .dp__friend-body { flex: 1; min-width: 0; }
     .dp__friend-label {
-      font-size: 11px; font-weight: 700;
+      font-size: 10px; font-weight: 700;
       color: var(--color-brand-primary);
       letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .dp__friend.empty .dp__friend-label {
       color: var(--color-text-tertiary);
     }
     .dp__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--color-brand-primary);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
+      font-size: 10px; font-weight: 700;
       box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
       margin-top: 1px;
     }
@@ -1680,7 +1734,7 @@
       box-shadow: none;
     }
     .dp__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 13px; line-height: 1.65;
       color: var(--color-text-primary);
       font-weight: 500;
       white-space: pre-line;
@@ -1697,36 +1751,36 @@
     }
     .dp__section:last-child { border-bottom: none; }
     .dp__section-head {
-      padding: 16px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px;
       cursor: pointer; user-select: none;
       transition: background 120ms;
     }
     .dp__section-head:hover { background: var(--color-bg-subtle); }
     .dp__section-icon {
       flex-shrink: 0;
-      width: 32px; height: 32px;
-      border-radius: 8px;
+      width: 28px; height: 28px;
+      border-radius: 7px;
       background: var(--color-bg-subtle);
       border: 1px solid var(--color-border-default);
       display: flex; align-items: center; justify-content: center;
       color: var(--color-text-secondary);
       transition: all 200ms;
     }
-    .dp__section-icon svg { width: 17px; height: 17px; }
+    .dp__section-icon svg { width: 15px; height: 15px; }
     .dp__section-titlebox {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 1px;
     }
     .dp__section-title {
-      font-size: 14.5px; font-weight: 700;
+      font-size: 13.5px; font-weight: 700;
       color: var(--color-text-primary);
       letter-spacing: -0.005em;
     }
     .dp__section-preview {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 12px; color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-top: 3px;
+      margin-top: 2px;
       font-weight: 500;
     }
     .dp__section-chev {
@@ -1741,7 +1795,7 @@
       background: var(--color-brand-bg-subtle);
       color: var(--color-brand-primary);
     }
-    .dp__section-body { display: none; padding: 0 16px 16px; }
+    .dp__section-body { display: none; padding: 0 14px 14px; }
     .dp__section.open .dp__section-body { display: block; }
 
     /* 통근 경로 */
@@ -2071,30 +2125,29 @@
 </header>
 
 <main id="main" style="display:none;">
-  <div class="summary-bar" id="summary"></div>
-  <div class="sort-bar" id="sort-bar">
-    <span class="sort-bar__label">정렬순서</span>
-    <div class="sort-select-wrap">
-      <label>1순위</label>
-      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+  <div class="combined-bar">
+    <div class="summary-bar" id="summary"></div>
+    <div class="sort-bar" id="sort-bar">
+      <span style="font-size:13px;color:var(--color-text-secondary);padding:0 16px;font-weight:500">
+        정렬 기준 <span id="sort-badge" style="display:none;color:#7c3aed;font-weight:700"></span>
+      </span>
     </div>
-    <div class="sort-select-wrap">
-      <label>2순위</label>
-      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-    </div>
-    <div class="sort-select-wrap">
-      <label>3순위</label>
-      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-    </div>
-    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
   </div>
 
   <div class="result-layout">
-    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
+    <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      </div>
+      <div class="sort-panel" id="sort-panel">
+        <div class="sort-panel-header">
+          <span class="sort-panel-title">정렬 기준</span>
+          <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
+        </div>
+        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+        <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -2118,25 +2171,23 @@
       </div>
     </div>
 
-    <!-- spec-17: 단지 상세 모달 -->
-    <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-panel__drag"></div>
-        <div class="detail-panel__header">
-          <h2 class="detail-panel__title" id="detail-title">-</h2>
-          <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
-        </div>
-        <div class="detail-panel__tabs">
-          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-        </div>
-        <div class="detail-panel__body" id="detail-body">
-          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-          <div class="detail-tab-pane active" id="detail-tab-info"></div>
-          <div class="detail-tab-pane" id="detail-tab-price"></div>
-          <div class="detail-tab-pane" id="detail-tab-poi"></div>
-        </div>
+    <!-- spec-17: 단지 상세 사이드 패널 -->
+    <div class="resize-handle detail-resize-handle" id="detail-resize-handle" style="display:none"></div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-panel__header">
+        <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-panel__close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-panel__tabs">
+        <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+      </div>
+      <div class="detail-panel__body" id="detail-body">
+        <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+        <div class="detail-tab-pane active" id="detail-tab-info"></div>
+        <div class="detail-tab-pane" id="detail-tab-price"></div>
+        <div class="detail-tab-pane" id="detail-tab-poi"></div>
       </div>
     </div>
 
@@ -2471,22 +2522,32 @@ function renderStatsPanel(data){
   const s = data.stats || {};
   if(!s.total) return '';
 
-  // 통근 × 평균가 — 미니 가로 막대 (최저 버킷만 빨강 강조)
+  // 통근 × 평균가 — 범례와 동일한 색상 적용
+  // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
+  const bucketColor = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
+    if (start <= 45) return '#f97316'; // 46~60분 → 주황
+    return '#f97316';
+  };
+  // 라벨을 범례 텍스트로 정규화
+  const bucketLabel = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '30분 이하';
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '31~45분';
+    return '46~60분';
+  };
   let curveHtml = '';
   if(s.commute_curve && s.commute_curve.length){
     const maxPrice = Math.max(...s.commute_curve.map(b=>b.avg_price||0));
-    const minPrice = Math.min(...s.commute_curve.filter(b=>b.avg_price).map(b=>b.avg_price));
     const rows = s.commute_curve.map(b=>{
       const pct = maxPrice ? Math.max(8, Math.round((b.avg_price||0)/maxPrice*100)) : 0;
-      const isCheap = b.avg_price === minPrice;
-      // 라벨 정리: "30분 이내"→"≤30분", "50분 초과"→">50분"
-      const lbl = (b.label||'')
-        .replace(/^(\d+)분 이내$/, '≤$1분')
-        .replace(/^(\d+)분 초과$/, '>$1분')
-        .replace(/^(\d+)~(\d+)분$/, '$1~$2분');
-      return `<div class="minibar-row ${isCheap?'cheap':''}">
-        <span class="minibar-row__label num">${escHtml(lbl)}</span>
-        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%"></div></div>
+      const color = bucketColor(b.label||'');
+      return `<div class="minibar-row">
+        <span class="minibar-row__dot" style="background:${color}"></span>
+        <span class="minibar-row__label num">${escHtml(bucketLabel(b.label||''))}</span>
+        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%;background:${color}"></div></div>
         <span class="minibar-row__value num">${shortPrice(b.avg_price).replace('억','')}</span>
       </div>`;
     }).join('');
@@ -2598,10 +2659,10 @@ function openDetail(aptSeq) {
     if (card && card.lat && card.lng)
       kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
   }
-  // 모달 초기화
-  const overlay = document.getElementById('detail-overlay');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  // 사이드 패널 열기
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.body.style.overflow = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -2622,13 +2683,16 @@ function openDetail(aptSeq) {
 }
 
 function closeDetail() {
-  document.getElementById('detail-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
+  if (panelMode === 'detail') {
+    backToList();
+  } else {
+    document.getElementById('detail-panel').classList.remove('open');
+    document.getElementById('detail-resize-handle').style.display = 'none';
+    document.querySelector('.detail-panel__tabs').style.display = '';
+  }
   clearPoiMarker();
 }
-function closeDetailOnBg(e) {
-  if (e.target === document.getElementById('detail-overlay')) closeDetail();
-}
+function closeDetailOnBg(e) {}
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -3300,7 +3364,45 @@ async function validateAndFilterPois() {
   });
 })();
 
-// ── 채팅 패널 좌측 드래그 리사이즈 ──────────────────────────
+// ── 상세 사이드 패널 리사이즈 ────────────────────────────────
+(function() {
+  const handle = document.getElementById('detail-resize-handle');
+  const panel  = document.getElementById('detail-panel');
+  const layout = document.querySelector('.result-layout');
+  if (!handle || !panel || !layout) return;
+
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const layoutW = layout.getBoundingClientRect().width;
+    const newW = Math.max(240, Math.min(layoutW - 560, startW - (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+    panel.style.minWidth = newW + 'px';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+})();
+
+// ── 채팅 패널 좌측 드래그 리사이즈 ────────────────────────────────
 (function() {
   const CHAT_W_KEY = 'chat_panel_w';
   const panel = document.getElementById('chat-panel');
@@ -3345,7 +3447,7 @@ async function validateAndFilterPois() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!document.getElementById('route-overlay').classList.contains('hidden')) { closeRoute(); return; }
-    if (!document.getElementById('detail-overlay').classList.contains('hidden')) closeDetail();
+    if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
     if (!document.getElementById('compare-overlay').classList.contains('hidden')) closeCompare();
   }
 });
@@ -3856,7 +3958,7 @@ function renderCards(data){
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
-  let html = partialBanner + renderStatsPanel(data);
+  let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
   html += `
@@ -3872,17 +3974,15 @@ function renderCards(data){
     </div>
     <div id="apt-search-result"></div>`;
 
-  // 추천 섹션
+  // 추천 요약 헤더만 표시 (개별 카드 없음)
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
     </div>`;
-    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
   }
 
-  // 버킷별 접힘 섹션
-  if(rest.length){
+  if(false && rest.length){
     const buckets = data.buckets || [];
     html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
     buckets.forEach(b=>{
@@ -4167,7 +4267,15 @@ async function showDetail(aptSeq, wpId){
   hideTooltip();
   _currentAptSeq = aptSeq;
   clearPoiMarker();
-  const panel = document.getElementById('cards-panel');
+
+  // 사이드 패널 열기
+  const sidePanel = document.getElementById('detail-panel');
+  sidePanel.classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.getElementById('detail-title').textContent = '불러오는 중...';
+  document.querySelector('.detail-panel__tabs').style.display = 'none';
+
+  const panel = document.getElementById('detail-body');
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
 
@@ -4190,7 +4298,7 @@ async function showDetail(aptSeq, wpId){
     renderDetailPanel(detail, routes, wpId);
     if (kakaoMap) validateAndFilterPois();
   } catch(e){
-    panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+    document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -4198,11 +4306,15 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-resize-handle').style.display = 'none';
+  document.querySelector('.detail-panel__tabs').style.display = '';
   if(resultData) renderCards(resultData);
 }
 
 function renderDetailPanel(d, routes, wpId){
-  const panel = document.getElementById('cards-panel');
+  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
   const bld = d.building || {};
@@ -4649,76 +4761,98 @@ function renderPOIHTML(poi){
   }).join('');
 }
 
-// ── 다중 우선순위 정렬 (spec-34, 구 spec-20) ────────────────
+// ── 체크박스 정렬 패널 ────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: '',                             label: '선택 안 함',        group: '' },
-  { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
-  { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
-  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
-  { value: 'build_year:desc',              label: '준공연도 신축순',   group: '기본' },
-  { value: 'deal_count:desc',              label: '거래건수 많은순',   group: '기본' },
-  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',     group: '기본' },
-  { value: 'transfer_count:asc',           label: '환승 적은순',       group: '기본' },
-  { value: 'pyeong:desc',                  label: '평수 넓은순',       group: '기본' },
-  { value: 'walk_to_transit_min:asc',      label: '집→대중교통 도보',  group: '도보' },
-  { value: 'nearest_park_min:asc',         label: '공원 도보',         group: '도보' },
-  { value: 'nearest_subway_min:asc',       label: '지하철 도보',       group: '도보' },
-  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',     group: '도보' },
-  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',   group: '도보' },
-  { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',  icon: 'ti-clock',          group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',    icon: 'ti-tag',            group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',    icon: 'ti-coins',          group: '기본' },
+  { value: 'build_year:desc',              label: '신축순',           icon: 'ti-building',       group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',  icon: 'ti-chart-bar',      group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',    icon: 'ti-users',          group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',      icon: 'ti-transfer',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',      icon: 'ti-maximize',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '대중교통 도보',    icon: 'ti-walk',           group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',        icon: 'ti-trees',          group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',      icon: 'ti-train',          group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',    icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',  icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',        icon: 'ti-shopping-cart',  group: '도보' },
 ];
 
-function _buildSelectHTML(excludeValues) {
-  let html = '';
-  let lastGroup = '';
-  for (const o of SORT_OPTIONS) {
-    if (o.group && o.group !== lastGroup) {
-      if (lastGroup !== '') html += '</optgroup>';
-      html += `<optgroup label="${o.group}">`;
-      lastGroup = o.group;
-    }
-    const disabled = o.value && excludeValues.has(o.value) ? ' disabled' : '';
-    html += `<option value="${o.value}"${disabled}>${o.label}</option>`;
-  }
-  if (lastGroup !== '') html += '</optgroup>';
-  return html;
-}
+// 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
+let _sortChecked = []; // e.g. ['total_time_min:asc', 'price_low:asc']
 
 function initSortBar(cards) {
   if (!cards || !cards.length) return;
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+
+  const wrap = document.getElementById('sort-chips-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SORT_OPTIONS.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'sort-check-item';
+    el.dataset.value = o.value;
+    el.innerHTML = `<span class="rank-badge"></span><div class="icon-bubble"><i class="ti ${o.icon}"></i></div><span class="sort-chip-label">${o.label}</span>`;
+    el.addEventListener('click', () => onSortCheckClick(o.value));
+    wrap.appendChild(el);
   });
+
   document.getElementById('sort-bar').classList.add('visible');
 }
 
-function updateSortDropdowns() {
-  const v1 = document.getElementById('sort-1').value;
-  const v2 = document.getElementById('sort-2').value;
-  const v3 = document.getElementById('sort-3').value;
-
-  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
-  const sel2 = document.getElementById('sort-2');
-  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
-  sel2.value = (v2 && v2 !== v1) ? v2 : '';
-  const newV2 = sel2.value;
-
-  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
-  const sel3 = document.getElementById('sort-3');
-  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
-  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
-}
-
-function onSortChange() {
-  updateSortDropdowns();
+function onSortCheckClick(value) {
+  const idx = _sortChecked.indexOf(value);
+  if (idx === -1) {
+    _sortChecked.push(value);
+  } else {
+    _sortChecked.splice(idx, 1);
+  }
+  _refreshSortUI();
   applySortOrder();
 }
 
+function _refreshSortUI() {
+  document.querySelectorAll('.sort-check-item').forEach(el => {
+    const rank = _sortChecked.indexOf(el.dataset.value);
+    el.classList.toggle('checked', rank !== -1);
+    const badge = el.querySelector('.rank-badge');
+    if (badge) badge.textContent = rank !== -1 ? rank + 1 : '';
+  });
+
+  // 토글 버튼 배지
+  const badge = document.getElementById('sort-badge');
+  if (badge) {
+    badge.textContent = _sortChecked.length || '';
+    badge.style.display = _sortChecked.length ? 'inline-flex' : 'none';
+  }
+
+  // 힌트 텍스트: "1순위 통근 짧은순 → 2순위 가격 낮은순"
+  const hint = document.getElementById('sort-hint');
+  if (!hint) return;
+  if (!_sortChecked.length) {
+    hint.innerHTML = '클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정';
+    return;
+  }
+  const labelMap = Object.fromEntries(SORT_OPTIONS.map(o => [o.value, o.label]));
+  const parts = _sortChecked.map((v, i) =>
+    `<span class="hint-order">${i+1}순위</span> ${labelMap[v] || v}`
+  );
+  hint.innerHTML = parts.join(' &nbsp;→&nbsp; ');
+}
+
+function toggleSortPanel() {
+  const panel = document.getElementById('sort-panel');
+  const btn = document.getElementById('sort-toggle-btn');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+// 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
+function updateSortDropdowns() {}
+function onSortChange() { applySortOrder(); }
+
 function applySortOrder() {
-  const keys = ['sort-1','sort-2','sort-3']
-    .map(id => document.getElementById(id).value)
-    .filter(v => v);
+  const keys = _sortChecked;
 
   if (!keys.length) {
     if (window._lastSearchData) renderCards(window._lastSearchData);
@@ -4748,18 +4882,15 @@ function _renderSortedFlat(cards) {
   if (!data) return;
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  let html = renderStatsPanel(data);
-  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
   _updateFavTab();
 }
 
 function resetSort() {
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  updateSortDropdowns();
+  _sortChecked = [];
+  _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
