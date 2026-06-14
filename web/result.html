@@ -1085,27 +1085,31 @@
       filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
     }
     .pin-workplace-body, .pin-workplace-2-body {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 16px; border-radius: 10px;
-      font-size: 13px; font-weight: 800; white-space: nowrap;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 22px; border-radius: 14px;
+      font-size: 18px; font-weight: 900; white-space: nowrap;
       letter-spacing: -0.01em; line-height: 1;
     }
+    /* 오피스1: 밝은 앰버 — 주황/파랑/초록/보라 핀들과 모두 대비됨 */
     .pin-workplace-body {
-      background: #0f172a; color: #fff;
-      border: 2px solid rgba(255,255,255,0.25);
+      background: #f59e0b;
+      color: #1a1200;
+      border: 3px solid #fff;
     }
+    /* 오피스2: 에메랄드 그린 — 앰버와 구분, 핀 색과도 충돌 없음 */
     .pin-workplace-2-body {
-      background: #312e81; color: #fff;
-      border: 2px solid rgba(255,255,255,0.25);
+      background: #059669;
+      color: #fff;
+      border: 3px solid #fff;
     }
     .pin-workplace-tail, .pin-workplace-2-tail {
       width: 0; height: 0;
-      border-left: 7px solid transparent;
-      border-right: 7px solid transparent;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
     }
-    .pin-workplace-tail  { border-top: 9px solid #0f172a; }
-    .pin-workplace-2-tail { border-top: 9px solid #312e81; }
-    .pin-workplace-icon { font-size: 15px; line-height: 1; }
+    .pin-workplace-tail  { border-top: 13px solid #f59e0b; }
+    .pin-workplace-2-tail { border-top: 13px solid #059669; }
+    .pin-workplace-icon { font-size: 20px; line-height: 1; }
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
