@@ -299,80 +299,65 @@
       font-weight: 400;
     }
 
-    /* result-layout: left-panel + resize-handle + map-panel (spec-19: 드래그 리사이즈) */
+    /* ── 풀스크린 지도 레이아웃 ─────────────────────────────── */
     .result-layout {
-      flex: 1; display: flex;
-      min-height: 0;
+      flex: 1; display: flex; min-height: 0; position: relative;
     }
-    /* 모바일 세로 분할: 카드 위 / 지도 아래 50vh */
-    @media (max-width: 767px) {
-      .result-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 50vh;
-      }
-      .left-panel {
-        border-right: none;
-        border-bottom: 1px solid var(--color-border-strong);
-      }
-      .map-panel { min-height: 50vh; }
+    .map-panel {
+      position: relative; flex: 1;
     }
-    /* 좌측 패널 — fav-tabs(상단) + cards-panel(스크롤) 세로 배치 */
-    .left-panel {
-      display: flex; flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-      width: 440px; min-width: 280px; flex-shrink: 0;
-    }
-    .cards-panel {
-      overflow-y: auto;
+    #map { width: 100%; height: 100%; background: #f0f0f0; }
+
+    /* ── 하단 슬라이드업 카드 시트 ──────────────────────────── */
+    .bottom-sheet {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 300;
       background: white;
-      padding: 14px;
-      flex: 1; min-height: 0;
+      border-radius: 16px 16px 0 0;
+      border-top: 1px solid var(--color-border-strong);
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
+      display: flex; flex-direction: column;
+      height: 300px;
+      transition: height 0.25s ease;
     }
-    /* sort-bar */
-    .sort-bar {
-      display: none;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 22px;
-      background: #fff;
-      border-bottom: 1px solid var(--color-border-strong);
-      flex-shrink: 0;
-      flex-wrap: wrap;
+    .bottom-sheet.expanded { height: 65vh; }
+    .bs-drag {
+      flex-shrink: 0; padding: 10px 0 4px;
+      display: flex; justify-content: center; cursor: grab;
     }
-    .sort-bar.visible { display: flex; }
-    .sort-bar__label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 4px; font-weight: 600; }
-    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sort-select-wrap label { font-size: 11px; color: var(--color-text-tertiary); font-weight: 600; }
-    .sort-select {
-      font-size: 13px; font-family: inherit;
-      padding: 6px 26px 6px 10px;
-      border: 1px solid var(--color-border-strong);
-      border-radius: 6px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
-      appearance: none; cursor: pointer;
+    .bs-drag-bar {
+      width: 36px; height: 4px;
+      background: var(--color-border-strong);
+      border-radius: 2px;
+    }
+    .bs-header {
+      flex-shrink: 0; padding: 0 16px 10px;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .bs-count {
+      font-size: 15px; font-weight: 700;
       color: var(--color-text-primary);
-      width: 128px;
-    }
-    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
-    .sort-bar__reset {
-      margin-left: auto; font-size: 12px;
-      background: none; border: none; cursor: pointer;
-      color: var(--color-text-secondary); padding: 4px 6px;
+      font-feature-settings: 'tnum';
       white-space: nowrap;
     }
-    .sort-bar__reset:hover { color: var(--color-brand-primary); }
-    .map-panel { position: relative; flex: 1; min-width: 320px; }
-    #map { width: 100%; height: 100%; background: #f0f0f0; }
-    /* spec-19: 리사이즈 핸들 */
-    .resize-handle {
-      width: 6px; flex-shrink: 0;
-      background: var(--color-border-strong);
-      cursor: col-resize; z-index: 10;
-      transition: background 0.15s;
+    .bs-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bs-chip {
+      padding: 5px 12px; border-radius: 999px;
+      border: 1.5px solid var(--color-border-strong);
+      background: white; font-size: 12px; font-weight: 600;
+      color: var(--color-text-secondary); cursor: pointer;
+      font-family: inherit; transition: all 120ms;
     }
-    .resize-handle:hover, .resize-handle.dragging { background: #5B9BD5; }
-    @media (max-width: 767px) { .resize-handle { display: none; } }
+    .bs-chip:hover { border-color: var(--color-text-secondary); color: var(--color-text-primary); }
+    .bs-chip.on {
+      background: var(--color-text-primary);
+      color: white; border-color: var(--color-text-primary);
+    }
+    .bs-cards {
+      flex: 1; overflow-y: auto;
+      padding: 0 14px 20px;
+    }
+    /* 카드 패널 — bs-cards 내부에서 사용 */
+    .cards-panel { background: transparent; }
 
     /* ════════════════════════════════════════════════════════
        [2] 통계 패널 — 미니 막대그래프
@@ -2055,111 +2040,11 @@
 
 <main id="main" style="display:none;">
   <div class="summary-bar" id="summary"></div>
-  <div class="sort-bar" id="sort-bar">
-    <span class="sort-bar__label">정렬순서</span>
-    <div class="sort-select-wrap">
-      <label>1순위</label>
-      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
-    </div>
-    <div class="sort-select-wrap">
-      <label>2순위</label>
-      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-    </div>
-    <div class="sort-select-wrap">
-      <label>3순위</label>
-      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-    </div>
-    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
-  </div>
   <div class="result-layout">
-    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
-    <div class="left-panel">
-      <div id="fav-tabs" class="fav-tabs" style="display:none">
-        <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
-        <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
-      </div>
-      <div class="cards-panel" id="cards-panel"></div>
-      <!-- spec-14: 비교 선택 하단 바 -->
-      <div class="compare-bar hidden" id="compare-bar">
-        <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
-        <button class="compare-bar__clear" onclick="clearCompare()">✕ 초기화</button>
-        <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
-      </div>
-    </div>
-    <!-- spec-18: 경로 상세 팝업 -->
-    <div class="route-overlay hidden" id="route-overlay" onclick="closeRouteOnBg(event)">
-      <div class="route-panel" id="route-panel">
-        <div class="route-panel__drag"></div>
-        <div class="route-panel__header">
-          <div class="route-panel__title" id="route-title">-</div>
-          <button class="route-panel__close" onclick="closeRoute()">✕</button>
-        </div>
-        <div class="route-panel__body" id="route-body">
-          <div style="padding:20px;color:var(--color-text-secondary);text-align:center;">불러오는 중...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- spec-17: 단지 상세 모달 -->
-    <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-panel__drag"></div>
-        <div class="detail-panel__header">
-          <h2 class="detail-panel__title" id="detail-title">-</h2>
-          <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
-        </div>
-        <div class="detail-panel__tabs">
-          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-        </div>
-        <div class="detail-panel__body" id="detail-body">
-          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-          <div class="detail-tab-pane active" id="detail-tab-info"></div>
-          <div class="detail-tab-pane" id="detail-tab-price"></div>
-          <div class="detail-tab-pane" id="detail-tab-poi"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- spec-14: 비교 오버레이 -->
-    <div class="compare-overlay hidden" id="compare-overlay" onclick="closeCompareOnBg(event)">
-      <div class="compare-panel">
-        <div class="compare-panel__head">
-          <span class="compare-panel__title">단지 비교</span>
-          <button class="compare-panel__close" onclick="closeCompare()">✕ 닫기</button>
-        </div>
-        <div id="compare-table-container"></div>
-      </div>
-    </div>
-    <!-- spec-22: 친구 채팅 패널 -->
-    <div class="chat-panel hidden" id="chat-panel">
-      <div class="chat-panel__resize" id="chat-resize-handle"></div>
-      <div class="chat-panel__header">
-        <div class="chat-panel__avatar">친구</div>
-        <div class="chat-panel__apt-name" id="chat-apt-name"></div>
-        <button class="chat-panel__close" onclick="closeFriendChat()">✕</button>
-      </div>
-      <div class="chat-price-links" id="chat-price-links"></div>
-      <div class="chat-panel__messages" id="chat-messages"></div>
-      <div class="chat-panel__suggestions" id="chat-suggestions"></div>
-      <div class="chat-attachment-bar" id="chat-attachment-bar"></div>
-      <input type="file" id="chat-file-input" style="display:none"
-        accept="image/*,.pdf,.txt"
-        onchange="_onChatFileSelected(event)">
-      <div class="chat-panel__input-row">
-        <button class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="파일·이미지 첨부">📎</button>
-        <input type="text" id="chat-input" placeholder="궁금한 거 물어봐…"
-          maxlength="200" onkeydown="if(event.key==='Enter')sendChatMessage()">
-        <button class="chat-panel__send" onclick="sendChatMessage()">전송</button>
-      </div>
-    </div>
-
-    <!-- spec-19: 드래그 리사이즈 핸들 -->
-    <div class="resize-handle" id="resize-handle"></div>
-    <!-- 우측: 지도 -->
-    <div class="map-panel" style="position:relative">
+    <div class="map-panel">
       <div id="map"></div>
+
+      <!-- 좌상단 통근시간 범례 -->
       <div id="map-legend">
         <div class="lg-title">통근시간</div>
         <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
@@ -2167,6 +2052,90 @@
         <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
         <div class="lg-row"><div class="lg-dot" style="background:#ef4444"></div><span>61분 이상</span></div>
         <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+      </div>
+
+      <!-- 하단 슬라이드업 카드 시트 -->
+      <div class="bottom-sheet" id="bottom-sheet">
+        <div class="bs-drag" id="bs-drag-handle">
+          <div class="bs-drag-bar"></div>
+        </div>
+        <div class="bs-header">
+          <span class="bs-count" id="bs-count">0곳</span>
+          <div class="bs-chips">
+            <button class="bs-chip on" data-sort="recommended" onclick="bsSort(this)">추천순</button>
+            <button class="bs-chip" data-sort="commute" onclick="bsSort(this)">통근시간순</button>
+            <button class="bs-chip" data-sort="price" onclick="bsSort(this)">가격순</button>
+            <button class="bs-chip" data-sort="new" onclick="bsSort(this)">신축순</button>
+          </div>
+        </div>
+        <div class="bs-cards" id="cards-panel"></div>
+      </div>
+
+      <!-- 오버레이들 (지도 위 레이어) -->
+      <div class="route-overlay hidden" id="route-overlay" onclick="closeRouteOnBg(event)">
+        <div class="route-panel" id="route-panel">
+          <div class="route-panel__drag"></div>
+          <div class="route-panel__header">
+            <div class="route-panel__title" id="route-title">-</div>
+            <button class="route-panel__close" onclick="closeRoute()">✕</button>
+          </div>
+          <div class="route-panel__body" id="route-body">
+            <div style="padding:20px;color:var(--color-text-secondary);text-align:center;">불러오는 중...</div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
+        <div class="detail-panel" id="detail-panel">
+          <div class="detail-panel__drag"></div>
+          <div class="detail-panel__header">
+            <h2 class="detail-panel__title" id="detail-title">-</h2>
+            <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
+          </div>
+          <div class="detail-panel__tabs">
+            <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+            <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+            <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+          </div>
+          <div class="detail-panel__body" id="detail-body">
+            <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+            <div class="detail-tab-pane active" id="detail-tab-info"></div>
+            <div class="detail-tab-pane" id="detail-tab-price"></div>
+            <div class="detail-tab-pane" id="detail-tab-poi"></div>
+          </div>
+        </div>
+      </div>
+      <div class="compare-overlay hidden" id="compare-overlay" onclick="closeCompareOnBg(event)">
+        <div class="compare-panel">
+          <div class="compare-panel__head">
+            <span class="compare-panel__title">단지 비교</span>
+            <button class="compare-panel__close" onclick="closeCompare()">✕ 닫기</button>
+          </div>
+          <div id="compare-table-container"></div>
+        </div>
+      </div>
+      <div class="chat-panel hidden" id="chat-panel">
+        <div class="chat-panel__resize" id="chat-resize-handle"></div>
+        <div class="chat-panel__header">
+          <div class="chat-panel__avatar">친구</div>
+          <div class="chat-panel__apt-name" id="chat-apt-name"></div>
+          <button class="chat-panel__close" onclick="closeFriendChat()">✕</button>
+        </div>
+        <div class="chat-price-links" id="chat-price-links"></div>
+        <div class="chat-panel__messages" id="chat-messages"></div>
+        <div class="chat-panel__suggestions" id="chat-suggestions"></div>
+        <div class="chat-attachment-bar" id="chat-attachment-bar"></div>
+        <input type="file" id="chat-file-input" style="display:none" accept="image/*,.pdf,.txt" onchange="_onChatFileSelected(event)">
+        <div class="chat-panel__input-row">
+          <button class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="파일·이미지 첨부">📎</button>
+          <input type="text" id="chat-input" placeholder="궁금한 거 물어봐…" maxlength="200" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="chat-panel__send" onclick="sendChatMessage()">전송</button>
+        </div>
+      </div>
+      <!-- 즐겨찾기 비교 바 -->
+      <div class="compare-bar hidden" id="compare-bar" style="position:absolute;bottom:300px;left:0;right:0;z-index:310">
+        <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
+        <button class="compare-bar__clear" onclick="clearCompare()">✕ 초기화</button>
+        <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
       </div>
     </div>
   </div>
@@ -3236,7 +3205,7 @@ async function validateAndFilterPois() {
   });
 }
 
-// ── 패널 리사이즈 핸들 (spec-19) ─────────────────────────────
+// ── 패널 리사이즈 핸들 (spec-19, 제거됨 — no-op) ────────────
 (function initResizeHandle() {
   const handle  = document.getElementById('resize-handle');
   const left    = document.querySelector('.left-panel');
@@ -4659,62 +4628,53 @@ function _buildSelectHTML(excludeValues) {
 
 function initSortBar(cards) {
   if (!cards || !cards.length) return;
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
-  });
-  document.getElementById('sort-bar').classList.add('visible');
+  const el = document.getElementById('bs-count');
+  if (el) el.textContent = `${cards.length}곳`;
 }
 
-function updateSortDropdowns() {
-  const v1 = document.getElementById('sort-1').value;
-  const v2 = document.getElementById('sort-2').value;
-  const v3 = document.getElementById('sort-3').value;
-
-  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
-  const sel2 = document.getElementById('sort-2');
-  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
-  sel2.value = (v2 && v2 !== v1) ? v2 : '';
-  const newV2 = sel2.value;
-
-  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
-  const sel3 = document.getElementById('sort-3');
-  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
-  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
-}
-
-function onSortChange() {
-  updateSortDropdowns();
-  applySortOrder();
-}
-
-function applySortOrder() {
-  const keys = ['sort-1','sort-2','sort-3']
-    .map(id => document.getElementById(id).value)
-    .filter(v => v);
-
-  if (!keys.length) {
-    if (window._lastSearchData) renderCards(window._lastSearchData);
-    return;
-  }
-
+function bsSort(btn) {
+  document.querySelectorAll('.bs-chip').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  const key = btn.dataset.sort;
   const cards = [...(window._lastCards || [])];
-  cards.sort((a, b) => {
-    for (const key of keys) {
-      const [field, dir] = key.split(':');
-      const av = a[field] ?? null;
-      const bv = b[field] ?? null;
-      if (av === null && bv === null) continue;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      const diff = dir === 'desc' ? bv - av : av - bv;
-      if (diff !== 0) return diff;
-    }
-    return 0;
-  });
-
+  if (key === 'commute') cards.sort((a,b) => (a.total_time_min||999)-(b.total_time_min||999));
+  else if (key === 'price') cards.sort((a,b) => (a.price_low||9999999)-(b.price_low||9999999));
+  else if (key === 'new') cards.sort((a,b) => (b.build_year||0)-(a.build_year||0));
+  else cards.sort((a,b) => { if(b.is_recommended!==a.is_recommended) return b.is_recommended?1:-1; return (a.total_time_min||999)-(b.total_time_min||999); });
   _renderSortedFlat(cards);
 }
+
+// 하단 시트 드래그 토글
+(function() {
+  let startY = 0, startH = 0, dragging = false;
+  document.addEventListener('DOMContentLoaded', () => {
+    const sheet = document.getElementById('bottom-sheet');
+    const handle = document.getElementById('bs-drag-handle');
+    if (!sheet || !handle) return;
+    handle.addEventListener('mousedown', e => {
+      dragging = true; startY = e.clientY; startH = sheet.offsetHeight;
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const newH = Math.max(80, Math.min(window.innerHeight * 0.85, startH + dy));
+      sheet.style.height = newH + 'px';
+      sheet.style.transition = 'none';
+    });
+    document.addEventListener('mouseup', () => {
+      if (dragging) { dragging = false; document.body.style.userSelect = ''; sheet.style.transition = ''; }
+    });
+    handle.addEventListener('click', () => {
+      sheet.classList.toggle('expanded');
+      sheet.style.height = '';
+    });
+  });
+})();
+
+function updateSortDropdowns() { /* no-op: sort dropdowns removed (bottom-sheet chips used instead) */ }
+function onSortChange() { /* no-op */ }
+function applySortOrder() { /* no-op */ }
 
 function _renderSortedFlat(cards) {
   const data = window._lastSearchData;
@@ -4725,14 +4685,12 @@ function _renderSortedFlat(cards) {
   html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
+  const cnt = document.getElementById('bs-count');
+  if (cnt) cnt.textContent = `${cards.length}곳`;
   _updateFavTab();
 }
 
 function resetSort() {
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  updateSortDropdowns();
   if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
