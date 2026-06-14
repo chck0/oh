@@ -3976,7 +3976,7 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin-workplace-wrap"><div class="pin-workplace-body"><span class="pin-workplace-icon">🏢</span>${dualMode ? 'W1 직장' : '직장'}</div><div class="pin-workplace-tail"></div></div>`,
+    content: `<div class="pin-workplace-wrap"><div class="pin-workplace-body"><span class="pin-workplace-icon">🏢</span>${dualMode ? '오피스 1' : '오피스'}</div><div class="pin-workplace-tail"></div></div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
 
@@ -3984,7 +3984,7 @@ async function initMap(data){
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin-workplace-2-wrap"><div class="pin-workplace-2-body"><span class="pin-workplace-icon">🏢</span>W2 직장</div><div class="pin-workplace-2-tail"></div></div>',
+      content: '<div class="pin-workplace-2-wrap"><div class="pin-workplace-2-body"><span class="pin-workplace-icon">🏢</span>오피스 2</div><div class="pin-workplace-2-tail"></div></div>',
       yAnchor: 1, zIndex: 100,
     }).setMap(kakaoMap);
   }
