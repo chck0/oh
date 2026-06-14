@@ -113,6 +113,9 @@ class _Config:
     # 반경 계산에 사용하는 평균 대중교통 속도 (km/h)
     AVG_SPEED_KMH: float = _optional_float('AVG_SPEED_KMH', 20.0)
 
+    # 버스 도로 라우팅용 로컬 OSRM 서버 (빌드타임 전용, Spec 32)
+    OSRM_URL: str = _optional('OSRM_URL', 'http://localhost:5000')
+
     # POI 도보 거리 상한 (분) — 단지 상세·채팅 화면에서 도보 시설 필터
     POI_WALK_MAX_MIN: int = _optional_int('POI_WALK_MAX_MIN', 10)
 
