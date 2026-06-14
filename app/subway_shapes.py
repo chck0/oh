@@ -1,8 +1,8 @@
 """
-OSM Overpass에서 다운로드한 수도권 지하철 선형 데이터로
-ODsay 경로의 지하철 구간 linestring을 고품질로 교체.
+OSM Overpass에서 다운로드한 수도권 지하철 선형 데이터에서 구간 곡선을 추출.
+build_pair_geom.py가 line_map 키 기반(get_segment_by_keys)으로 역쌍 곡선 생성에 사용.
 
-data/subway_shapes_kr.json 이 없으면 조용히 None 반환 (기존 동작 유지).
+data/subway_shapes_kr.json 이 없으면 조용히 None 반환.
 """
 from __future__ import annotations
 import json
@@ -28,30 +28,6 @@ def _norm(name: str) -> str:
     name = _STRIP_PREFIX.sub('', name)
     name = _STRIP_SPECIAL.sub('', name)
     return name.lower()
-
-
-# ODsay 노선명 → OSM 검색 키워드 (일부 이름이 달라 보완)
-_ALIASES: dict[str, list[str]] = {
-    '경의중앙선':   ['경의중앙'],
-    '수인분당선':   ['수인분당', '수인·분당', '분당'],
-    '경춘선':       ['경춘'],
-    '경강선':       ['경강'],
-    '서해선':       ['서해'],
-    '공항철도':     ['공항철도', 'arex', '공항'],
-    '신림선':       ['신림'],
-    '우이신설선':   ['우이신설', '우이'],
-    '의정부경전철': ['의정부'],
-    '용인경전철':   ['용인경전철', '에버라인'],
-    '김포골드라인': ['김포골드', '김포'],
-    'gtxa':         ['gtx-a', 'gtxa'],
-}
-
-
-def _keywords(line_name: str) -> list[str]:
-    n = _norm(line_name)
-    if n in _ALIASES:
-        return _ALIASES[n]
-    return [n]
 
 
 # ── 데이터 로드 및 인덱스 구축 ─────────────────────────────────
@@ -92,35 +68,20 @@ def _nearest(pts: list[tuple[float, float]], x: float, y: float) -> int:
 
 
 # ── 공개 API ──────────────────────────────────────────────────
-def get_segment(
-    line_name: str,
+_DEFAULT_BBOX_MARGIN = 0.015   # ~1.5km
+
+
+def _segment_from_candidates(
+    candidates: list[dict],
     start_lng: float, start_lat: float,
     end_lng: float,   end_lat: float,
+    bbox_margin: float = _DEFAULT_BBOX_MARGIN,
 ) -> Optional[str]:
-    """
-    ODsay 지하철 구간 → OSM 선형에서 해당 구간 추출.
-    반환: "경도,위도 경도,위도 ..." 또는 None (매칭 실패 시)
-    """
-    if not line_name:
-        return None
-
-    index = _load_index()
-    if not index:
-        return None
-
-    keywords = _keywords(line_name)
-
-    # 후보 수집
-    candidates: list[dict] = []
-    for key, shapes in index.items():
-        if any(kw in key for kw in keywords):
-            candidates.extend(shapes)
-
+    """후보 shape들 중 start/end에 가장 잘 맞고 bbox를 통과하는 구간을 추출."""
     if not candidates:
         return None
 
-    # 허용 bbox: start/end 범위에서 margin 이내만 유효 (~1.5km 고정)
-    bbox_margin = 0.015
+    # 허용 bbox: start/end 범위에서 margin 이내만 유효
     min_lng_ok = min(start_lng, end_lng) - bbox_margin
     max_lng_ok = max(start_lng, end_lng) + bbox_margin
     min_lat_ok = min(start_lat, end_lat) - bbox_margin
@@ -162,25 +123,22 @@ def get_segment(
     return None
 
 
-def enrich_linestring(step_type: str, line_name: str, existing_ls: Optional[str]) -> Optional[str]:
+def get_segment_by_keys(
+    osm_keys: list[str],
+    start_lng: float, start_lat: float,
+    end_lng: float,   end_lat: float,
+    bbox_margin: float = _DEFAULT_BBOX_MARGIN,
+) -> Optional[str]:
     """
-    지하철 step의 기존 linestring을 OSM 고품질 선형으로 교체.
-    - 지하철이 아니거나 OSM 매칭 실패 시 existing_ls 그대로 반환.
+    line_map이 지정한 OSM 계통 키 목록으로 구간 추출 (노선명 키워드 매칭 우회).
     """
-    if step_type not in ('지하철',):
-        return existing_ls
-    if not existing_ls:
-        return existing_ls
-
-    pts_str = existing_ls.strip().split()
-    if len(pts_str) < 2:
-        return existing_ls
-
-    try:
-        slng, slat = map(float, pts_str[0].split(','))
-        elng, elat = map(float, pts_str[-1].split(','))
-    except ValueError:
-        return existing_ls
-
-    result = get_segment(line_name, slng, slat, elng, elat)
-    return result if result else existing_ls
+    if not osm_keys:
+        return None
+    index = _load_index()
+    if not index:
+        return None
+    candidates: list[dict] = []
+    for k in osm_keys:
+        candidates.extend(index.get(k, []))
+    return _segment_from_candidates(
+        candidates, start_lng, start_lat, end_lng, end_lat, bbox_margin)

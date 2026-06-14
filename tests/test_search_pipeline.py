@@ -109,7 +109,9 @@ CREATE TABLE IF NOT EXISTS transit_routes (
     step4_type TEXT, step4_time_min INTEGER, step4_dist_m INTEGER,
     "step4_노선" TEXT, "step4_출발" TEXT, "step4_도착" TEXT,
     step5_type TEXT, step5_time_min INTEGER, step5_dist_m INTEGER,
-    "step5_노선" TEXT, "step5_출발" TEXT, "step5_도착" TEXT
+    "step5_노선" TEXT, "step5_출발" TEXT, "step5_도착" TEXT,
+    step1_linestring TEXT, step2_linestring TEXT, step3_linestring TEXT,
+    step4_linestring TEXT, step5_linestring TEXT
 );
 
 CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (

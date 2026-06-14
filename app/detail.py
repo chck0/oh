@@ -14,7 +14,6 @@ from fastapi import APIRouter, Depends
 
 from app.db import get_db, connect as db_connect
 from app.portable import year_minus
-from app.subway_shapes import enrich_linestring
 from config import cfg
 
 router = APIRouter()
@@ -59,7 +58,7 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
                 'line':       r[off+3],
                 'from':       r[off+4],
                 'to':         r[off+5],
-                'linestring': enrich_linestring(t, r[off+3], r[off+6]),
+                'linestring': r[off+6],   # baked (GTFS순서+OSM역쌍곡선, Spec31)
             })
         options.append({
             'rank': r['rank'],

@@ -323,20 +323,20 @@ class TestStepCols:
         ]
 
     def test_first_step(self):
-        t, tm, dm, ln, fr, to = step_cols(self._sample_steps(), 1)
+        t, tm, dm, ln, fr, to, ls = step_cols(self._sample_steps(), 1)
         assert t == '도보'
         assert tm == 5
         assert dm == 200
 
     def test_second_step(self):
-        t, tm, dm, ln, fr, to = step_cols(self._sample_steps(), 2)
+        t, tm, dm, ln, fr, to, ls = step_cols(self._sample_steps(), 2)
         assert t == '지하철'
         assert ln == '2호선'
         assert fr == 'A역'
         assert to == 'B역'
 
     def test_out_of_range_returns_empty(self):
-        t, tm, dm, ln, fr, to = step_cols(self._sample_steps(), 5)
+        t, tm, dm, ln, fr, to, ls = step_cols(self._sample_steps(), 5)
         assert t == ''
         assert tm is None
         assert dm is None
@@ -345,6 +345,6 @@ class TestStepCols:
         assert to == ''
 
     def test_empty_steps_out_of_range(self):
-        t, tm, dm, ln, fr, to = step_cols([], 1)
+        t, tm, dm, ln, fr, to, ls = step_cols([], 1)
         assert t == ''
         assert tm is None

@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS transit_routes (
     "step5_노선" TEXT NOT NULL DEFAULT '',
     "step5_출발" TEXT NOT NULL DEFAULT '',
     "step5_도착" TEXT NOT NULL DEFAULT '',
+    step1_linestring TEXT, step2_linestring TEXT, step3_linestring TEXT,
+    step4_linestring TEXT, step5_linestring TEXT,
     PRIMARY KEY (origin_cell, wp_id, rank)
 );
 """
