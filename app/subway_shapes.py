@@ -119,10 +119,15 @@ def get_segment(
     if not candidates:
         return None
 
-    # 최적 후보 선택 (start/end 좌표가 가장 잘 맞는 것)
-    best: Optional[tuple] = None
-    best_score = float('inf')
+    # 허용 bbox: start/end 범위에서 margin 이내만 유효 (~1.5km 고정)
+    bbox_margin = 0.015
+    min_lng_ok = min(start_lng, end_lng) - bbox_margin
+    max_lng_ok = max(start_lng, end_lng) + bbox_margin
+    min_lat_ok = min(start_lat, end_lat) - bbox_margin
+    max_lat_ok = max(start_lat, end_lat) + bbox_margin
 
+    # 모든 후보를 score 순으로 정렬, bbox 통과하는 첫 번째 사용
+    scored: list[tuple] = []
     for shape in candidates:
         pts = _flat_pts(shape)
         if len(pts) < 2:
@@ -131,25 +136,30 @@ def get_segment(
         ei = _nearest(pts, end_lng,   end_lat)
         score = _dist2(*pts[si], start_lng, start_lat) + \
                 _dist2(*pts[ei], end_lng,   end_lat)
-        if score < best_score:
-            best_score = score
-            best = (pts, si, ei)
+        scored.append((score, pts, si, ei))
 
-    if best is None:
-        return None
+    scored.sort(key=lambda x: x[0])
 
-    pts, si, ei = best
+    for _, pts, si, ei in scored:
+        # 구간 슬라이싱 (방향 보정)
+        if si <= ei:
+            segment = pts[si:ei + 1]
+        else:
+            segment = pts[ei:si + 1][::-1]
 
-    # 구간 슬라이싱 (방향 보정)
-    if si <= ei:
-        segment = pts[si:ei + 1]
-    else:
-        segment = pts[ei:si + 1][::-1]
+        if len(segment) < 2:
+            continue
 
-    if len(segment) < 2:
-        return None
+        # bbox 검증: 분기 노선에서 잘못된 구간 추출 시 bbox 초과 → 다음 후보 시도
+        seg_lngs = [p[0] for p in segment]
+        seg_lats = [p[1] for p in segment]
+        if min(seg_lngs) < min_lng_ok or max(seg_lngs) > max_lng_ok or \
+           min(seg_lats) < min_lat_ok or max(seg_lats) > max_lat_ok:
+            continue
 
-    return ' '.join(f'{p[0]},{p[1]}' for p in segment)
+        return ' '.join(f'{p[0]},{p[1]}' for p in segment)
+
+    return None
 
 
 def enrich_linestring(step_type: str, line_name: str, existing_ls: Optional[str]) -> Optional[str]:
