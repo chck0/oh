@@ -276,10 +276,14 @@
        메인 결과 레이아웃
        ════════════════════════════════════════════════════════ */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .summary-bar {
-      flex-shrink: 0; background: white;
-      padding: 14px 22px;
+    .combined-bar {
+      display: flex; align-items: center; flex-shrink: 0;
+      background: white;
       border-bottom: 1px solid var(--color-border-strong);
+    }
+    .summary-bar {
+      flex: 1; min-width: 0; background: white;
+      padding: 14px 22px;
       font-size: 14px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
       font-feature-settings: 'tnum';
@@ -334,9 +338,9 @@
       display: none;
       align-items: center;
       gap: 10px;
-      padding: 10px 22px;
+      padding: 10px 16px;
       background: #fff;
-      border-bottom: 1px solid var(--color-border-strong);
+      border-left: 1px solid var(--color-border-strong);
       flex-shrink: 0;
       flex-wrap: wrap;
     }
@@ -431,10 +435,13 @@
 
     .minibar-row {
       display: grid;
-      grid-template-columns: 76px 1fr 56px;
-      align-items: center; gap: 12px;
+      grid-template-columns: 12px 80px 1fr 56px;
+      align-items: center; gap: 8px;
       padding: 5px 0; font-size: 13.5px;
       font-feature-settings: 'tnum';
+    }
+    .minibar-row__dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
     .minibar-row__label {
       color: var(--color-text-primary);
@@ -448,11 +455,7 @@
     }
     .minibar-row__fill {
       position: absolute; left: 0; top: 0; bottom: 0;
-      background: var(--color-text-secondary);
       border-radius: 3px;
-    }
-    .minibar-row.cheap .minibar-row__fill {
-      background: var(--color-brand-primary);
     }
     .minibar-row__value {
       text-align: right; font-weight: 700;
@@ -2071,22 +2074,24 @@
 </header>
 
 <main id="main" style="display:none;">
-  <div class="summary-bar" id="summary"></div>
-  <div class="sort-bar" id="sort-bar">
-    <span class="sort-bar__label">정렬순서</span>
-    <div class="sort-select-wrap">
-      <label>1순위</label>
-      <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+  <div class="combined-bar">
+    <div class="summary-bar" id="summary"></div>
+    <div class="sort-bar" id="sort-bar">
+      <span class="sort-bar__label">정렬순서</span>
+      <div class="sort-select-wrap">
+        <label>1순위</label>
+        <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+      </div>
+      <div class="sort-select-wrap">
+        <label>2순위</label>
+        <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
+      </div>
+      <div class="sort-select-wrap">
+        <label>3순위</label>
+        <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
+      </div>
+      <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
     </div>
-    <div class="sort-select-wrap">
-      <label>2순위</label>
-      <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-    </div>
-    <div class="sort-select-wrap">
-      <label>3순위</label>
-      <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-    </div>
-    <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
   </div>
 
   <div class="result-layout">
@@ -2471,22 +2476,32 @@ function renderStatsPanel(data){
   const s = data.stats || {};
   if(!s.total) return '';
 
-  // 통근 × 평균가 — 미니 가로 막대 (최저 버킷만 빨강 강조)
+  // 통근 × 평균가 — 범례와 동일한 색상 적용
+  // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
+  const bucketColor = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
+    if (start <= 45) return '#f97316'; // 46~60분 → 주황
+    return '#f97316';
+  };
+  // 라벨을 범례 텍스트로 정규화
+  const bucketLabel = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '30분 이하';
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '31~45분';
+    return '46~60분';
+  };
   let curveHtml = '';
   if(s.commute_curve && s.commute_curve.length){
     const maxPrice = Math.max(...s.commute_curve.map(b=>b.avg_price||0));
-    const minPrice = Math.min(...s.commute_curve.filter(b=>b.avg_price).map(b=>b.avg_price));
     const rows = s.commute_curve.map(b=>{
       const pct = maxPrice ? Math.max(8, Math.round((b.avg_price||0)/maxPrice*100)) : 0;
-      const isCheap = b.avg_price === minPrice;
-      // 라벨 정리: "30분 이내"→"≤30분", "50분 초과"→">50분"
-      const lbl = (b.label||'')
-        .replace(/^(\d+)분 이내$/, '≤$1분')
-        .replace(/^(\d+)분 초과$/, '>$1분')
-        .replace(/^(\d+)~(\d+)분$/, '$1~$2분');
-      return `<div class="minibar-row ${isCheap?'cheap':''}">
-        <span class="minibar-row__label num">${escHtml(lbl)}</span>
-        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%"></div></div>
+      const color = bucketColor(b.label||'');
+      return `<div class="minibar-row">
+        <span class="minibar-row__dot" style="background:${color}"></span>
+        <span class="minibar-row__label num">${escHtml(bucketLabel(b.label||''))}</span>
+        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%;background:${color}"></div></div>
         <span class="minibar-row__value num">${shortPrice(b.avg_price).replace('억','')}</span>
       </div>`;
     }).join('');
