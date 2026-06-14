@@ -1008,50 +1008,97 @@
     /* ════════════════════════════════════════════════════════
        지도 핀 (디자인 시스템 §4 핀 체계)
        ════════════════════════════════════════════════════════ */
+    /* ── 집 모양 핀 (호갱노노 스타일) ─────────────────────── */
     .pin {
-      padding: 4px 10px;
-      background: var(--color-pin-default-bg);
-      border: 1px solid var(--color-pin-default-border);
-      border-radius: var(--radius-pill);
-      font-size: 12px; font-weight: 600;
-      color: var(--color-pin-default-text);
-      white-space: nowrap; cursor: pointer;
-      box-shadow: var(--shadow-md);
-      font-family: 'Pretendard', system-ui, sans-serif;
+      display: inline-flex; flex-direction: column; align-items: center;
+      cursor: pointer; font-family: 'Pretendard', system-ui, sans-serif;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+    .pin:hover { transform: translateY(-3px); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.36)); }
+    /* 지붕 (삼각형) */
+    .pin-roof {
+      width: 0; height: 0;
+      border-left: 24px solid transparent;
+      border-right: 24px solid transparent;
+      border-bottom: 16px solid #3b82f6;
+    }
+    /* 몸체 (직사각형 + 아래 화살표) */
+    .pin-body {
+      width: 48px; min-height: 36px;
+      background: #3b82f6;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4px 4px 10px;
+      position: relative;
+      border-radius: 0 0 3px 3px;
+    }
+    .pin-body::after {
+      content: '';
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 9px solid #3b82f6;
+    }
+    .pin-time {
+      font-size: 13px; font-weight: 800; color: #fff;
+      line-height: 1.2; font-feature-settings: 'tnum';
+      white-space: nowrap;
+    }
+    .pin-sub {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.82);
+      line-height: 1.1; white-space: nowrap;
+    }
+    .pin-crown {
+      font-size: 14px; line-height: 1; margin-bottom: 1px;
+    }
+    /* 통근시간 색상 */
+    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
+    .pin-t1 .pin-body { background:#16a34a; }
+    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
+    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
+    .pin-t2 .pin-body { background:#3b82f6; }
+    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
+    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
+    .pin-t3 .pin-body { background:#f97316; }
+    .pin-t3 .pin-body::after { border-top-color:#f97316; }
+    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
+    .pin-t4 .pin-body { background:#ef4444; }
+    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
+    /* 추천 핀 — 보라 */
+    .pin-best .pin-roof { border-bottom-color:#6d28d9; }
+    .pin-best .pin-body { background:#6d28d9; }
+    .pin-best .pin-body::after { border-top-color:#6d28d9; }
+    /* 복수 평형 뱃지 */
+    .pin-multi {
+      position: absolute; top: -6px; right: -6px;
+      background: white; color: #374151;
+      border: 1.5px solid #d1d5db; border-radius: 99px;
+      font-size: 9px; font-weight: 700;
+      padding: 0 4px; line-height: 16px;
       font-feature-settings: 'tnum';
-      transition: transform 120ms ease, box-shadow 120ms ease;
     }
-    .pin:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
+    /* 직장·룩업 핀 — 기존 pill 유지 */
+    .pin-lookup, .pin-workplace, .pin-workplace-2 {
+      display: inline-block; padding: 5px 12px;
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+      white-space: nowrap; cursor: pointer; line-height: 1.4;
+      filter: none; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    .pin-best {
-      background: var(--color-pin-recommended-bg);
-      color: var(--color-pin-recommended-text);
-      border-color: var(--color-pin-recommended-bg);
-      box-shadow: var(--shadow-pin-recommended);
+    .pin-lookup { background:#f59e0b; color:#fff; border:1px solid #d97706; }
+    .pin-workplace { background:var(--color-pin-selected-bg); color:var(--color-pin-selected-text); border:2px solid var(--color-brand-primary); }
+    .pin-workplace-2 { background:#1a56db; color:#fff; border:2px solid #1e429f; }
+    /* 지도 좌상단 범례 */
+    #map-legend {
+      position: absolute; top: 10px; left: 10px; z-index: 200;
+      background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 8px 12px; font-size: 11px; font-family: 'Pretendard', sans-serif;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12); pointer-events: none;
     }
-    .pin-lookup {
-      background: #f59e0b; color: #fff;
-      border-color: #d97706; font-weight: 700;
-      box-shadow: 0 2px 8px rgba(245,158,11,0.45);
-    }
-    .pin-workplace {
-      background: var(--color-pin-selected-bg);
-      color: var(--color-pin-selected-text);
-      border: 2px solid var(--color-brand-primary);
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-    .pin-workplace-2 {
-      background: #1a56db;
-      color: #fff;
-      border: 2px solid #1e429f;
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
-    }
+    #map-legend .lg-title { font-weight: 700; font-size: 11px; color: #374151; margin-bottom: 5px; }
+    #map-legend .lg-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; line-height: 1.4; }
+    #map-legend .lg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    #map-legend .lg-row:last-child { margin-bottom: 0; }
 
     /* ════════════════════════════════════════════════════════
        [spec-14] 즐겨찾기 비교
@@ -2111,8 +2158,16 @@
     <!-- spec-19: 드래그 리사이즈 핸들 -->
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
-    <div class="map-panel">
+    <div class="map-panel" style="position:relative">
       <div id="map"></div>
+      <div id="map-legend">
+        <div class="lg-title">통근시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#ef4444"></div><span>61분 이상</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+      </div>
     </div>
   </div>
 </main>
@@ -3925,13 +3980,18 @@ async function initMap(data){
     group.cards.sort((a,b)=>a.price_low - b.price_low);
     const main = group.cards[0];
     const ptCount = group.cards.length;
-    const cls = group.any_recommended ? 'pin-best' : '';
+    const t = main.total_time_min || 999;
+    const tCls = t <= 30 ? 'pin-t1' : t <= 45 ? 'pin-t2' : t <= 60 ? 'pin-t3' : 'pin-t4';
+    const cls = group.any_recommended ? 'pin-best' : tCls;
     const z = group.any_recommended ? 50 : 5;
-    const multiMark = ptCount > 1 ? `<span class="pin-multi-mark">${ptCount}</span>` : '';
-    const pinText = `${escHtml(main.pyeong_type||'')} ${shortPrice(main.price_low)} ${main.total_time_min}분`;
+    const crownHtml = group.any_recommended ? '<div class="pin-crown">👑</div>' : '';
+    const multiHtml = ptCount > 1 ? `<span class="pin-multi">${ptCount}</span>` : '';
+    const timeText = t < 999 ? `${t}분` : '?';
+    const subText = main.pyeong_type ? `<div class="pin-sub">${escHtml(main.pyeong_type)}</div>` : '';
+    const pinHtml = `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${crownHtml}<div class="pin-roof"></div><div class="pin-body" style="position:relative">${multiHtml}<div class="pin-time">${timeText}</div>${subText}</div></div>`;
     const overlay = new kakao.maps.CustomOverlay({
       position: pos,
-      content: `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${pinText}${multiMark}</div>`,
+      content: pinHtml,
       yAnchor: 1,
       zIndex: z,
     });
