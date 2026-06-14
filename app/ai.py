@@ -34,9 +34,8 @@ def _get_client() -> anthropic.AsyncAnthropic:
 # ── 모델 분리 ────────────────────────────────────────────────
 # 추천 카드 (소수, 긴 코멘트, 균형 잡힌 시각) → Sonnet
 # 일반 카드 (다수, 한 줄 평) → Haiku (저렴, 빠름)
-# dated 버전 사용 (alias가 권한/접근 이슈로 실패하는 경우 대비)
-SONNET_MODEL = 'claude-sonnet-4-5-20250929'
-HAIKU_MODEL = 'claude-haiku-4-5-20251001'
+# 모델명은 config.py (cfg.SONNET_MODEL / cfg.HAIKU_MODEL) 에서 관리.
+# 변경 시 .env 또는 Vercel 대시보드에서 CLAUDE_SONNET_MODEL / CLAUDE_HAIKU_MODEL 설정.
 
 # 일반 카드 동시 호출 상한 (Anthropic rate limit 안전치)
 REGULAR_CONCURRENCY = 8
@@ -47,21 +46,23 @@ REGULAR_CONCURRENCY = 8
 # ═══════════════════════════════════════════════════════════════
 def make_buckets(max_minutes: int) -> list[tuple[int, int]]:
     """
-    통근시간 버킷: 0~30분, 30~40분, 40~50분, 50~max
+    통근시간 버킷: 범례와 동일한 3구간
+    ≤30분 / 31~45분 / 46~max분
     """
     bs = [(0, 30)]
-    start = 30
-    while start < max_minutes:
-        end = min(start + 10, max_minutes)
-        bs.append((start, end))
-        start = end
+    if max_minutes > 30:
+        bs.append((30, min(45, max_minutes)))
+    if max_minutes > 45:
+        bs.append((45, max_minutes))
     return bs
 
 
 def bucket_label(s: int, e: int) -> str:
     if s == 0:
-        return f"{e}분 이내"
-    return f"{s}~{e}분"
+        return "30분 이하"
+    if s == 30:
+        return "31~45분"
+    return f"46~{e}분"
 
 
 def assign_bucket(t: int, buckets: list[tuple[int, int]]) -> int:
@@ -431,8 +432,8 @@ async def build_recommend_comments(
         prompt = _make_prompt_recommend(c, avg_price_by_pt, wp_label)
         # Sonnet 실패 시 Haiku 폴백
         # 2문장 한도라 max_tokens는 작게. 폴백도 Haiku.
-        tasks.append(_call_llm(prompt, SONNET_MODEL, max_tokens=150,
-                               fallback_model=HAIKU_MODEL))
+        tasks.append(_call_llm(prompt, cfg.SONNET_MODEL, max_tokens=150,
+                               fallback_model=cfg.HAIKU_MODEL))
         keys.append(card_key(c))
 
     print(f'[LLM] 추천 코멘트 {len(tasks)}개 Sonnet 호출 시작')
@@ -464,7 +465,7 @@ async def build_regular_comments(
     async def _bounded_call(c):
         async with sem:
             prompt = _make_prompt_regular(c, avg_price_by_pt)
-            return await _call_llm(prompt, HAIKU_MODEL, max_tokens=80)
+            return await _call_llm(prompt, cfg.HAIKU_MODEL, max_tokens=80)
 
     tasks = [_bounded_call(c) for c in regular_cards]
     keys = [card_key(c) for c in regular_cards]

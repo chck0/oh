@@ -11,10 +11,11 @@
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- 카카오맵 SDK (클러스터러 제거 — 단지 단위 핀 직접 표시) -->
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=764855b79f6cfa586600499f333d624c&libraries=services&autoload=false"></script>
+  <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
+  <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
+  <script src="/api/kakao-sdk?libraries=services"></script>
 
   <style>
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
@@ -276,10 +277,14 @@
        메인 결과 레이아웃
        ════════════════════════════════════════════════════════ */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .summary-bar {
-      flex-shrink: 0; background: white;
-      padding: 14px 22px;
+    .combined-bar {
+      display: flex; align-items: center; flex-shrink: 0;
+      background: white;
       border-bottom: 1px solid var(--color-border-strong);
+    }
+    .summary-bar {
+      flex: 1; min-width: 0; background: white;
+      padding: 14px 22px;
       font-size: 14px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
       font-feature-settings: 'tnum';
@@ -329,6 +334,92 @@
       padding: 14px;
       flex: 1; min-height: 0;
     }
+    /* sort toggle button (combined-bar 우측) */
+    .sort-bar {
+      display: none;
+      align-items: center;
+      border-left: 1px solid var(--color-border-strong);
+      flex-shrink: 0;
+    }
+    .sort-bar.visible { display: flex; }
+    .sort-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 18px; height: 100%;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      color: var(--color-text-primary);
+      background: none; border: none; cursor: pointer;
+      white-space: nowrap;
+    }
+    .sort-toggle-btn:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn .sort-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; border-radius: 9px;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 0 4px;
+    }
+    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
+
+    /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
+    .sort-panel {
+      display: flex; flex-direction: column;
+      background: #f8fafc; flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+      padding: 11px 13px 9px;
+      gap: 8px;
+    }
+    .sort-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sort-panel-title {
+      font-size: 13px; font-weight: 700; color: var(--color-text-primary);
+      letter-spacing: .02em;
+    }
+    .sort-panel-reset {
+      font-size: 12px; color: var(--color-text-tertiary);
+      background: none; border: none; cursor: pointer; padding: 2px 6px;
+    }
+    .sort-panel-reset:hover { color: var(--color-brand-primary); }
+    .sort-chips-wrap {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px;
+    }
+    .sort-check-item {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 10px;
+      cursor: pointer; padding: 10px 12px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      background: #fff; user-select: none; transition: all .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      position: relative;
+    }
+    .sort-check-item .icon-bubble {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s; background: #f8fafc;
+    }
+    .sort-check-item i { font-size: 18px; line-height: 1; color: #e57373; }
+    .sort-check-item:hover { border-color: #e57373; box-shadow: 0 2px 8px rgba(229,115,115,.2); }
+    .sort-check-item:hover .icon-bubble { background: #fff1f2; }
+    .sort-check-item.checked { border-color: #e57373; background: #fff1f2; }
+    .sort-check-item.checked .icon-bubble { background: #fee2e2; }
+    .sort-chip-label {
+      font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.3;
+      word-break: keep-all; text-align: left; letter-spacing: -.01em;
+    }
+    .sort-check-item.checked .sort-chip-label { color: #c0392b; }
+    .sort-check-item .rank-badge {
+      display: none; position: absolute; top: -8px; right: -8px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #e57373; color: #fff; border: 2px solid #fff;
+      font-size: 12px; font-weight: 800;
+      align-items: center; justify-content: center; line-height: 1;
+    }
+    .sort-check-item.checked .rank-badge { display: inline-flex; }
+    .sort-hint {
+      font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
+      padding: 0 2px;
+    }
+    .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -398,10 +489,13 @@
 
     .minibar-row {
       display: grid;
-      grid-template-columns: 76px 1fr 56px;
-      align-items: center; gap: 12px;
+      grid-template-columns: 12px 80px 1fr 56px;
+      align-items: center; gap: 8px;
       padding: 5px 0; font-size: 13.5px;
       font-feature-settings: 'tnum';
+    }
+    .minibar-row__dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
     .minibar-row__label {
       color: var(--color-text-primary);
@@ -415,11 +509,7 @@
     }
     .minibar-row__fill {
       position: absolute; left: 0; top: 0; bottom: 0;
-      background: var(--color-text-secondary);
       border-radius: 3px;
-    }
-    .minibar-row.cheap .minibar-row__fill {
-      background: var(--color-brand-primary);
     }
     .minibar-row__value {
       text-align: right; font-weight: 700;
@@ -560,130 +650,137 @@
     /* ════════════════════════════════════════════════════════
        [1] 추천 카드 — AI 친구 코멘트 HERO
        ════════════════════════════════════════════════════════ */
+    /* ── 추천 카드 (compact 3-row) ── */
     .rec-card {
       position: relative;
       background: white;
       border-radius: var(--radius-lg);
       border: 1px solid var(--color-border-strong);
       border-left: 4px solid var(--color-brand-primary);
-      padding: 18px 44px 16px 18px;  /* right 44px: ♥ 버튼 공간 확보 */
-      margin-bottom: 10px;
+      padding: 14px 44px 14px 16px;
+      margin-bottom: 8px;
       cursor: pointer;
       transition: box-shadow 200ms ease;
     }
     .rec-card:hover { box-shadow: var(--shadow-lg); }
+    /* row1: 슬롯 칩 (통근버킷 × 평형) */
     .rec-card__slot {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
       background: var(--color-brand-bg-subtle);
-      padding: 5px 11px;
-      border-radius: var(--radius-sm);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
       letter-spacing: 0.01em;
+      margin-bottom: 8px;
     }
     .rec-card__slot-divider {
       width: 1px; height: 9px;
       background: currentColor; opacity: 0.4;
     }
+    /* row2: 단지명 + 가격 */
     .rec-card__title-row {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; margin: 12px 0 4px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 10px; margin-bottom: 6px;
     }
     .rec-card__title {
-      font-size: 18px; font-weight: 700;
+      font-size: 16px; font-weight: 700;
       letter-spacing: -0.005em;
       color: var(--color-text-primary);
       line-height: 1.3; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .rec-card__price {
-      font-size: 22px; font-weight: 700;
+      font-size: 18px; font-weight: 700;
       letter-spacing: -0.01em;
       color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      white-space: nowrap; line-height: 1.2;
+      white-space: nowrap; flex-shrink: 0;
     }
     .rec-card__price .unit {
-      font-size: 14px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       color: var(--color-text-secondary);
       margin-left: 1px;
     }
+    /* row3: 메타 (동 · 세대수 · 최고층) */
     .rec-card__meta {
-      font-size: 13.5px; color: var(--color-text-secondary);
+      font-size: 12px; color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px; line-height: 1.55;
+      margin-bottom: 8px; line-height: 1.4;
       font-weight: 500;
     }
     .rec-card__meta .dot {
       display: inline-block; width: 2px; height: 2px; border-radius: 50%;
       background: currentColor; opacity: 0.5;
-      margin: 0 6px; vertical-align: middle;
+      margin: 0 5px; vertical-align: middle;
     }
-
-    /* spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral) — 친구 코멘트 위 단독 행 */
+    /* 이유 칩 */
     .rec-card__reasons {
-      display: flex; gap: 6px; flex-wrap: wrap;
-      margin: 10px 0 12px;
+      display: flex; gap: 5px; flex-wrap: wrap;
+      margin-bottom: 8px;
     }
     .reason-chip {
       display: inline-flex; align-items: center;
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: var(--radius-pill);
-      font-size: 12.5px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
       white-space: nowrap;
     }
     .reason-chip--info    { background: var(--blue-100);              color: var(--blue-700); }
-    /* Brand 칩 — 카드 1장당 1개만 (디자인 시스템 §2.2 빨강 5% 이하 원칙) */
     .reason-chip--brand   { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); }
     .reason-chip--neutral { background: var(--color-bg-subtle);       color: var(--color-text-secondary); border: 1px solid var(--color-border-default); }
 
-    /* AI 친구 한마디 — HERO */
+    /* AI 친구 한마디 — 기본 접힘, 클릭 시 펼침 */
+    .rec-card__friend-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      color: var(--color-brand-primary);
+      cursor: pointer; padding: 4px 0; user-select: none;
+      border: none; background: none; font-family: inherit;
+    }
+    .rec-card__friend-toggle .toggle-arrow {
+      font-size: 10px; transition: transform 180ms ease;
+    }
+    .rec-card__friend-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    .rec-card__friend-body-wrap {
+      overflow: hidden;
+      max-height: 0; transition: max-height 250ms ease;
+    }
+    .rec-card__friend-body-wrap.open { max-height: 200px; }
     .rec-card__friend {
-      display: flex; gap: 11px; align-items: flex-start;
+      display: flex; gap: 10px; align-items: flex-start;
       background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
-      border-radius: 10px;
-      padding: 12px 13px 13px;
-      margin-bottom: 12px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 6px;
     }
-    .rec-card__friend.empty {
-      background: var(--color-bg-subtle);
-    }
+    .rec-card__friend.empty { background: var(--color-bg-subtle); }
     .rec-card__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--color-brand-primary);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
-      margin-top: 1px;
+      font-size: 10px; font-weight: 700;
     }
     .rec-card__friend.empty .rec-card__friend-avatar {
       background: var(--color-text-tertiary);
-      box-shadow: none;
     }
-    .rec-card__friend-body { flex: 1; min-width: 0; }
     .rec-card__friend-label {
       font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
-    .rec-card__friend.empty .rec-card__friend-label {
-      color: var(--color-text-tertiary);
-    }
+    .rec-card__friend.empty .rec-card__friend-label { color: var(--color-text-tertiary); }
     .rec-card__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 13px; line-height: 1.55;
       color: var(--color-text-primary);
-      white-space: pre-line;
-      letter-spacing: -0.005em;
-      font-weight: 500;
+      white-space: pre-line; font-weight: 500;
     }
     .rec-card__friend.empty .rec-card__friend-text {
-      font-style: italic; color: var(--color-text-tertiary);
-      font-weight: 400;
+      font-style: italic; color: var(--color-text-tertiary); font-weight: 400;
     }
     .spinner-mini {
       display: inline-block; width: 10px; height: 10px;
@@ -899,67 +996,54 @@
     .bucket-pt-label:first-child { margin-top: 4px; }
     .bucket-pt-label:first-child { margin-top: 4px; }
 
-    /* 일반 list-card (버킷 안) */
+    /* 일반 list-card — 한 줄 row */
     .list-card {
       position: relative;
       background: white;
       border: 1px solid var(--color-border-strong);
-      border-radius: 10px;
-      padding: 13px 40px 13px 14px;  /* right 40px: ♥ 버튼 공간 확보 */
-      margin-bottom: 8px;
+      border-radius: 8px;
+      padding: 11px 40px 11px 14px;
+      margin-bottom: 5px;
       cursor: pointer;
-      transition: box-shadow 200ms, border-color 200ms;
+      transition: box-shadow 150ms, border-color 150ms;
+      display: flex; align-items: center; gap: 10px;
     }
-    .list-card:hover { border-color: var(--color-text-tertiary); }
-    .list-card:hover { box-shadow: var(--shadow-md); }
+    .list-card:hover { border-color: var(--color-text-tertiary); box-shadow: var(--shadow-md); }
     .list-card:last-child { margin-bottom: 0; }
+    /* 왼쪽: 단지명 + 평형 (flex-grow) */
     .list-card__top {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; margin-bottom: 4px;
+      flex: 1; min-width: 0;
     }
     .list-card__name {
-      font-size: 15px; font-weight: 700;
+      font-size: 14px; font-weight: 700;
       color: var(--color-text-primary);
       letter-spacing: -0.005em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .list-card__name .pt {
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       color: var(--color-text-secondary);
-      margin-left: 6px;
-    }
-    .list-card__price {
-      font-size: 16px; font-weight: 700;
-      color: var(--color-text-primary);
-      font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
+      margin-left: 5px;
     }
     .list-card__meta {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 11.5px; color: var(--color-text-tertiary);
+      font-weight: 500; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* 오른쪽: 통근시간 + 가격 (flex-shrink: 0) */
+    .list-card__right {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 3px; flex-shrink: 0;
+    }
+    .list-card__price {
+      font-size: 14px; font-weight: 700;
+      color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      margin-bottom: 8px;
-      line-height: 1.5;
-      font-weight: 500;
     }
     .list-card__row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 4px;
     }
-    .list-card__comment {
-      font-size: 13px; line-height: 1.6;
-      color: var(--color-text-primary);
-      background: var(--color-brand-bg-subtle);
-      border-left: 3px solid var(--color-brand-primary);
-      padding: 8px 11px; border-radius: 5px;
-      margin-top: 8px;
-      white-space: pre-line;
-      font-weight: 500;
-    }
-    .list-card__comment.empty {
-      background: var(--color-bg-subtle);
-      border-color: var(--color-border-default);
-      color: var(--color-text-tertiary);
-      font-style: italic;
-    }
+    .list-card__comment { display: none; } /* 일반 카드는 코멘트 숨김 */
 
     .error-box {
       background: white; padding: 24px;
@@ -975,49 +1059,119 @@
     /* ════════════════════════════════════════════════════════
        지도 핀 (디자인 시스템 §4 핀 체계)
        ════════════════════════════════════════════════════════ */
+    /* ── 집 모양 핀 (호갱노노 스타일) ─────────────────────── */
     .pin {
-      padding: 4px 10px;
-      background: var(--color-pin-default-bg);
-      border: 1px solid var(--color-pin-default-border);
-      border-radius: var(--radius-pill);
-      font-size: 12px; font-weight: 600;
-      color: var(--color-pin-default-text);
-      white-space: nowrap; cursor: pointer;
-      box-shadow: var(--shadow-md);
-      font-family: 'Pretendard', system-ui, sans-serif;
+      display: inline-flex; flex-direction: column; align-items: center;
+      cursor: pointer; font-family: 'Pretendard', system-ui, sans-serif;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+    .pin:hover { transform: translateY(-3px); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.36)); }
+    /* 지붕 (삼각형) */
+    .pin-roof {
+      width: 0; height: 0;
+      border-left: 24px solid transparent;
+      border-right: 24px solid transparent;
+      border-bottom: 16px solid #3b82f6;
+    }
+    /* 몸체 (직사각형 + 아래 화살표) */
+    .pin-body {
+      width: 48px; min-height: 36px;
+      background: #3b82f6;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4px 4px 10px;
+      position: relative;
+      border-radius: 0 0 3px 3px;
+    }
+    .pin-body::after {
+      content: '';
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 9px solid #3b82f6;
+    }
+    .pin-time {
+      font-size: 13px; font-weight: 800; color: #fff;
+      line-height: 1.2; font-feature-settings: 'tnum';
+      white-space: nowrap;
+    }
+    .pin-sub {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.82);
+      line-height: 1.1; white-space: nowrap;
+    }
+    .pin-crown {
+      font-size: 14px; line-height: 1; margin-bottom: 1px;
+    }
+    /* 통근시간 색상 */
+    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
+    .pin-t1 .pin-body { background:#16a34a; }
+    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
+    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
+    .pin-t2 .pin-body { background:#3b82f6; }
+    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
+    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
+    .pin-t3 .pin-body { background:#f97316; }
+    .pin-t3 .pin-body::after { border-top-color:#f97316; }
+    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
+    .pin-t4 .pin-body { background:#ef4444; }
+    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
+    /* 추천 핀 — 보라 */
+    .pin-best .pin-roof { border-bottom-color:#6d28d9; }
+    .pin-best .pin-body { background:#6d28d9; }
+    .pin-best .pin-body::after { border-top-color:#6d28d9; }
+    /* 복수 평형 뱃지 */
+    .pin-multi {
+      position: absolute; top: -6px; right: -6px;
+      background: white; color: #374151;
+      border: 1.5px solid #d1d5db; border-radius: 99px;
+      font-size: 9px; font-weight: 700;
+      padding: 0 4px; line-height: 16px;
       font-feature-settings: 'tnum';
-      transition: transform 120ms ease, box-shadow 120ms ease;
     }
-    .pin:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-    .pin-best {
-      background: var(--color-pin-recommended-bg);
-      color: var(--color-pin-recommended-text);
-      border-color: var(--color-pin-recommended-bg);
-      box-shadow: var(--shadow-pin-recommended);
-    }
+    /* 직장 핀 */
     .pin-lookup {
-      background: #f59e0b; color: #fff;
-      border-color: #d97706; font-weight: 700;
-      box-shadow: 0 2px 8px rgba(245,158,11,0.45);
+      display: inline-block; padding: 5px 12px;
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+      white-space: nowrap; cursor: pointer; line-height: 1.4;
+      background:#f59e0b; color:#fff; border:1px solid #d97706;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    .pin-workplace {
-      background: var(--color-pin-selected-bg);
-      color: var(--color-pin-selected-text);
-      border: 2px solid var(--color-brand-primary);
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
+    /* 오피스 마커 — 원형 위치핀 SVG 픽토그램, 집핀과 완전히 다른 형태 */
+    .pin-workplace-wrap, .pin-workplace-2-wrap {
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+      cursor: pointer;
     }
-    .pin-workplace-2 {
-      background: #1a56db;
-      color: #fff;
-      border: 2px solid #1e429f;
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
+    /* 지도 좌상단 범례 */
+    #map-legend {
+      position: absolute; top: 10px; left: 10px; z-index: 200;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 14px 20px; min-width: 160px;
+      font-size: 13px; font-family: 'Pretendard', sans-serif;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12); pointer-events: none;
+    }
+    #map-legend .lg-title {
+      font-weight: 700; font-size: 11px;
+      color: #94a3b8;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #map-legend .lg-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px; line-height: 1.4;
+      color: #1e293b; font-size: 13px; font-weight: 500;
+    }
+    #map-legend .lg-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.07);
+    }
+    #map-legend .lg-row:last-child { margin-bottom: 0; }
+    #map-legend .lg-divider {
+      border: none; border-top: 1px solid rgba(0,0,0,0.07);
+      margin: 8px 0;
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1055,13 +1209,7 @@
       background: white; color: var(--color-text-secondary);
       font-size: 12px; cursor: pointer;
     }
-    /* ── 단지 상세 모달 (spec-17) ────────────────────────────── */
-    .detail-overlay {
-      position: fixed; inset: 0; z-index: 600;
-      background: rgba(0,0,0,0.48);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .detail-overlay.hidden { display: none; }
+    /* ── 단지 상세 사이드 패널 (spec-17) ─────────────────────── */
 
     /* spec-18: 경로 상세 팝업 */
     .route-overlay {
@@ -1114,24 +1262,27 @@
     }
 
     .detail-panel {
-      background: white; border-radius: 20px 20px 0 0;
-      width: 100%; max-width: 640px;
-      max-height: 85vh; display: flex; flex-direction: column;
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.22);
+      background: white;
+      width: 0; min-width: 0; overflow: hidden;
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-left: none;
+      transition: width .25s ease, border .25s ease;
     }
-    .detail-panel__drag {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #ddd; margin: 12px auto 0; flex-shrink: 0;
+    .detail-panel.open {
+      width: 420px; min-width: 240px;
+      border-left: 1px solid var(--color-border-strong);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 10px 20px 0;
-      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+      padding: 14px 16px 0;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
-    .detail-panel__title { font-size: 18px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
     .detail-panel__close {
-      flex-shrink: 0; padding: 4px 10px; border-radius: 6px;
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
       border: 1px solid var(--color-border-default); background: white;
-      cursor: pointer; font-size: 13px; color: var(--color-text-secondary);
+      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
       display: flex; padding: 10px 20px 0; flex-shrink: 0;
@@ -1154,6 +1305,18 @@
     .detail-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
     .detail-kv__label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
     .detail-kv__value { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+    .detail-kv__sub { font-size: 12px; font-weight: 500; color: #8A857E; }
+    /* spec-31: 경사 인디케이터 — 이모지 금지, CSS 막대 4단계 */
+    .slope-ind { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 6px; }
+    .slope-ind > i { width: 4px; background: #E8E6E3; border-radius: 1px; display: inline-block; }
+    .slope-ind > i:nth-child(1) { height: 4px; }
+    .slope-ind > i:nth-child(2) { height: 7px; }
+    .slope-ind > i:nth-child(3) { height: 10px; }
+    .slope-ind > i:nth-child(4) { height: 12px; }
+    .slope-ind[data-lv="1"] > i:nth-child(-n+1),
+    .slope-ind[data-lv="2"] > i:nth-child(-n+2),
+    .slope-ind[data-lv="3"] > i:nth-child(-n+3),
+    .slope-ind[data-lv="4"] > i:nth-child(-n+4) { background: #A82E1B; }
     .detail-trade-row {
       display: grid; grid-template-columns: 90px 1fr 1fr 40px;
       gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
@@ -1473,25 +1636,6 @@
       color: var(--color-text-tertiary);
       font-style: italic;
     }
-    .pin-tooltip__cta {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--color-bg-subtle);
-      border-top: 1.5px solid var(--color-border-strong);
-      font-size: 13.5px; font-weight: 700;
-      color: var(--color-text-primary);
-      transition: background 120ms, color 120ms;
-    }
-    .pin-tooltip:hover .pin-tooltip__cta {
-      background: var(--color-brand-bg-subtle);
-      color: var(--color-brand-primary);
-    }
-    .pin-tooltip__cta-arrow {
-      font-size: 14px; transition: transform 200ms;
-    }
-    .pin-tooltip:hover .pin-tooltip__cta-arrow {
-      transform: translateX(3px);
-    }
 
     /* ════════════════════════════════════════════════════════
        [6] 상세 패널
@@ -1499,8 +1643,8 @@
     .dp__header {
       position: sticky; top: 0; z-index: 10;
       background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
-      padding: 14px 16px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
       box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
     }
     .dp__back {
@@ -1519,7 +1663,7 @@
       border-color: rgba(255, 255, 255, 0.5);
     }
     .dp__name {
-      font-size: 17px; font-weight: 700;
+      font-size: 15px; font-weight: 700;
       letter-spacing: -0.01em;
       color: white;
       flex: 1; min-width: 0;
@@ -1534,54 +1678,54 @@
     }
 
     .dp__hero {
-      padding: 18px 16px 16px;
+      padding: 13px 14px 13px;
       background: white;
       border-bottom: 1.5px solid var(--color-border-strong);
     }
     .dp__meta {
-      font-size: 13.5px;
-      color: var(--color-text-primary);
+      font-size: 12.5px;
+      color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 12px;
+      margin-bottom: 9px;
       font-weight: 500;
     }
     .dp__commute {
-      font-size: 14px; font-weight: 700;
+      font-size: 13px; font-weight: 700;
       color: var(--blue-700);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px;
-      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
       background: var(--blue-100);
-      padding: 7px 13px;
+      padding: 5px 11px;
       border-radius: var(--radius-pill);
     }
     .dp__friend {
-      display: flex; gap: 12px; align-items: flex-start;
+      display: flex; gap: 10px; align-items: flex-start;
       background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
       border-radius: 10px;
-      padding: 13px 14px 14px;
+      padding: 11px 12px 12px;
     }
     .dp__friend.empty {
       background: var(--color-bg-subtle);
     }
     .dp__friend-body { flex: 1; min-width: 0; }
     .dp__friend-label {
-      font-size: 11px; font-weight: 700;
+      font-size: 10px; font-weight: 700;
       color: var(--color-brand-primary);
       letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .dp__friend.empty .dp__friend-label {
       color: var(--color-text-tertiary);
     }
     .dp__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--color-brand-primary);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
+      font-size: 10px; font-weight: 700;
       box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
       margin-top: 1px;
     }
@@ -1590,7 +1734,7 @@
       box-shadow: none;
     }
     .dp__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 13px; line-height: 1.65;
       color: var(--color-text-primary);
       font-weight: 500;
       white-space: pre-line;
@@ -1607,36 +1751,36 @@
     }
     .dp__section:last-child { border-bottom: none; }
     .dp__section-head {
-      padding: 16px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px;
       cursor: pointer; user-select: none;
       transition: background 120ms;
     }
     .dp__section-head:hover { background: var(--color-bg-subtle); }
     .dp__section-icon {
       flex-shrink: 0;
-      width: 32px; height: 32px;
-      border-radius: 8px;
+      width: 28px; height: 28px;
+      border-radius: 7px;
       background: var(--color-bg-subtle);
       border: 1px solid var(--color-border-default);
       display: flex; align-items: center; justify-content: center;
       color: var(--color-text-secondary);
       transition: all 200ms;
     }
-    .dp__section-icon svg { width: 17px; height: 17px; }
+    .dp__section-icon svg { width: 15px; height: 15px; }
     .dp__section-titlebox {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 1px;
     }
     .dp__section-title {
-      font-size: 14.5px; font-weight: 700;
+      font-size: 13.5px; font-weight: 700;
       color: var(--color-text-primary);
       letter-spacing: -0.005em;
     }
     .dp__section-preview {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 12px; color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-top: 3px;
+      margin-top: 2px;
       font-weight: 500;
     }
     .dp__section-chev {
@@ -1651,7 +1795,7 @@
       background: var(--color-brand-bg-subtle);
       color: var(--color-brand-primary);
     }
-    .dp__section-body { display: none; padding: 0 16px 16px; }
+    .dp__section-body { display: none; padding: 0 14px 14px; }
     .dp__section.open .dp__section-body { display: block; }
 
     /* 통근 경로 */
@@ -1882,6 +2026,10 @@
     .dp-poi-name {
       flex: 1; color: var(--color-text-primary);
     }
+    .dp-poi-tag {
+      color: var(--color-text-tertiary);
+      font-size: 12px;
+    }
     .dp-poi-dist {
       font-size: 12.5px;
       color: var(--color-text-secondary);
@@ -1917,6 +2065,9 @@
   <div class="loading-head">
     <h2 id="loading-title">맞춤 매물 찾는 중…</h2>
     <p id="loading-subtitle">통근시간 분석 + AI 코멘트가 끝나는 동안 잠깐 음악 한 곡 어떠세요</p>
+    <!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) -->
+    <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--color-text-tertiary);">개발용으로 만든 타이머입니다 (최종때는 삭제)</div>
+    <div id="analysis-timer" style="margin-top:6px;display:inline-block;font-size:15px;font-weight:700;color:var(--color-brand-primary);background:var(--color-brand-bg-subtle);border:1px solid var(--color-brand-primary);border-radius:8px;padding:6px 14px;font-feature-settings:'tnum';font-variant-numeric:tabular-nums;">⏱ 0.0초</div>
   </div>
 
   <div class="progress-steps" id="progress-steps">
@@ -1959,6 +2110,14 @@
   </button>
 </div>
 
+<!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) — 페이지 로드 시점부터 카운트 -->
+<script>
+  window._analysisTimerInterval = setInterval(function(){
+    var el = document.getElementById('analysis-timer');
+    if (el) el.textContent = '⏱ ' + (performance.now() / 1000).toFixed(1) + '초';
+  }, 100);
+</script>
+
 <header>
   <a href="/" class="back-link">← 처음으로</a>
   <h1>BADUGI</h1>
@@ -1966,13 +2125,29 @@
 </header>
 
 <main id="main" style="display:none;">
-  <div class="summary-bar" id="summary"></div>
+  <div class="combined-bar">
+    <div class="summary-bar" id="summary"></div>
+    <div class="sort-bar" id="sort-bar">
+      <span style="font-size:13px;color:var(--color-text-secondary);padding:0 16px;font-weight:500">
+        정렬 기준 <span id="sort-badge" style="display:none;color:#7c3aed;font-weight:700"></span>
+      </span>
+    </div>
+  </div>
+
   <div class="result-layout">
-    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
+    <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      </div>
+      <div class="sort-panel" id="sort-panel">
+        <div class="sort-panel-header">
+          <span class="sort-panel-title">정렬 기준</span>
+          <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
+        </div>
+        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+        <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -1996,25 +2171,23 @@
       </div>
     </div>
 
-    <!-- spec-17: 단지 상세 모달 -->
-    <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-panel__drag"></div>
-        <div class="detail-panel__header">
-          <h2 class="detail-panel__title" id="detail-title">-</h2>
-          <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
-        </div>
-        <div class="detail-panel__tabs">
-          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-        </div>
-        <div class="detail-panel__body" id="detail-body">
-          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-          <div class="detail-tab-pane active" id="detail-tab-info"></div>
-          <div class="detail-tab-pane" id="detail-tab-price"></div>
-          <div class="detail-tab-pane" id="detail-tab-poi"></div>
-        </div>
+    <!-- spec-17: 단지 상세 사이드 패널 -->
+    <div class="resize-handle detail-resize-handle" id="detail-resize-handle" style="display:none"></div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-panel__header">
+        <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-panel__close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-panel__tabs">
+        <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+      </div>
+      <div class="detail-panel__body" id="detail-body">
+        <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+        <div class="detail-tab-pane active" id="detail-tab-info"></div>
+        <div class="detail-tab-pane" id="detail-tab-price"></div>
+        <div class="detail-tab-pane" id="detail-tab-poi"></div>
       </div>
     </div>
 
@@ -2054,14 +2227,22 @@
     <!-- spec-19: 드래그 리사이즈 핸들 -->
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
-    <div class="map-panel">
+    <div class="map-panel" style="position:relative">
       <div id="map"></div>
+      <div id="map-legend">
+        <div class="lg-title">통근시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <hr class="lg-divider">
+        <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+      </div>
     </div>
   </div>
 </main>
 
 <!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
-<div class="pin-tooltip hidden" id="pin-tooltip" onclick="tooltipDetailClick()">
+<div class="pin-tooltip hidden" id="pin-tooltip">
   <div class="pin-tooltip__head">
     <div class="pin-tooltip__top">
       <span class="pin-tooltip__name" id="tt-apt-nm"></span>
@@ -2084,10 +2265,6 @@
       </div>
     </div>
     <div class="pin-tooltip__comment" id="tt-comment" style="display:none"></div>
-  </div>
-  <div class="pin-tooltip__cta">
-    <span>상세 보기</span>
-    <span class="pin-tooltip__cta-arrow">→</span>
   </div>
 </div>
 
@@ -2209,7 +2386,10 @@ function escHtml(s){
 //  검색 실행
 // ═══════════════════════════════════════════════════════
 const THIS_YEAR = new Date().getFullYear();
-let kakaoReady = new Promise(resolve => { kakao.maps.load(resolve); });
+
+let kakaoReady = new Promise(resolve => {
+  kakao.maps.load(resolve);
+});
 
 async function runSearch(){
   const ctrl = new AbortController();
@@ -2232,6 +2412,7 @@ async function runSearch(){
     }
   } catch(err){
     clearTimeout(_tid);
+    if(window._analysisTimerInterval){ clearInterval(window._analysisTimerInterval); window._analysisTimerInterval=null; }
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('main').style.display='flex';
     const msg = err.name === 'AbortError' ? '검색 시간이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요.' : err.message;
@@ -2301,8 +2482,11 @@ function onSearchDone(){
   document.getElementById('loading-subtitle').innerHTML =
     `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요.`;
   document.getElementById('done-btn').classList.add('show');
-  // 분석 완료 메시지 잠깐 보여준 뒤 자동 전환 (수동 클릭도 그대로 가능)
-  setTimeout(showResults, 1200);
+  // ⏱ 개발용 타이머 정지 + 최종 시간 표시 (배포 전 제거 예정)
+  if(window._analysisTimerInterval){ clearInterval(window._analysisTimerInterval); window._analysisTimerInterval=null; }
+  const _tEl = document.getElementById('analysis-timer');
+  if(_tEl) _tEl.textContent = '⏱ 분석 완료 — ' + (performance.now()/1000).toFixed(1) + '초';
+  // 자동 전환 제거 — 아래 '결과 보기' 버튼을 눌러야 결과로 넘어감
 }
 function showResults(){
   if(document.getElementById('loading').classList.contains('hidden')) return;
@@ -2338,22 +2522,32 @@ function renderStatsPanel(data){
   const s = data.stats || {};
   if(!s.total) return '';
 
-  // 통근 × 평균가 — 미니 가로 막대 (최저 버킷만 빨강 강조)
+  // 통근 × 평균가 — 범례와 동일한 색상 적용
+  // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
+  const bucketColor = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
+    if (start <= 45) return '#f97316'; // 46~60분 → 주황
+    return '#f97316';
+  };
+  // 라벨을 범례 텍스트로 정규화
+  const bucketLabel = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '30분 이하';
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '31~45분';
+    return '46~60분';
+  };
   let curveHtml = '';
   if(s.commute_curve && s.commute_curve.length){
     const maxPrice = Math.max(...s.commute_curve.map(b=>b.avg_price||0));
-    const minPrice = Math.min(...s.commute_curve.filter(b=>b.avg_price).map(b=>b.avg_price));
     const rows = s.commute_curve.map(b=>{
       const pct = maxPrice ? Math.max(8, Math.round((b.avg_price||0)/maxPrice*100)) : 0;
-      const isCheap = b.avg_price === minPrice;
-      // 라벨 정리: "30분 이내"→"≤30분", "50분 초과"→">50분"
-      const lbl = (b.label||'')
-        .replace(/^(\d+)분 이내$/, '≤$1분')
-        .replace(/^(\d+)분 초과$/, '>$1분')
-        .replace(/^(\d+)~(\d+)분$/, '$1~$2분');
-      return `<div class="minibar-row ${isCheap?'cheap':''}">
-        <span class="minibar-row__label num">${escHtml(lbl)}</span>
-        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%"></div></div>
+      const color = bucketColor(b.label||'');
+      return `<div class="minibar-row">
+        <span class="minibar-row__dot" style="background:${color}"></span>
+        <span class="minibar-row__label num">${escHtml(bucketLabel(b.label||''))}</span>
+        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%;background:${color}"></div></div>
         <span class="minibar-row__value num">${shortPrice(b.avg_price).replace('억','')}</span>
       </div>`;
     }).join('');
@@ -2465,10 +2659,10 @@ function openDetail(aptSeq) {
     if (card && card.lat && card.lng)
       kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
   }
-  // 모달 초기화
-  const overlay = document.getElementById('detail-overlay');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  // 사이드 패널 열기
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.body.style.overflow = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -2489,13 +2683,16 @@ function openDetail(aptSeq) {
 }
 
 function closeDetail() {
-  document.getElementById('detail-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
+  if (panelMode === 'detail') {
+    backToList();
+  } else {
+    document.getElementById('detail-panel').classList.remove('open');
+    document.getElementById('detail-resize-handle').style.display = 'none';
+    document.querySelector('.detail-panel__tabs').style.display = '';
+  }
   clearPoiMarker();
 }
-function closeDetailOnBg(e) {
-  if (e.target === document.getElementById('detail-overlay')) closeDetail();
-}
+function closeDetailOnBg(e) {}
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -2520,6 +2717,40 @@ function _renderDetail(d) {
   const subway = (b.subway_line && b.subway_sta)
     ? `${escHtml(b.subway_line)} ${escHtml(b.subway_sta)}${b.subway_walk ? ` (도보 ${b.subway_walk}분)` : ''}`
     : '-';
+
+  // ── 입지·구조 (spec-31): 데이터 있는 행만 노출 ──────────────
+  const ihRows = [];
+  if (b.slope_label) {
+    const lv = b.slope_level || 1;  // 레벨은 백엔드 산출값 사용 (라벨 문자열 결합 제거)
+    const ind = `<span class="slope-ind" data-lv="${lv}"><i></i><i></i><i></i><i></i></span>`;
+    const tip = b.slope_avg != null ? ` title="평균 경사 ${b.slope_avg}°"` : '';
+    ihRows.push(`<div${tip}><div class="detail-kv__label">경사</div>`
+      + `<div class="detail-kv__value">${ind}${escHtml(b.slope_label)}`
+      + (b.slope_hint ? ` <span class="detail-kv__sub">· ${escHtml(b.slope_hint)}</span>` : '')
+      + `</div></div>`);
+  }
+  if (b.far != null && b.far > 0) {
+    const lvl = b.far_level ? ` <span class="detail-kv__sub">· ${escHtml(b.far_level)}</span>` : '';
+    ihRows.push(`<div title="아파트 대개 200~250%"><div class="detail-kv__label">용적률</div>`
+      + `<div class="detail-kv__value">${b.far}%${lvl}</div></div>`);
+  }
+  if (b.bcr != null && b.bcr > 0) {
+    const lvl = b.bcr_level ? ` <span class="detail-kv__sub">· ${escHtml(b.bcr_level)}</span>` : '';
+    ihRows.push(`<div title="아파트 대개 15~25%"><div class="detail-kv__label">건폐율</div>`
+      + `<div class="detail-kv__value">${b.bcr}%${lvl}</div></div>`);
+  }
+  if (b.structure) {
+    ihRows.push(`<div><div class="detail-kv__label">구조</div>`
+      + `<div class="detail-kv__value">${escHtml(b.structure)}</div></div>`);
+  }
+  if (b.approve_ym) {
+    ihRows.push(`<div><div class="detail-kv__label">사용승인</div>`
+      + `<div class="detail-kv__value">${escHtml(b.approve_ym)}</div></div>`);
+  }
+  const infraSection = ihRows.length
+    ? `<div class="detail-section"><div class="detail-section__title">입지·구조</div>`
+      + `<div class="detail-kv">${ihRows.join('')}</div></div>`
+    : '';
 
   const ps = d.price_summary || {};
   let psBadge = '-';
@@ -2546,6 +2777,7 @@ function _renderDetail(d) {
         <div><div class="detail-kv__label">현관</div><div class="detail-kv__value">${hall}</div></div>
       </div>
     </div>
+    ${infraSection}
     <div class="detail-section">
       <div class="detail-section__title">가까운 지하철</div>
       <div style="font-size:14px;font-weight:600;">${subway}</div>
@@ -2681,6 +2913,11 @@ const CHAT_SUGGESTIONS = [
   '투자 가치 있어?',
   '학군이랑 주변 환경은?',
 ];
+
+function _toggleFriend(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
 
 function _openChatFromEl(el) {
   openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '',
@@ -3011,10 +3248,11 @@ function showPoiMarker(poiName, walkMin, distM) {
   // 실제 거리 + 여유분으로 동적 반경 (최소 600m, 최대 2000m)
   const searchRadius = Math.min(Math.max(distM + 300, 600), 2000);
 
+  const loc = new kakao.maps.LatLng(card.lat, card.lng);
   const ps = new kakao.maps.services.Places();
-  ps.keywordSearch(poiName, (data, status) => {
-    if (status !== kakao.maps.services.Status.OK || !data.length) return;
-    const doc = data[0];
+  const opts = { location: loc, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE };
+
+  function place(doc) {
     const pos = new kakao.maps.LatLng(parseFloat(doc.y), parseFloat(doc.x));
     _poiMarker = new kakao.maps.CustomOverlay({
       position: pos,
@@ -3032,11 +3270,18 @@ function showPoiMarker(poiName, walkMin, distM) {
     kakaoMap.setLevel(4);
     kakaoMap.setCenter(pos);
     kakaoMap.panBy(-160, -100);
-  }, {
-    location: new kakao.maps.LatLng(card.lat, card.lng),
-    radius: searchRadius,
-    size: 1
-  });
+  }
+
+  // 풀네임 검색 → 실패 시 앞 6글자로 폴백 (validateAndFilterPois와 동일 전략).
+  // "구리여중고교"처럼 축약·결합된 시설명도 마커가 찍히도록 함.
+  ps.keywordSearch(poiName, (data, status) => {
+    if (status === kakao.maps.services.Status.OK && data.length) { place(data[0]); return; }
+    if (poiName.length > 4) {
+      ps.keywordSearch(poiName.substring(0, 6), (d2, s2) => {
+        if (s2 === kakao.maps.services.Status.OK && d2.length) place(d2[0]);
+      }, opts);
+    }
+  }, opts);
 }
 
 // ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
@@ -3119,7 +3364,45 @@ async function validateAndFilterPois() {
   });
 })();
 
-// ── 채팅 패널 좌측 드래그 리사이즈 ──────────────────────────
+// ── 상세 사이드 패널 리사이즈 ────────────────────────────────
+(function() {
+  const handle = document.getElementById('detail-resize-handle');
+  const panel  = document.getElementById('detail-panel');
+  const layout = document.querySelector('.result-layout');
+  if (!handle || !panel || !layout) return;
+
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const layoutW = layout.getBoundingClientRect().width;
+    const newW = Math.max(240, Math.min(layoutW - 560, startW - (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+    panel.style.minWidth = newW + 'px';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+})();
+
+// ── 채팅 패널 좌측 드래그 리사이즈 ────────────────────────────────
 (function() {
   const CHAT_W_KEY = 'chat_panel_w';
   const panel = document.getElementById('chat-panel');
@@ -3164,7 +3447,7 @@ async function validateAndFilterPois() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!document.getElementById('route-overlay').classList.contains('hidden')) { closeRoute(); return; }
-    if (!document.getElementById('detail-overlay').classList.contains('hidden')) closeDetail();
+    if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
     if (!document.getElementById('compare-overlay').classList.contains('hidden')) closeCompare();
   }
 });
@@ -3481,24 +3764,29 @@ function renderRecCard(c, wpId, cmpMode=false){
   </div>`;
 
   const comment = c.friend_comment || '';
-  const friendHtml = comment
-    ? `<div class="rec-card__friend" style="cursor:pointer"
+  const friendInner = comment
+    ? `<div class="rec-card__friend"
         data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
         data-lat="${c.lat||''}" data-lng="${c.lng||''}"
-        onclick="event.stopPropagation();_openChatFromEl(this)" title="더 물어보기">
+        onclick="event.stopPropagation();_openChatFromEl(this)" style="cursor:pointer" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
-        <div class="rec-card__friend-body">
+        <div>
           <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
           <div class="rec-card__friend-text">${escHtml(comment)}</div>
         </div>
       </div>`
     : `<div class="rec-card__friend empty">
         <div class="rec-card__friend-avatar">···</div>
-        <div class="rec-card__friend-body">
+        <div>
           <div class="rec-card__friend-label">한마디 (생성 중)</div>
-          <div class="rec-card__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+          <div class="rec-card__friend-text"><span class="spinner-mini"></span>살펴보는 중...</div>
         </div>
       </div>`;
+  const friendHtml = `
+    <button class="rec-card__friend-toggle" onclick="event.stopPropagation();_toggleFriend(this)" type="button">
+      <span>AI 한마디</span><span class="toggle-arrow">▼</span>
+    </button>
+    <div class="rec-card__friend-body-wrap">${friendInner}</div>`;
 
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
@@ -3606,22 +3894,21 @@ function renderListCard(c, wpId, cmpMode=false){
     ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_lcId)?'checked':''} onchange="toggleCompare('${_lcId}',this)"> 비교</label>`
     : '';
 
+  const commuteChip = dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
+    ? `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num">${c.total_time_min_1}분</strong> · W2 <strong class="num">${c.total_time_min_2}분</strong></span>`
+    : `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')} <strong class="num">${c.total_time_min}분</strong></span>`;
+
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
     ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
-      <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__name">${escHtml(c.apt_nm)}<span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__meta">${metaParts.join(' · ')}</div>
+    </div>
+    <div class="list-card__right">
       <div class="list-card__price num">${shortPrice(c.price_low)}${_priceChgBadge(c.price_chg_6m_pct)}</div>
+      <div class="list-card__row">${commuteChip}</div>
     </div>
-    <div class="list-card__meta">${metaParts.join(' · ')}</div>
-    ${_whyTagsHtml(c.why_tags)}
-    <div class="list-card__row">
-      ${dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
-        ? `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
-        : `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
-    </div>
-    ${_commuteEconRow(c)}
-    ${commentHtml}
   </article>`;
 }
 
@@ -3632,6 +3919,7 @@ function renderCards(data){
   // 전역 상태 저장 (탭 전환 / 재렌더 시 참조)
   window._lastSearchData = data;
   window._lastCards      = data.cards || [];
+  window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
 
@@ -3670,7 +3958,7 @@ function renderCards(data){
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
-  let html = partialBanner + renderStatsPanel(data);
+  let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
   html += `
@@ -3686,17 +3974,15 @@ function renderCards(data){
     </div>
     <div id="apt-search-result"></div>`;
 
-  // 추천 섹션
+  // 추천 요약 헤더만 표시 (개별 카드 없음)
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
     </div>`;
-    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
   }
 
-  // 버킷별 접힘 섹션
-  if(rest.length){
+  if(false && rest.length){
     const buckets = data.buckets || [];
     html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
     buckets.forEach(b=>{
@@ -3758,6 +4044,7 @@ function renderCards(data){
   }
 
   panel.innerHTML = html;
+  initSortBar(data.cards);
 }
 
 function toggleBucket(headEl){
@@ -3783,15 +4070,15 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin pin-workplace">${dualMode ? 'W1 직장' : '직장'}</div>`,
+    content: `<div class="pin-workplace-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="22" height="18" rx="1" fill="white"/><rect x="21" y="15" width="14" height="8" rx="1" fill="white"/><rect x="25" y="11" width="6" height="6" rx="1" fill="white"/><rect x="19" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="19" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="23" y="34" width="10" height="5" rx="0.5" fill="#0f172a"/>${dualMode ? '<circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">1</text>' : ''}</svg></div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
 
-  // spec-13: W2 직장 핀 (파란색)
+  // spec-13: W2 직장 핀
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin pin-workplace-2">W2 직장</div>',
+      content: '<div class="pin-workplace-2-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="20" y="22" width="16" height="20" rx="1" fill="white"/><rect x="15" y="28" width="26" height="14" rx="1" fill="white"/><rect x="25" y="14" width="6" height="10" rx="1" fill="white"/><rect x="22" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="30" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">2</text></svg></div>',
       yAnchor: 1, zIndex: 100,
     }).setMap(kakaoMap);
   }
@@ -3820,13 +4107,18 @@ async function initMap(data){
     group.cards.sort((a,b)=>a.price_low - b.price_low);
     const main = group.cards[0];
     const ptCount = group.cards.length;
-    const cls = group.any_recommended ? 'pin-best' : '';
+    const t = main.total_time_min || 999;
+    const tCls = t <= 30 ? 'pin-t1' : t <= 45 ? 'pin-t2' : t <= 60 ? 'pin-t3' : 'pin-t4';
+    const cls = group.any_recommended ? 'pin-best' : tCls;
     const z = group.any_recommended ? 50 : 5;
-    const multiMark = ptCount > 1 ? `<span class="pin-multi-mark">${ptCount}</span>` : '';
-    const pinText = `${escHtml(main.pyeong_type||'')} ${shortPrice(main.price_low)} ${main.total_time_min}분`;
+    const crownHtml = group.any_recommended ? '<div class="pin-crown">👑</div>' : '';
+    const multiHtml = ptCount > 1 ? `<span class="pin-multi">${ptCount}</span>` : '';
+    const timeText = t < 999 ? `${t}분` : '?';
+    const subText = main.pyeong_type ? `<div class="pin-sub">${escHtml(main.pyeong_type)}</div>` : '';
+    const pinHtml = `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${crownHtml}<div class="pin-roof"></div><div class="pin-body" style="position:relative">${multiHtml}<div class="pin-time">${timeText}</div>${subText}</div></div>`;
     const overlay = new kakao.maps.CustomOverlay({
       position: pos,
-      content: `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${pinText}${multiMark}</div>`,
+      content: pinHtml,
       yAnchor: 1,
       zIndex: z,
     });
@@ -3865,7 +4157,6 @@ function zoomLevelFor(min){
 // ═══════════════════════════════════════════════════════
 const tooltip = document.getElementById('pin-tooltip');
 let tooltipTimer = null;
-let tooltipCurrentSeq = null;
 
 // 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
 let _ttGroup = null;
@@ -3876,8 +4167,6 @@ function showTooltip(pinEl, group, wpId){
   clearTimeout(tooltipTimer);
   _ttGroup = group;
   _ttActivePtIdx = 0;
-  _tooltipWpId = wpId;
-  tooltipCurrentSeq = group.apt_seq;
 
   // 상단: 단지명 + 배지
   document.getElementById('tt-apt-nm').textContent = group.apt_nm;
@@ -3965,27 +4254,28 @@ function renderTooltipPt(idx){
   }
 }
 function scheduleHideTooltip(){ tooltipTimer = setTimeout(hideTooltip, 250); }
-function hideTooltip(){ tooltip.classList.add('hidden'); tooltipCurrentSeq=null; }
+function hideTooltip(){ tooltip.classList.add('hidden'); }
 tooltip.addEventListener('mouseenter', ()=>clearTimeout(tooltipTimer));
 tooltip.addEventListener('mouseleave', ()=>scheduleHideTooltip());
 
 // ═══════════════════════════════════════════════════════
 //  상세 패널
 // ═══════════════════════════════════════════════════════
-let _tooltipWpId = null;
-function tooltipDetailClick(){
-  if(tooltipCurrentSeq && _tooltipWpId != null){
-    hideTooltip();
-    showDetail(tooltipCurrentSeq, _tooltipWpId);
-  }
-}
 
 async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
   _currentAptSeq = aptSeq;
   clearPoiMarker();
-  const panel = document.getElementById('cards-panel');
+
+  // 사이드 패널 열기
+  const sidePanel = document.getElementById('detail-panel');
+  sidePanel.classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.getElementById('detail-title').textContent = '불러오는 중...';
+  document.querySelector('.detail-panel__tabs').style.display = 'none';
+
+  const panel = document.getElementById('detail-body');
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
 
@@ -4008,7 +4298,7 @@ async function showDetail(aptSeq, wpId){
     renderDetailPanel(detail, routes, wpId);
     if (kakaoMap) validateAndFilterPois();
   } catch(e){
-    panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+    document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -4016,11 +4306,15 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-resize-handle').style.display = 'none';
+  document.querySelector('.detail-panel__tabs').style.display = '';
   if(resultData) renderCards(resultData);
 }
 
 function renderDetailPanel(d, routes, wpId){
-  const panel = document.getElementById('cards-panel');
+  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
   const bld = d.building || {};
@@ -4342,6 +4636,11 @@ function getChartSeries(key){
 function initDetailChart(key, aptNm, umdNm){
   const canvas = document.getElementById('dp-chart');
   if(!canvas) return;
+  // Chart.js가 아직 로드 안 됐으면 대기 후 재시도
+  if(typeof Chart === 'undefined'){
+    setTimeout(() => initDetailChart(key, aptNm, umdNm), 100);
+    return;
+  }
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   const {labels,complexData,dongData} = getChartSeries(key);
   // 데이터 포인트가 적으면 점만, 충분하면 선+점
@@ -4415,7 +4714,7 @@ function renderTradesHTML(trades){
 
 // ── POI (카테고리별 그룹, 중요도순) ──────────────────────────
 // poi_lclas_cd 실제 코드 (Supabase apt_walking_poi 확인 2026-05-25):
-// A=학교(중고등), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
+// A=학교(초중고), B=어린이집/유치원, C=학원, D=교통(D01=지하철출구·D02=버스),
 // E=쇼핑/편의(백화점·마트·편의점), F=의료(병원·약국),
 // G=음식점, H=공공기관(구청·경찰·소방), I=공원/녹지,
 // J=문화/여가(영화관·박물관·도서관·J01~J04), K=스포츠(헬스장·수영장), L=금융(은행·ATM)
@@ -4433,6 +4732,9 @@ const POI_ALLOWED_SUBS = {
   L: new Set(['L01','L02']),
   J: new Set(['J01','J02','J03','J04']),
 };
+// 교통(D) 항목 표시용 접미사 — 학교명 등 정류장/출구가 시설명으로 보여 헷갈리는 것 방지.
+// (검색용 data-poi-name은 원본 유지하고, 보이는 이름에만 붙임)
+const POI_SUB_LABEL = { D01: '지하철역', D02: '버스정류장' };
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
@@ -4453,10 +4755,143 @@ function renderPOIHTML(poi){
         data-walk-min="${p.walking_min||0}"
         data-dist-m="${Math.round(p.distance_m||0)}"
         onclick="togglePoiMarker(this)">
-        <div class="dp-poi-name">${escHtml(p.name)}</div>
+        <div class="dp-poi-name">${escHtml(p.name)}${POI_SUB_LABEL[p.sub_category] ? ` <span class="dp-poi-tag">(${POI_SUB_LABEL[p.sub_category]})</span>` : ''}</div>
         <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
       </div>`).join('')}`;
   }).join('');
+}
+
+// ── 체크박스 정렬 패널 ────────────────────────────────────────
+const SORT_OPTIONS = [
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',  icon: 'ti-clock',          group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',    icon: 'ti-tag',            group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',    icon: 'ti-coins',          group: '기본' },
+  { value: 'build_year:desc',              label: '신축순',           icon: 'ti-building',       group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',  icon: 'ti-chart-bar',      group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',    icon: 'ti-users',          group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',      icon: 'ti-transfer',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',      icon: 'ti-maximize',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '대중교통 도보',    icon: 'ti-walk',           group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',        icon: 'ti-trees',          group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',      icon: 'ti-train',          group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',    icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',  icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',        icon: 'ti-shopping-cart',  group: '도보' },
+];
+
+// 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
+let _sortChecked = []; // e.g. ['total_time_min:asc', 'price_low:asc']
+
+function initSortBar(cards) {
+  if (!cards || !cards.length) return;
+
+  const wrap = document.getElementById('sort-chips-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SORT_OPTIONS.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'sort-check-item';
+    el.dataset.value = o.value;
+    el.innerHTML = `<span class="rank-badge"></span><div class="icon-bubble"><i class="ti ${o.icon}"></i></div><span class="sort-chip-label">${o.label}</span>`;
+    el.addEventListener('click', () => onSortCheckClick(o.value));
+    wrap.appendChild(el);
+  });
+
+  document.getElementById('sort-bar').classList.add('visible');
+}
+
+function onSortCheckClick(value) {
+  const idx = _sortChecked.indexOf(value);
+  if (idx === -1) {
+    _sortChecked.push(value);
+  } else {
+    _sortChecked.splice(idx, 1);
+  }
+  _refreshSortUI();
+  applySortOrder();
+}
+
+function _refreshSortUI() {
+  document.querySelectorAll('.sort-check-item').forEach(el => {
+    const rank = _sortChecked.indexOf(el.dataset.value);
+    el.classList.toggle('checked', rank !== -1);
+    const badge = el.querySelector('.rank-badge');
+    if (badge) badge.textContent = rank !== -1 ? rank + 1 : '';
+  });
+
+  // 토글 버튼 배지
+  const badge = document.getElementById('sort-badge');
+  if (badge) {
+    badge.textContent = _sortChecked.length || '';
+    badge.style.display = _sortChecked.length ? 'inline-flex' : 'none';
+  }
+
+  // 힌트 텍스트: "1순위 통근 짧은순 → 2순위 가격 낮은순"
+  const hint = document.getElementById('sort-hint');
+  if (!hint) return;
+  if (!_sortChecked.length) {
+    hint.innerHTML = '클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정';
+    return;
+  }
+  const labelMap = Object.fromEntries(SORT_OPTIONS.map(o => [o.value, o.label]));
+  const parts = _sortChecked.map((v, i) =>
+    `<span class="hint-order">${i+1}순위</span> ${labelMap[v] || v}`
+  );
+  hint.innerHTML = parts.join(' &nbsp;→&nbsp; ');
+}
+
+function toggleSortPanel() {
+  const panel = document.getElementById('sort-panel');
+  const btn = document.getElementById('sort-toggle-btn');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+// 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
+function updateSortDropdowns() {}
+function onSortChange() { applySortOrder(); }
+
+function applySortOrder() {
+  const keys = _sortChecked;
+
+  if (!keys.length) {
+    if (window._lastSearchData) renderCards(window._lastSearchData);
+    return;
+  }
+
+  const cards = [...(window._lastCards || [])];
+  cards.sort((a, b) => {
+    for (const key of keys) {
+      const [field, dir] = key.split(':');
+      const av = a[field] ?? null;
+      const bv = b[field] ?? null;
+      if (av === null && bv === null) continue;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const diff = dir === 'desc' ? bv - av : av - bv;
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+
+  _renderSortedFlat(cards);
+}
+
+function _renderSortedFlat(cards) {
+  const data = window._lastSearchData;
+  if (!data) return;
+  const panel = document.getElementById('cards-panel');
+  const wpId = data.wp_id;
+  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
+  panel.innerHTML = html;
+  _updateFavTab();
+}
+
+function resetSort() {
+  _sortChecked = [];
+  _refreshSortUI();
+  if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
 // ── 실행 ─────────────────────────────────────────────────────

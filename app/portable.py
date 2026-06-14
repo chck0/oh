@@ -5,10 +5,10 @@ SQLite ↔ Postgres 비호환 SQL을 Python 레벨로 끌어올린 헬퍼.
 DB별 분기가 꼭 필요한 곳(UPSERT, schema bootstrap 등)만 여기서 처리.
 """
 from __future__ import annotations
-import os
 from datetime import date
+from config import cfg
 
-USE_PG = bool(os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL'))
+USE_PG = cfg.USE_PG  # re-export for backward compat during migration
 
 
 # ── 날짜 헬퍼 ────────────────────────────────────────────────
@@ -67,6 +67,21 @@ def get_last_id(conn, cursor, table: str, id_col: str):
     return cursor.lastrowid
 
 
+def resync_sequence(conn, table: str, id_col: str) -> None:
+    """SERIAL 시퀀스를 MAX(id_col)로 보정 (Postgres 전용, SQLite는 no-op).
+
+    외부 적재/마이그레이션으로 시퀀스가 테이블 max보다 뒤처지면 INSERT 시
+    duplicate key(UniqueViolation)가 난다. setval로 nextval=max+1 되도록 복구.
+    table/id_col은 코드 내부 상수만 전달(사용자 입력 금지) — f-string 사용.
+    """
+    if not USE_PG:
+        return
+    conn.execute(
+        f"SELECT setval(pg_get_serial_sequence('{table}', '{id_col}'), "
+        f"COALESCE((SELECT MAX({id_col}) FROM {table}), 1), true)"
+    )
+
+
 # ── GREATEST 헬퍼 (dual workplace 정렬용) ────────────────────
 def greatest(*cols: str) -> str:
     """portable GREATEST(col1, col2, ...).
@@ -81,13 +96,20 @@ def greatest(*cols: str) -> str:
 
 
 # ── 컬럼 목록 조회 (PRAGMA table_info 대체) ──────────────────
+_col_cache: dict[str, list[str]] = {}
+
 def list_columns(conn, table: str) -> list[str]:
+    if table in _col_cache:
+        return _col_cache[table]
     if USE_PG:
         rows = conn.execute(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name=? ORDER BY ordinal_position",
             [table],
         ).fetchall()
-        return [r[0] for r in rows]
-    rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
-    return [r[1] for r in rows]
+        result = [r[0] for r in rows]
+    else:
+        rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
+        result = [r[1] for r in rows]
+    _col_cache[table] = result
+    return result

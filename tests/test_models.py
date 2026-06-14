@@ -7,7 +7,8 @@ app/models.py Pydantic 스키마 검증 테스트
 """
 import pytest
 from pydantic import ValidationError
-from app.models import SearchRequest, TransitStep, AptResult
+from app.search import SearchRequest          # 실제 사용되는 SearchRequest (search.py)
+from app.models import TransitStep, AptResult  # 공용 응답 스키마
 
 
 # ── SearchRequest ─────────────────────────────────────────────
@@ -27,7 +28,7 @@ class TestSearchRequest:
 
     def test_default_pyeong_types(self):
         req = SearchRequest(workplace_address='서울')
-        assert req.pyeong_types == ['20평대']
+        assert req.pyeong_types == ['10평대', '20평대']  # search.py 기본값
 
     def test_custom_values(self):
         req = SearchRequest(
@@ -45,8 +46,8 @@ class TestSearchRequest:
         assert req.max_minutes == 10
 
     def test_max_minutes_maximum_boundary(self):
-        req = SearchRequest(workplace_address='서울', max_minutes=120)
-        assert req.max_minutes == 120
+        req = SearchRequest(workplace_address='서울', max_minutes=60)  # le=60
+        assert req.max_minutes == 60
 
     def test_max_minutes_below_min_raises(self):
         with pytest.raises(ValidationError):
@@ -54,7 +55,7 @@ class TestSearchRequest:
 
     def test_max_minutes_above_max_raises(self):
         with pytest.raises(ValidationError):
-            SearchRequest(workplace_address='서울', max_minutes=121)
+            SearchRequest(workplace_address='서울', max_minutes=61)  # le=60
 
     def test_missing_workplace_address_raises(self):
         with pytest.raises(ValidationError):

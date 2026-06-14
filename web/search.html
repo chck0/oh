@@ -258,24 +258,60 @@
       background: var(--color-bg-muted);
     }
 
-    /* ─── 가격 row ─────────────────────────────────────────── */
-    .price-row {
-      display: flex; align-items: center; gap: 10px;
-      flex-wrap: wrap;
+    /* ─── 가격 슬라이더 ────────────────────────────────────── */
+    .price-slider-wrap { padding: 4px 4px 0; }
+    .price-slider-labels {
+      display: flex; justify-content: space-between;
+      margin-bottom: 14px;
     }
-    .price-row input { width: 96px; text-align: right; }
-    .price-row .unit {
-      font-size: 15px; font-weight: 500;
-      color: var(--color-text-secondary);
+    .price-slider-labels .price-badge {
+      font-size: 14px; font-weight: 700;
+      color: var(--color-brand-primary);
+      background: var(--color-brand-bg-subtle);
+      padding: 5px 13px; border-radius: 999px;
     }
-    .price-range-row {
-      display: flex; align-items: center; gap: 10px;
-      flex-wrap: wrap; margin-bottom: 8px;
+    .price-slider-labels .price-badge span {
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-secondary); margin-right: 2px;
     }
-    .price-range-row input { width: 96px; text-align: right; }
-    .price-range-row .unit {
-      font-size: 15px; font-weight: 500;
-      color: var(--color-text-secondary);
+    .price-dual-range {
+      position: relative; height: 36px; display: flex; align-items: center;
+    }
+    .price-dual-range input[type=range] {
+      position: absolute; width: 100%;
+      -webkit-appearance: none; appearance: none;
+      background: transparent; pointer-events: none;
+      height: 4px; outline: none;
+    }
+    .price-dual-range input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: white; border: 3px solid var(--color-brand-primary);
+      cursor: pointer; pointer-events: all;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 2;
+    }
+    .price-dual-range input[type=range]::-moz-range-thumb {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: white; border: 3px solid var(--color-brand-primary);
+      cursor: pointer; pointer-events: all;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .price-track {
+      position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+      height: 4px; border-radius: 2px;
+      background: var(--color-border-strong); z-index: 0;
+    }
+    .price-track-fill {
+      position: absolute; height: 100%; border-radius: 2px;
+      background: var(--color-brand-primary);
+    }
+    .price-ticks {
+      display: flex; justify-content: space-between;
+      margin-top: 8px; padding: 0 2px;
+    }
+    .price-ticks span {
+      font-size: 11px; color: var(--color-text-tertiary); font-weight: 500;
     }
     /* 가격 범위 너무 넓음 경고 */
     .price-warn {
@@ -291,10 +327,6 @@
     }
     .price-warn.show { display: block; }
     .price-warn strong { color: #E65100; font-weight: 600; }
-    .price-label {
-      font-size: 13px; font-weight: 600; width: 28px;
-      color: var(--color-text-secondary);
-    }
 
     /* ─── 칩 그룹 ──────────────────────────────────────────── */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -520,8 +552,8 @@
 <main class="page">
 
   <header class="page-head">
-    <h2>조건을 알려주세요</h2>
-    <p>몇 가지만 알려주시면 맞춤 매물을 찾아드려요.</p>
+    <h2>당신을 위한 최적화 아파트 추천</h2>
+    <p>직장주소, 금액, 통근시간 3가지 정보를 넣어주세요.</p>
   </header>
 
   <form id="search-form">
@@ -583,25 +615,28 @@
           </div>
         </span>
       </div>
-      <div class="price-range-row">
-        <span class="price-label">최소</span>
-        <input type="number" id="min-price-eok" min="0" step="1" placeholder="제한없음">
-        <span class="unit">억</span>
-        <input type="number" id="min-price-man" min="0" max="9000" step="1000" placeholder="0">
-        <span class="unit">만원</span>
+      <div class="price-slider-wrap">
+        <div class="price-slider-labels">
+          <div class="price-badge" id="price-label-min"><span>최소</span>제한없음</div>
+          <div class="price-badge" id="price-label-max"><span>최대</span>5억</div>
+        </div>
+        <div class="price-dual-range">
+          <div class="price-track"><div class="price-track-fill" id="price-track-fill"></div></div>
+          <input type="range" id="slider-min" min="0" max="200000" step="5000" value="0" oninput="onPriceSlider()">
+          <input type="range" id="slider-max" min="0" max="200000" step="5000" value="50000" oninput="onPriceSlider()">
+        </div>
+        <div class="price-ticks">
+          <span>0원</span><span>5억</span><span>10억</span><span>15억</span><span>20억+</span>
+        </div>
       </div>
-      <div class="price-range-row">
-        <span class="price-label">최대</span>
-        <input type="number" id="price-eok" value="5" min="0" step="1" required>
-        <span class="unit">억</span>
-        <input type="number" id="price-man" value="0" min="0" max="9000" step="1000" required>
-        <span class="unit">만원</span>
-      </div>
-      <div class="hint">만원 칸은 천만 단위 (0, 1000, 2000, …, 9000) · 최소 < 최대</div>
+      <!-- 기존 JS 호환용 hidden inputs -->
+      <input type="hidden" id="min-price-eok" value="">
+      <input type="hidden" id="min-price-man" value="">
+      <input type="hidden" id="price-eok" value="5">
+      <input type="hidden" id="price-man" value="0">
       <div class="error" id="price-error"></div>
       <div class="price-warn" id="price-warn">
-        ⚠️ 가격 범위가 <strong>5억 이상</strong> 차이 나면 검색 타임아웃이 발생할 수 있어요.<br>
-        최소 금액을 입력하거나 최대 금액을 줄여서 범위를 좁혀주세요.
+        ⚠️ 가격 범위가 <strong>5억 이상</strong> 차이 나면 검색 타임아웃이 발생할 수 있어요.
       </div>
     </section>
 
@@ -627,88 +662,6 @@
         <button type="button" class="chip num active" data-value="60">60분</button>
       </div>
       <div class="hint">선택한 시간 이하로 출근 가능한 매물만 보여드려요.</div>
-    </section>
-
-    <!-- ④ 관심 평형 -->
-    <section class="section">
-      <div class="section-head">
-        <span class="section-num num">4</span>
-        <span class="section-title">관심 평형 <span class="optional">복수 선택</span></span>
-        <span class="info-wrap">
-          <button type="button" class="info-btn" aria-label="안내">i</button>
-          <div class="info-popover">
-            <strong>공급면적 기준</strong>이에요. 보통 "30평대 아파트"라고 부르는 그 단위.
-            <ul>
-              <li>10평대 (10~19평)</li>
-              <li>20평대 (20~29평)</li>
-              <li>30평대 (30~39평)</li>
-              <li>40평대 (40~49평)</li>
-            </ul>
-          </div>
-        </span>
-      </div>
-      <div class="check-chips">
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="10평미만"><span class="check-chip__box"></span><span>10평 미만</span></label>
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="10평대"><span class="check-chip__box"></span><span>10평대</span></label>
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="20평대" checked><span class="check-chip__box"></span><span>20평대</span></label>
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="30평대" checked><span class="check-chip__box"></span><span>30평대</span></label>
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="40평대"><span class="check-chip__box"></span><span>40평대</span></label>
-        <label class="check-chip"><input type="checkbox" name="pyeong" value="50평대+"><span class="check-chip__box"></span><span>50평대+</span></label>
-      </div>
-      <div class="error" id="pyeong-error"></div>
-    </section>
-
-    <!-- ⑤ 단지 세대수 -->
-    <section class="section">
-      <div class="section-head">
-        <span class="section-num num">5</span>
-        <span class="section-title">단지 세대수 <span class="optional">선택</span></span>
-        <span class="info-wrap">
-          <button type="button" class="info-btn" aria-label="안내">i</button>
-          <div class="info-popover">
-            <strong>단지 규모로 분위기가 달라져요.</strong>
-            <ul>
-              <li><strong>300세대 미만</strong> — 작은 단지. 시설은 놀이터 정도.</li>
-              <li><strong>300~700세대 (중형)</strong> — 기본 시설 갖춤. 가장 흔한 규모.</li>
-              <li><strong>700~1,500세대 (대형)</strong> — 수영장·도서관·카페 풍부.</li>
-              <li><strong>1,500세대+ (대단지)</strong> — 자체 상가·학교 갖춘 규모.</li>
-            </ul>
-          </div>
-        </span>
-      </div>
-      <div class="radio-list">
-        <label class="radio-item"><input type="radio" name="mincnt" value="" checked><span class="radio-item__dot"></span><span class="radio-item__label">제한 없음</span><span class="radio-item__hint">기본 100세대 이상</span></label>
-        <label class="radio-item"><input type="radio" name="mincnt" value="300"><span class="radio-item__dot"></span><span class="radio-item__label num">300세대 이상</span></label>
-        <label class="radio-item"><input type="radio" name="mincnt" value="500"><span class="radio-item__dot"></span><span class="radio-item__label num">500세대 이상</span></label>
-        <label class="radio-item"><input type="radio" name="mincnt" value="1000"><span class="radio-item__dot"></span><span class="radio-item__label num">1,000세대 이상</span></label>
-        <label class="radio-item"><input type="radio" name="mincnt" value="1500"><span class="radio-item__dot"></span><span class="radio-item__label num">1,500세대 이상</span></label>
-      </div>
-    </section>
-
-    <!-- ⑥ 준공연도 -->
-    <section class="section">
-      <div class="section-head">
-        <span class="section-num num">6</span>
-        <span class="section-title">준공연도 이후 <span class="optional">선택</span></span>
-        <span class="info-wrap">
-          <button type="button" class="info-btn" aria-label="안내">i</button>
-          <div class="info-popover">
-            <strong>노후 단지를 제외하고 싶을 때 설정하세요.</strong>
-            <ul>
-              <li><strong>2000년대 이후</strong> — 지하 주차장 기본 갖춤.</li>
-              <li><strong>2010년대 이후</strong> — 에너지 효율 등급 적용 단지.</li>
-              <li><strong>2020년대 이후</strong> — 스마트홈·커뮤니티시설 신축.</li>
-            </ul>
-          </div>
-        </span>
-      </div>
-      <div class="radio-list">
-        <label class="radio-item"><input type="radio" name="build_year_min" value="" checked><span class="radio-item__dot"></span><span class="radio-item__label">제한 없음</span></label>
-        <label class="radio-item"><input type="radio" name="build_year_min" value="2000"><span class="radio-item__dot"></span><span class="radio-item__label num">2000년 이후</span></label>
-        <label class="radio-item"><input type="radio" name="build_year_min" value="2010"><span class="radio-item__dot"></span><span class="radio-item__label num">2010년 이후</span></label>
-        <label class="radio-item"><input type="radio" name="build_year_min" value="2015"><span class="radio-item__dot"></span><span class="radio-item__label num">2015년 이후</span></label>
-        <label class="radio-item"><input type="radio" name="build_year_min" value="2020"><span class="radio-item__dot"></span><span class="radio-item__label num">2020년 이후</span></label>
-      </div>
     </section>
 
     <div class="submit-zone">
@@ -788,19 +741,12 @@ loadRecentSearches();
     document.getElementById('address2').value = addr2;
   }
 
-  // 최대 가격
+  // 가격 슬라이더 복원
   const maxPrice = parseInt(p.get('max_price'), 10);
-  if (maxPrice) {
-    document.getElementById('price-eok').value = Math.floor(maxPrice / 10000);
-    document.getElementById('price-man').value = maxPrice % 10000;
-  }
-
-  // 최소 가격
   const minPrice = parseInt(p.get('min_price'), 10);
-  if (minPrice) {
-    document.getElementById('min-price-eok').value = Math.floor(minPrice / 10000);
-    document.getElementById('min-price-man').value = minPrice % 10000;
-  }
+  if (maxPrice) document.getElementById('slider-max').value = Math.min(maxPrice, 200000);
+  if (minPrice) document.getElementById('slider-min').value = Math.min(minPrice, 200000);
+  if (maxPrice || minPrice) onPriceSlider();
 
   // 통근시간 칩
   const maxMin = p.get('max_minutes');
@@ -853,61 +799,59 @@ function removeWp2() {
   document.getElementById('wp1-label').style.display = 'none';
 }
 
-// ── 가격 검증 ─────────────────────────────────────────────
-// 반환값: { maxPrice, minPrice } | null
+// ── 가격 슬라이더 ─────────────────────────────────────────
+const PRICE_MAX_MAN = 200000;
+
+function _priceLabel(val) {
+  if (val <= 0) return '제한없음';
+  if (val >= PRICE_MAX_MAN) return '20억+';
+  const eok = Math.floor(val / 10000);
+  const man = val % 10000;
+  if (man === 0) return `${eok}억`;
+  return `${eok}억 ${(man / 1000).toFixed(0)}천만`;
+}
+
+function onPriceSlider() {
+  const sMin = document.getElementById('slider-min');
+  const sMax = document.getElementById('slider-max');
+  let vMin = parseInt(sMin.value);
+  let vMax = parseInt(sMax.value);
+  if (vMin >= vMax) {
+    if (document.activeElement === sMin) vMin = Math.max(0, vMax - 5000);
+    else vMax = Math.min(PRICE_MAX_MAN, vMin + 5000);
+    sMin.value = vMin; sMax.value = vMax;
+  }
+  document.getElementById('price-label-min').innerHTML = `<span>최소</span>${_priceLabel(vMin)}`;
+  document.getElementById('price-label-max').innerHTML = `<span>최대</span>${_priceLabel(vMax)}`;
+  const pct1 = vMin / PRICE_MAX_MAN * 100;
+  const pct2 = vMax / PRICE_MAX_MAN * 100;
+  const fill = document.getElementById('price-track-fill');
+  fill.style.left = pct1 + '%';
+  fill.style.width = (pct2 - pct1) + '%';
+  document.getElementById('price-eok').value = Math.floor(vMax / 10000);
+  document.getElementById('price-man').value = vMax % 10000;
+  if (vMin > 0) {
+    document.getElementById('min-price-eok').value = Math.floor(vMin / 10000);
+    document.getElementById('min-price-man').value = vMin % 10000;
+  } else {
+    document.getElementById('min-price-eok').value = '';
+    document.getElementById('min-price-man').value = '';
+  }
+  const gap = vMax - vMin;
+  document.getElementById('price-warn').classList.toggle('show', gap > 50000);
+}
+
 function validatePrice() {
-  const maxEokEl = document.getElementById('price-eok');
-  const maxManEl = document.getElementById('price-man');
-  const minEokEl = document.getElementById('min-price-eok');
-  const minManEl = document.getElementById('min-price-man');
-  const errorEl  = document.getElementById('price-error');
-
-  [maxEokEl, maxManEl, minEokEl, minManEl].forEach(el => el.classList.remove('invalid'));
-  errorEl.classList.remove('show');
-
-  // 최대 금액 검증
-  const maxEok = parseInt(maxEokEl.value) || 0;
-  const maxMan = parseInt(maxManEl.value) || 0;
-  if (maxMan % 1000 !== 0) {
-    errorEl.textContent = '만원 칸은 천만 단위로 입력해주세요 (0, 1000, 2000, …)';
-    errorEl.classList.add('show'); maxManEl.classList.add('invalid'); return null;
-  }
-  const maxPrice = maxEok * 10000 + maxMan;
-  if (maxPrice < 10000) {
-    errorEl.textContent = '최대 금액은 최소 1억 이상 입력해주세요';
-    errorEl.classList.add('show'); maxEokEl.classList.add('invalid'); return null;
-  }
-
-  // 최소 금액 검증 (선택 입력)
-  const minEokVal = minEokEl.value.trim();
-  const minManVal = minManEl.value.trim();
-  let minPrice = null;
-  if (minEokVal !== '' || minManVal !== '') {
-    const minEok = parseInt(minEokVal) || 0;
-    const minMan = parseInt(minManVal) || 0;
-    if (minMan % 1000 !== 0) {
-      errorEl.textContent = '최소 금액 만원 칸은 천만 단위로 입력해주세요';
-      errorEl.classList.add('show'); minManEl.classList.add('invalid'); return null;
-    }
-    minPrice = minEok * 10000 + minMan;
-    if (minPrice >= maxPrice) {
-      errorEl.textContent = '최소 금액은 최대 금액보다 작아야 합니다';
-      errorEl.classList.add('show');
-      minEokEl.classList.add('invalid'); return null;
-    }
-  }
-
-  // 가격 범위 너무 넓음 경고 (실시간)
-  const warnEl = document.getElementById('price-warn');
-  const gap = maxPrice - (minPrice || 0);
-  if (gap > 50000) warnEl.classList.add('show');
-  else             warnEl.classList.remove('show');
-
+  const maxPrice = (parseInt(document.getElementById('price-eok').value) || 0) * 10000
+                 + (parseInt(document.getElementById('price-man').value) || 0);
+  const minEok = document.getElementById('min-price-eok').value;
+  const minPrice = minEok !== ''
+    ? (parseInt(minEok) || 0) * 10000 + (parseInt(document.getElementById('min-price-man').value) || 0)
+    : null;
   return { maxPrice, minPrice };
 }
-['price-eok','price-man','min-price-eok','min-price-man'].forEach(id => {
-  document.getElementById(id).addEventListener('input', validatePrice);
-});
+
+onPriceSlider();
 
 // ── 폼 제출 ────────────────────────────────────────────────
 document.getElementById('search-form').addEventListener('submit', (e) => {
@@ -915,10 +859,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
 
   const addressEl = document.getElementById('address');
   const addressErrEl = document.getElementById('address-error');
-  const pyeongErrEl = document.getElementById('pyeong-error');
-
   addressErrEl.classList.remove('show');
-  pyeongErrEl.classList.remove('show');
 
   const address = addressEl.value.trim();
   if (!address) {
@@ -938,18 +879,8 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     return;
   }
 
-  const pyeongTypes = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(el => el.value);
-  if (pyeongTypes.length === 0) {
-    pyeongErrEl.textContent = '평형을 하나 이상 선택해주세요';
-    pyeongErrEl.classList.add('show');
-    return;
-  }
-
   const chip = document.querySelector('#commute-chips .chip.active');
   const maxMinutes = parseInt(chip.dataset.value, 10);
-
-  const mincnt = document.querySelector('input[name=mincnt]:checked').value;
-  const buildYearMin = document.querySelector('input[name=build_year_min]:checked').value;
 
   // W2 직장 처리 (선택)
   const address2El = document.getElementById('address2');
@@ -967,11 +898,9 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     workplace_address: address,
     max_price: String(maxPrice),
     max_minutes: String(maxMinutes),
-    pyeong_types: pyeongTypes.join(','),
+    pyeong_types: '10평미만,10평대,20평대,30평대,40평대,50평대+',
   });
   if (minPrice !== null) params.set('min_price', String(minPrice));
-  if (mincnt) params.set('min_kaptdaCnt', mincnt);
-  if (buildYearMin) params.set('build_year_min', buildYearMin);
   if (address2) params.set('workplace_address_2', address2);
 
   window.location.href = '/result.html?' + params.toString();

@@ -3,57 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BADUGI — 당신의 집을 잘 찾는 개코</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <title>BADUGI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+      background: #f5f6f8;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .card {
+      background: #fff;
+      max-width: 720px;
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 40px 36px;
+    }
+    .page-tag {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .notice {
+      display: inline-block;
+      font-size: 13px;
+      color: #d23;
+      background: #fde8ea;
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin-bottom: 28px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #eee;
+    }
+    ul { list-style: none; }
+    li { margin-bottom: 18px; }
+    .en {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .en .pct { color: #2a7; }
+    .ko {
+      font-size: 13.5px;
+      color: #666;
+      margin-top: 3px;
+    }
+    .start-wrap { margin-top: 32px; text-align: center; }
+    .start-btn {
+      display: inline-block;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 14px 48px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .start-btn:hover { background: #333; }
+  </style>
 </head>
-<body class="landing-page">
+<body>
+  <main class="card">
+    <div class="page-tag">[서비스 소개 / 설명 페이지]</div>
+    <span class="notice">발표 전 수정필요</span>
 
-<div class="canvas">
+    <h2>Grading Criteria</h2>
+    <ul>
+      <li>
+        <div class="en">• What's new? <span class="pct">(20%)</span> — Who are your competitors and how is your product superior?</div>
+        <div class="ko">무엇이 새로운가? — 경쟁자는 누구이며, 당신의 제품은 어떻게 더 우수한가?</div>
+      </li>
+      <li>
+        <div class="en">• Why You? <span class="pct">(20%)</span> — What differentiated efforts did you invest?</div>
+        <div class="ko">왜 당신인가? — 당신은 어떤 차별화된 노력을 기울였는가?</div>
+      </li>
+      <li>
+        <div class="en">• So, what? <span class="pct">(30%)</span> — What are the real responses from your target users?</div>
+        <div class="ko">그래서? — 타겟 사용자들의 실제 반응은 어떠한가?</div>
+      </li>
+      <li>
+        <div class="en">• Is AI Native? <span class="pct">(30%)</span> — How did you achieve drastic efficiency improvement using AI tools?</div>
+        <div class="ko">AI 네이티브인가? — AI 도구를 활용해 어떻게 극적인 효율 향상을 달성했는가?</div>
+      </li>
+    </ul>
 
-  <!-- ① 좌상단 바둑인 + 말풍선 -->
-  <img class="person person-1" src="/static/images/go-master-1.jpg" alt="바둑 마스터 1">
-  <div class="bubble bubble-1">
-    그래봤자 바둑<br>그래도 바둑!
-  </div>
-
-  <!-- ② 우상단 바둑인 + 말풍선 -->
-  <img class="person person-2" src="/static/images/go-master-2.jpg" alt="바둑 마스터 2">
-  <div class="bubble bubble-2">
-    음..바둑
-  </div>
-
-  <!-- ③ 가운데: 로고 + 멍멍 + 브랜드 텍스트 -->
-  <img class="logo" src="/static/images/badugi-logo.png" alt="BADUGI">
-  <div class="meong">멍멍</div>
-  <div class="brand-box">
-    당신의 집을 잘 찾는 개코<br>
-    <span class="brand">BADUGI</span> <span class="brand-sub">(서비스 이름이다)</span>
-  </div>
-
-  <!-- ④ 설명 -->
-  <div class="description">
-    내 직장을 기준으로 한 맞춤형 아파트 구입 추천 서비스.<br>
-    출퇴근 시간과 가격, 평수의 트레이드오프를 한눈에 비교하고,<br>
-    나에게 가장 잘 맞는 최적의 조합을 찾아 보세요!
-  </div>
-
-  <!-- ⑤ 좌하단 시작하기 폭발 (8점) -->
-  <a class="start-btn" href="/search.html" aria-label="시작하기">
-    <svg viewBox="0 0 100 100" width="259" height="259" aria-hidden="true">
-      <polygon
-        points="50,2 57.65,31.52 83.94,16.06 68.48,42.35 98,50 68.48,57.65 83.94,83.94 57.65,68.48 50,98 42.35,68.48 16.06,83.94 31.52,57.65 2,50 31.52,42.35 16.06,16.06 42.35,31.52"
-        fill="#C00000"/>
-    </svg>
-    <span class="start-text">
-      시작하기<br>
-      <small>(클릭)</small>
-    </span>
-  </a>
-
-  <!-- ⑥ 우하단 환호 -->
-  <img class="celebrate" src="/static/images/celebrate.png" alt="마침내!">
-
-</div>
-
+    <div class="start-wrap">
+      <a class="start-btn" href="/search.html">시작하기</a>
+    </div>
+  </main>
 </body>
 </html>

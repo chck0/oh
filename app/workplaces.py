@@ -3,7 +3,7 @@
 (sandbox/lib_workplace.py에서 정식 이전)
 
 서버리스(Vercel) 환경에서는 파일시스템이 read-only이므로 폴더/메타 파일
-생성은 자동 스킵 (IS_SERVERLESS).
+생성은 자동 스킵 (cfg.IS_SERVERLESS).
 DB 어댑터는 app/db.py 에서 Supabase/SQLite 자동 분기.
 """
 import os
@@ -14,12 +14,10 @@ import json
 import urllib.parse
 import urllib.request
 from config import cfg
-from app.portable import insert_returning_id, get_last_id, list_columns
+from app.portable import insert_returning_id, get_last_id, list_columns, resync_sequence
 
 KAKAO_URL = 'https://dapi.kakao.com/v2/local/search/address.json'
 _UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
-# Vercel은 VERCEL=1 환경변수를 자동 세팅
-IS_SERVERLESS = bool(os.getenv('VERCEL'))
 
 
 def _sanitize_for_folder(s: str) -> str:
@@ -64,8 +62,43 @@ def resolve(addr_input: str) -> dict | None:
     }
 
 
+_wp_mem_cache: dict[str, dict] = {}  # address_input → wp dict (프로세스 생존 동안 유지)
+
+
 def get_or_create(conn, addr_input: str) -> dict | None:
     """workplaces UPSERT + 폴더 생성. dict 반환."""
+    # 데모 모드(spec-32): 시드된 직장은 Kakao 호출 없이 DB에서 직접 반환.
+    # 미일치 시 평소처럼 캐시/DB/Kakao 경로로 진행 → 키가 더미면 정직하게 실패(400).
+    if os.getenv('BADUGI_DEMO'):
+        row = conn.execute(
+            'SELECT * FROM workplaces WHERE address_input=? OR address_norm=? '
+            'ORDER BY last_used DESC LIMIT 1', (addr_input, addr_input)
+        ).fetchone()
+        if row is not None:
+            cols = list_columns(conn, 'workplaces')
+            return dict(zip(cols, [row[c] for c in cols]))
+
+    # ── 1순위: 인메모리 캐시 → DB/Kakao 완전 생략 ───────────────
+    if addr_input in _wp_mem_cache:
+        return _wp_mem_cache[addr_input]
+
+    # ── 2순위: DB 조회 → Kakao API 호출 생략 ────────────────────
+    cols = list_columns(conn, 'workplaces')
+    cached = conn.execute(
+        'SELECT * FROM workplaces WHERE address_input = ?', (addr_input,)
+    ).fetchone()
+    if cached:
+        now = time.strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            'UPDATE workplaces SET last_used=?, search_count=search_count+1 WHERE wp_id=?',
+            (now, cached['wp_id'])
+        )
+        conn.commit()
+        result = dict(zip(cols, [cached[c] for c in cols]))
+        _wp_mem_cache[addr_input] = result
+        return result
+
+    # ── 3순위: Kakao REST API geocoding (첫 등록 시만) ──────────
     resolved = resolve(addr_input)
     if not resolved:
         return None
@@ -89,16 +122,36 @@ def get_or_create(conn, addr_input: str) -> dict | None:
             resolved['lat'], resolved['lng'], '',
             now, now, 1, 0,
         ]
-        cur = conn.execute(
-            insert_returning_id('workplaces', ins_cols, 'wp_id'),
-            ins_vals,
-        )
-        wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
+        # SQLite: wp_id는 NOT NULL이지만 PK가 아니므로 자동 할당 안 됨 → 수동 계산
+        from app.portable import USE_PG
+        if not USE_PG:
+            next_id = (conn.execute('SELECT COALESCE(MAX(wp_id),0)+1 FROM workplaces').fetchone()[0])
+            ins_cols = ['wp_id'] + ins_cols
+            ins_vals = [next_id] + ins_vals
+        try:
+            cur = conn.execute(
+                insert_returning_id('workplaces', ins_cols, 'wp_id'),
+                ins_vals,
+            )
+            wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
+        except Exception:
+            # wp_id SERIAL 시퀀스가 테이블 max보다 뒤처져 duplicate key가 나는 경우
+            # (외부 적재/마이그레이션 후 setval 누락) → 시퀀스 보정 후 1회 재시도.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            resync_sequence(conn, 'workplaces', 'wp_id')
+            cur = conn.execute(
+                insert_returning_id('workplaces', ins_cols, 'wp_id'),
+                ins_vals,
+            )
+            wp_id = get_last_id(conn, cur, 'workplaces', 'wp_id')
         folder = f'wp_{wp_id:04d}__{_sanitize_for_folder(resolved["address_norm"])}'
         conn.execute('UPDATE workplaces SET folder_name=? WHERE wp_id=?', (folder, wp_id))
         conn.commit()
         # 로컬에서만 raw 아카이브 폴더 생성 (Vercel은 read-only FS)
-        if not IS_SERVERLESS:
+        if not cfg.IS_SERVERLESS:
             d = raw_dir_by(folder)
             d.mkdir(parents=True, exist_ok=True)
             (d / 'cells').mkdir(exist_ok=True)

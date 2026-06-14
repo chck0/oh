@@ -50,6 +50,7 @@ if not PG_URL:
     sys.exit(1)
 
 # 이관 대상 테이블 (의존 순서대로)
+# download_db.py의 _PREFERRED_ORDER와 동기화 유지
 TABLES = [
     'workplaces',
     'apartments',
@@ -66,6 +67,7 @@ TABLES = [
     'apt_pt_friend_comment',
     'building_register',
     'building_register_log',
+    'trade_tags',
 ]
 
 
@@ -130,19 +132,29 @@ def migrate_table(sl: sqlite3.Connection, pg, table: str, batch: int, truncate: 
 
 
 def _fix_sequence(pg, table: str):
-    """INSERT 후 SERIAL 컬럼의 nextval이 max(id)+1이 되도록 보정."""
-    serial_map = {
-        'workplaces':     ('wp_id', 'workplaces_wp_id_seq'),
-        'apt_walking_poi': ('id', 'apt_walking_poi_id_seq'),
-    }
-    if table not in serial_map:
-        return
-    col, seq = serial_map[table]
+    """INSERT 후 SERIAL 컬럼의 nextval 보정 — pg_get_serial_sequence 동적 조회."""
     with pg.cursor() as cur:
         cur.execute(
-            f"SELECT setval(%s, COALESCE((SELECT MAX({col}) FROM {table}), 1), true)",
-            (seq,),
+            """
+            SELECT column_name,
+                   pg_get_serial_sequence(%s, column_name)
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name   = %s
+              AND column_default LIKE 'nextval%%'
+            """,
+            (table, table),
         )
+        rows = cur.fetchall()
+    if not rows:
+        return
+    with pg.cursor() as cur:
+        for col, seq in rows:
+            if seq:
+                cur.execute(
+                    f"SELECT setval(%s, COALESCE((SELECT MAX({col}) FROM {table}), 1), true)",
+                    (seq,),
+                )
     pg.commit()
 
 

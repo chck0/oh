@@ -134,6 +134,13 @@ CLAUDE.md        # 기술 스택 + 환경변수 + 세부 작업 규칙
 
 ## 5. Spec 번호 현황
 
-다음 신규 Spec 번호: **29**
+다음 신규 Spec 번호: **36**
 
-완료 목록: spec-01~28 (세부 내용 → `docs/specs/SPEC_GUIDE.md`)
+완료 목록: spec-01~28, spec-29(초등학교 POI), spec-30(POI 지도마커 수정),
+spec-31(경사도·재건축/구조 지표), spec-32(로컬 데모 모드),
+spec-34(다중 우선순위 정렬·구 20), spec-35(search.py 분할·구 28)
+(세부 내용 → `docs/specs/_meta/GUIDE.md`)
+Draft: spec-33(실거래 데이터 자동 갱신)
+
+※ 번호 중복 정리(2026-06-13): 20·28이 각각 2개였음 → 나중 것을 34·35로 재배정.
+원본 유지: 20-transit-route-detail, 28-commute-economics.

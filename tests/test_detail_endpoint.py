@@ -85,6 +85,20 @@ CREATE TABLE IF NOT EXISTS apt_walking_poi (
     walking_min  INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS apt_slope (
+    kaptCode      TEXT PRIMARY KEY,
+    apt_slope_avg REAL
+);
+
+CREATE TABLE IF NOT EXISTS building_register (
+    kaptCode     TEXT,
+    mgmBldrgstPk TEXT,
+    vlRat        REAL,
+    bcRat        REAL,
+    strctCdNm    TEXT,
+    useAprDay    TEXT
+);
+
 CREATE TABLE IF NOT EXISTS workplaces (
     wp_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     address_key  TEXT NOT NULL UNIQUE,
@@ -150,6 +164,19 @@ def _seed(conn):
             "(kaptCode,poi_lclas_cd,poi_mlsfc_cd,poi_nm,distance_m,walking_min) "
             "VALUES (?,?,?,?,?,?)",
             ('KC001', cat, sub, name, dist, walk),
+        )
+    # apt_slope (spec-31) — 평지 케이스
+    conn.execute(
+        "INSERT INTO apt_slope (kaptCode, apt_slope_avg) VALUES (?,?)",
+        ('KC001', 2.0),
+    )
+    # building_register (spec-31) — 동 2개 (AVG/MIN/최빈값 집계 검증)
+    for pk, far in (('KC001-1', 237.0), ('KC001-2', 243.0)):
+        conn.execute(
+            "INSERT INTO building_register "
+            "(kaptCode,mgmBldrgstPk,vlRat,bcRat,strctCdNm,useAprDay) "
+            "VALUES (?,?,?,?,?,?)",
+            ('KC001', pk, far, 22.0, '철근콘크리트구조', '20040517'),
         )
     conn.commit()
 
@@ -320,3 +347,136 @@ class TestTrades:
         # 최신 거래가 먼저
         first = data['trades'][0]
         assert first['date'].startswith('2024')
+
+
+# ── 입지·구조 지표 (spec-31) ──────────────────────────────────
+
+class TestSlopeLabelHelpers:
+    """경사/용적률/건폐율/승인일 라벨 변환 순수함수."""
+
+    def test_slope_label_flat(self):
+        from app.detail import _slope_label
+        assert _slope_label(2.0) == ('평지', '걷기 편해요', 1)
+
+    def test_slope_label_gentle(self):
+        from app.detail import _slope_label
+        assert _slope_label(5.0)[0] == '완만한 오르막'
+        assert _slope_label(5.0)[2] == 2
+
+    def test_slope_label_hill(self):
+        from app.detail import _slope_label
+        assert _slope_label(9.0)[0] == '언덕'
+        assert _slope_label(9.0)[2] == 3
+
+    def test_slope_label_steep(self):
+        from app.detail import _slope_label
+        assert _slope_label(13.0)[0] == '가파른 언덕'
+        assert _slope_label(13.0)[2] == 4
+
+    def test_slope_label_negative_treated_flat(self):
+        from app.detail import _slope_label
+        assert _slope_label(-1.0)[0] == '평지'
+
+    def test_slope_label_none(self):
+        from app.detail import _slope_label
+        assert _slope_label(None) is None
+
+    def test_far_levels(self):
+        from app.detail import _far_level
+        assert _far_level(160) == '낮은 편'
+        assert _far_level(240) == '보통'
+        assert _far_level(300) == '높은 편'
+        assert _far_level(0) is None
+
+    def test_bcr_levels(self):
+        from app.detail import _bcr_level
+        assert _bcr_level(12) == '낮은 편'
+        assert _bcr_level(20) == '보통'
+        assert _bcr_level(30) == '높은 편'
+
+    def test_approve_ym(self):
+        from app.detail import _approve_ym
+        assert _approve_ym('20040517') == '2004.05'
+        assert _approve_ym('2004') is None
+        assert _approve_ym('20041350') is None  # 월 13 비정상
+        assert _approve_ym(None) is None
+
+
+class TestInfraSection:
+    """detail building 객체의 입지·구조 필드."""
+
+    def test_slope_disabled_until_data_verified(self, detail_client):
+        # 2026-06-13 임시 비활성(SLOPE_LABEL_ENABLED=False): 단위 미확정 → 경사 행 숨김.
+        # _slope_label 순수함수 자체는 유지(아래 TestSlopeLabelHelpers).
+        b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']
+        assert 'slope_label' not in b
+        assert 'slope_avg' not in b
+        # 나머지 입지·구조(용적률 등)는 정상 유지
+        assert b['far'] == 240.0
+
+    def test_far_bcr_aggregated(self, detail_client):
+        b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']
+        assert b['far'] == 240.0          # (237+243)/2
+        assert b['far_level'] == '보통'
+        assert b['bcr'] == 22.0
+        assert b['bcr_level'] == '보통'
+
+    def test_structure_and_approve(self, detail_client):
+        b = detail_client.get('/api/apt/APT001/detail?wp_id=1').json()['building']
+        assert b['structure'] == '철근콘크리트구조'
+        assert b['approve_ym'] == '2004.05'
+
+    def test_missing_tables_graceful(self):
+        """apt_slope/building_register 미존재 → 500 없이 상세 정상."""
+        conn = sqlite3.connect(':memory:', check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.executescript(_SCHEMA)
+        _seed(conn)
+        conn.execute('DROP TABLE apt_slope')
+        conn.execute('DROP TABLE building_register')
+        conn.commit()
+        from app.main import app
+        from app.db import get_db
+
+        def _ov():
+            yield conn
+
+        app.dependency_overrides[get_db] = _ov
+        with TestClient(app) as c:
+            resp = c.get('/api/apt/APT001/detail?wp_id=1')
+        app.dependency_overrides.clear()
+        conn.close()
+        assert resp.status_code == 200
+        b = resp.json()['building']
+        assert 'slope_label' not in b
+        assert 'far' not in b
+
+    def test_far_bcr_zero_treated_as_missing(self):
+        """건축물대장 용적률/건폐율 0(미집계) → 0% 표시 대신 행 숨김."""
+        conn = sqlite3.connect(':memory:', check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.executescript(_SCHEMA)
+        _seed(conn)
+        # APT001의 building_register vlRat/bcRat를 0으로 교체
+        conn.execute("DELETE FROM building_register WHERE kaptCode='KC001'")
+        conn.execute(
+            "INSERT INTO building_register "
+            "(kaptCode,mgmBldrgstPk,vlRat,bcRat,strctCdNm,useAprDay) "
+            "VALUES ('KC001','KC001-1',0,0,'철근콘크리트구조','20040517')",
+        )
+        conn.commit()
+        from app.main import app
+        from app.db import get_db
+
+        def _ov():
+            yield conn
+
+        app.dependency_overrides[get_db] = _ov
+        with TestClient(app) as c:
+            b = c.get('/api/apt/APT001/detail?wp_id=1').json()['building']
+        app.dependency_overrides.clear()
+        conn.close()
+        assert 'far' not in b
+        assert 'bcr' not in b
+        # 구조·사용승인은 유효하므로 유지
+        assert b['structure'] == '철근콘크리트구조'

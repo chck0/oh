@@ -1,202 +1,160 @@
 ## 프로젝트 개요
 
 **BADUGI — 직장 주소 기반 아파트 추천 서비스.**
-
-- 컨셉: "부동산 잘 아는 친구가 옆에서 카톡으로 추천해주는" 톤
-- 흐름: 직장 주소 입력 → 반경 내 매물 필터 → ODsay 대중교통 경로 → 통근버킷 × 평형 매트릭스 추천 → Claude AI 코멘트
-- 배포: Vercel (서버리스) + Supabase Postgres
+직장 주소 입력 → 반경 내 매물 필터 → ODsay 대중교통 경로 → 통근버킷 × 평형 매트릭스 추천 → Claude AI 코멘트.
+배포: Vercel (서버리스) + Supabase Postgres.
 
 ## 작업 방식
 
-### 0. Spec First, Then Code (절대 원칙)
+### 0. Worklog + Spec (별개의 축)
 
-- **어떤 기능이든 코드보다 spec 문서를 먼저 작성한다.**
-- Spec 파일 위치: `docs/specs/NN-feature-name.md` (번호 순)
-- Spec 최소 구성: Why(왜), Scope(범위), Functional Requirements, Data Model, Acceptance Criteria
-- Spec 초안을 사용자에게 보여주고 승인받은 뒤 구현에 들어간다.
-- 코드 구현 후 spec 섹션 "구현 메모"와 AC 체크박스를 업데이트한다.
-- **예외 없음**: 한 줄짜리 수정도 관련 spec이 없으면 먼저 spec부터 만든다.
+둘은 양자택일이 아니다. 큰 작업은 **둘 다** 쓴다.
 
-### 1. Forest First, Then Trees
+- **Worklog** (머지·인수인계용): 커밋할 때 **항상** 작성. 크기 무관. → 작성법은 아래 "작업 일지" 섹션.
+- **Spec** (사전 설계용): **큰 작업에만** 추가로 작성 (여러 파일·새 DB 테이블·새 API·여러 Phase).
+  - 작성법은 `docs/specs/_meta/GUIDE.md` (`_meta/template.md` 복사 → 4칸: **Why / Scope / 설계 / 완료 조건(= 루프 종료 기준)**)
+  - 버그픽스·리팩토링·소규모 수정은 Spec 생략 (worklog는 그래도 씀).
 
-- 새 작업을 시작할 때 **전체 그림(목표, 범위, 영향받는 파일)을 먼저 파악**한 뒤 세부 구현에 들어간다.
-- 코드를 바로 작성하지 말고, 어떤 파일들이 변경되는지 먼저 정리해서 보여준다.
-- 큰 작업은 Phase 단위로 나눠서 단계적으로 진행한다.
+### 1. 자율 루프 (OMC Ralph)
 
-### 2. 확인하면서 진행
+**아래 중 2개 이상 해당하면 AI가 먼저 `/oh-my-claudecode:ralph` 실행을 제안한다:**
+- 수정 파일 5개 이상 / 새 DB 테이블·외부 API 연동 / 여러 Phase로 나뉘는 작업
 
-- 모호한 요청이 들어오면 **추정으로 진행하지 말고 질문**한다.
-- 각 단계 완료 후 결과를 요약해서 보고하고, 다음 단계로 넘어가기 전에 사용자 확인을 받는다.
-- 단, "바로 반영해줘", "계속 진행하자" 같은 명확한 지시에는 즉시 실행한다.
+**제안 형식 (질문은 최대 2개 — 완료 조건이 애매할 때만):**
+```
+🔁 루프 제안
+목표: ...
+단계: 1) ... 2) ... 3) ...
+완료 조건: 모든 엔드포인트 정상 응답 + 기존 테스트 통과
+금지 사항: .env 수정 금지, DB 스키마 삭제 금지
+```
 
-### 3. 항상 테스트 → 커밋
+**루프 중 원칙:** 사용자 확인 없이 계속 진행 (테스트가 안전망). 중단: `/oh-my-claudecode:cancel`
 
-- 커밋 전 로컬에서 서버 기동 확인: `uvicorn app.main:app --reload`
-- `/api/_debug`, `/api/_test_odsay`, `/api/_test_kakao` 진단 엔드포인트로 상태 확인.
-- 새 기능 추가 시 진단 엔드포인트 또는 HTML 테스트 페이지(`web/map-test.html`, `web/test-detail.html`)로 검증.
+### 2. 큰 그림 먼저
 
-### 4. Git 워크플로우
+작업 시작 시 영향받는 파일 목록을 먼저 정리한 뒤 구현 진입. 모호하면 추정하지 말고 질문.
 
-- **세션 시작 시 항상 `git pull origin main`** — 원격 변경사항을 놓치지 않는다.
-- 작업 브랜치에서 개발 → PR 생성 → **squash merge**로 main에 반영.
-- 커밋 메시지는 conventional commits 스타일: `feat:`, `fix:`, `refactor:`, `docs:`, `perf:`.
-- 푸시 실패 시 rebase 후 재시도. 네트워크 오류는 최대 4회 지수 백오프 재시도.
+### 3. 테스트 → 커밋
+
+커밋 전 `uvicorn app.main:app --reload` 기동 확인. `/api/_debug` · `/api/_test_odsay` · `/api/_test_kakao` 로 상태 체크.
+
+### 4. Git 커밋
+
+커밋 메시지: `feat:` · `fix:` · `refactor:` · `docs:` · `perf:`. merge·rebase·push는 명시적 요청 시만.
 
 ## 기술 스택
 
-- **언어**: Python 3.10+
-- **백엔드**: FastAPI + uvicorn
-- **DB**: SQLite (로컬 dev) ↔ Supabase Postgres (Vercel 프로덕션) — `DATABASE_URL` 유무로 자동 전환
-- **LLM**: Anthropic Claude API
-  - 추천 카드: `claude-sonnet-4-6` (2~3문장, 균형잡힌 장단점)
-  - 일반 카드: `claude-haiku-4-5` (한 줄, 40자)
-- **외부 API**: Kakao REST (주소 → 좌표), ODsay (대중교통 경로, 다중 키)
-- **프론트엔드**: Vanilla JS + Kakao Maps API
-- **배포**: Vercel (서버리스, 60초 타임아웃), Supabase (pgBouncer 6543)
-- **의존성**: `requirements.txt` 참조
+- **백엔드**: Python 3.10+ / FastAPI + uvicorn
+- **DB**: `DATABASE_URL`이 `postgresql://` → Supabase 모드 / 파일 경로·없음 → SQLite 모드
+  - `python scripts/download_db.py` 실행 시 `.env`의 `DATABASE_URL`이 로컬 절대경로로 자동 전환됨
+- **LLM**: `cfg.SONNET_MODEL` (추천 카드) / `cfg.HAIKU_MODEL` (일반 카드) — `.env`에서 override 가능
+- **외부 API**: Kakao REST (주소 → 좌표), ODsay (대중교통, 다중 키)
+- **배포**: Vercel (서버리스, 60초 타임아웃) + Supabase pgBouncer 6543
 
 ## 프로젝트 구조
 
 ```
-app/           # FastAPI 백엔드 (핵심 비즈니스 로직)
+app/           # FastAPI 백엔드
 api/           # Vercel 서버리스 진입점 (api/index.py)
-web/           # 프론트엔드 (HTML/JS/CSS, Vercel CDN 서빙)
+web/           # 프론트엔드 (HTML/JS/CSS)
 scripts/       # 데이터 파이프라인 + DB 마이그레이션
-config.py      # 중앙 환경변수 관리
-vercel.json    # Vercel 배포 설정
+config.py      # 중앙 환경변수 관리 (cfg.*)
 ```
-
-## 주요 모듈
-
-| 모듈 | 역할 |
-|------|------|
-| `app/search.py` | `POST /api/search` — 핵심 검색 파이프라인 |
-| `app/ai.py` | 통근버킷 × 평형 추천 로직 + Claude 코멘트 생성 |
-| `app/transit.py` | ODsay 멀티키 병렬 호출 + 경로 필터링 + DB 캐싱 |
-| `app/workplaces.py` | Kakao 주소 정규화 + wp_id 발급 |
-| `app/db.py` | SQLite ↔ Postgres 이중 어댑터 |
-| `app/portable.py` | DB 비호환 로직 Python 구현 (upsert, returning 등) |
-| `app/main.py` | FastAPI 진입점 + 미들웨어 + 진단 엔드포인트 |
-| `app/models.py` | Pydantic 요청/응답 스키마 |
-| `web/result.html` | 메인 결과 UI (지도 + 카드 + 통계) |
-
-## 핵심 검색 파이프라인
-
-```
-POST /api/search
-  1. Kakao REST → 직장 주소 좌표 확보 (workplaces.py)
-  2. 반경 필터링 → is_apt=1, recent_trade=3 단지 추출
-  3. ODsay 멀티키 병렬 호출 → 대중교통 경로 캐싱 (transit.py)
-     - 4키 × 4 동시 = 16 병렬, 셀당 1회 캐시
-     - Vercel 60초 제약 → MAX_FETCH_CELLS=250, 초과분은 deferred
-  4. 가격·평형 매칭 → trade_recent 조회
-  5. 추천 로직 (ai.py)
-     - 통근시간 10분 단위 버킷 × 평형 타입 매트릭스
-     - 각 슬롯 최저가 1개, 같은 단지 중복 제거
-  6. Claude 코멘트 백그라운드 생성 → DB 캐시
-  7. cards + stats + buckets 응답 (llm_pending=true 시 폴링)
-```
-
-## 추천 로직 구조
-
-```
-통근시간:  0-30분 | 30-40분 | 40-50분 | 50-60분
-평형:       20평대   20평대    20평대    20평대
-            30평대   30평대    30평대    30평대
-
-→ 각 (버킷, 평형) 슬롯에서 최저가 1개 추천
-→ is_recommended=True, pick_reason 자동 생성
-```
-
-## 진단 엔드포인트
-
-| 엔드포인트 | 용도 |
-|---|---|
-| `GET /health` | 서버 상태 체크 |
-| `GET /api/_debug` | 환경변수·DB 행 수·연결 상태 확인 |
-| `GET /api/_test_odsay` | 각 ODsay 키 실제 호출 테스트 |
-| `GET /api/_test_kakao` | Kakao REST API 테스트 |
-
-## 핵심 DB 테이블
-
-| 테이블 | 역할 |
-|---|---|
-| `workplaces` | 직장 주소 + 좌표 (wp_id) |
-| `apartments` | 아파트 마스터 + grid_key |
-| `trade_recent` | 최근 3개월 실거래 |
-| `trade_history` | 3년 실거래 |
-| `transit_cache` | ODsay 호출 결과 캐시 (셀 단위) |
-| `transit_routes` | 경로 옵션 rank 1~N |
-| `apt_pt_friend_comment` | Claude 코멘트 캐시 |
 
 ## 환경 변수
 
 ```bash
-# 런타임 필수
-DATABASE_URL=postgresql://...      # Supabase (pgBouncer 6543, Transaction mode)
-KAKAO_REST_API_KEY=...             # 주소 검색
-ODSAY_KEY_1=..., ODSAY_REFERER_1=... # ODsay (최대 20개 키)
-ANTHROPIC_API_KEY=...              # Claude 코멘트
+# DB 모드 — 형식으로 자동 분기
+DATABASE_URL=postgresql://...      # Supabase 모드
+DATABASE_URL=/abs/path/apt.db      # SQLite 모드 (download_db.py가 자동 설정)
 
-# 로컬 dev (DATABASE_URL 없을 때)
-DB_PATH=data/apartment.db          # SQLite 경로
+# 런타임 필수
+KAKAO_REST_API_KEY=...
+ODSAY_KEY_1=..., ODSAY_REFERER_1=...   # 최대 20개 키
+ANTHROPIC_API_KEY=...
+
+# 모델명 override (기본값은 config.py 참조)
+CLAUDE_SONNET_MODEL=...
+CLAUDE_HAIKU_MODEL=...
 
 # 스크립트 전용
-VWORLD_API_KEY=...                 # 지오코딩
-MOLIT_API_KEY=...                  # 국토부 API
+VWORLD_API_KEY=..., MOLIT_API_KEY=...
 ```
 
-- API 키가 없을 때는 즉시 사용자에게 알리고, 조용히 mock으로 대체하지 않는다.
+## 코딩 규칙
+
+### 설정·시크릿
+- **`os.getenv()` 직접 호출 금지** — `from config import cfg` 후 `cfg.속성명` 사용
+- **API 키·URL·모델명·숫자 상수 하드코딩 금지** — `config.py`에 추가 후 `cfg.*` 참조
+- **`.env`는 절대 git에 올리지 않는다**
+
+### DB 연결
+- **`psycopg.connect()` / `sqlite3.connect()` 직접 호출 금지** — `from app.db import connect` 사용
+- SQL 값 삽입은 f-string 금지, 반드시 `?` 파라미터 바인딩 사용
+
+```python
+# ❌ conn.execute(f"SELECT * FROM t WHERE col = {value}")
+# ✅ conn.execute("SELECT * FROM t WHERE col = ?", (value,))
+```
+
+### 새 기능 체크리스트
+- [ ] 새 설정값 → `config.py`에 `_optional()` / `_optional_int()` 추가
+- [ ] 새 환경변수 → `CLAUDE.md` 환경 변수 섹션 업데이트
+- [ ] Postgres 전용 SQL 문법 금지 → `app/portable.py` 헬퍼 활용
 
 ## 알려진 제약사항
 
-| 제약 | 영향 | 대응 |
-|---|---|---|
-| Vercel Hobby 60초 | 신규 직장 첫 검색 시 일부 셀 미처리 | `partial=true` → 재검색 시 자동 캐시 채움 |
-| pgBouncer Transaction mode | prepared statement 불가 | `prepare_threshold=None` 자동 설정 |
-| Vercel 파일시스템 read-only | raw JSON 아카이브 불가 | `IS_SERVERLESS` 감지 후 로컬 저장 스킵 |
-| Claude Haiku 동시 호출 | rate limit | 8개 이하로 제한 |
+| 제약 | 대응 |
+|---|---|
+| Vercel 60초 타임아웃 | `partial=true` → 재검색 시 캐시 자동 채움 |
+| pgBouncer Transaction mode | `prepare_threshold=None` 자동 설정 |
+| Vercel 파일시스템 read-only | `IS_SERVERLESS` 감지 후 로컬 저장 스킵 |
+| Claude Haiku rate limit | 동시 호출 8개 이하 제한 |
 
 ## 로컬 개발 실행
 
 ```bash
 pip install -r requirements.txt
-python config.py                        # 환경변수 검증
+python config.py                          # 환경변수 검증
 uvicorn app.main:app --reload --port 8000
-# http://localhost:8000/
 ```
 
-## 세션 관리
-
-- 세션 시작 시 **반드시 `git pull origin main`** 먼저 실행.
-- 최근 커밋 5개 확인 후 이전 세션에서 중단된 작업이 있는지 파악.
-- 한 세션에서 1~2개 기능만 완결하는 것을 목표로 한다.
+검증: `python -m pytest` / `python -m mypy app/` / `python -m flake8 app/`
 
 ## 의사소통 언어
 
-- 한국어를 기본으로 사용한다.
-- 커밋 메시지와 PR 제목은 한국어 또는 영어 모두 가능.
+한국어 기본. 커밋 메시지는 한국어·영어 모두 가능.
 
-## Skill routing
+## 작업 일지 (Worklog)
 
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+`docs/worklog/<이름>_<YYYY-MM-DD>.md` 에 쌓인다. (`.author`, `.raw/`는 gitignore)
 
-Key routing rules:
-- Product ideas/brainstorming → invoke /office-hours
-- Strategy/scope → invoke /plan-ceo-review
-- Architecture → invoke /plan-eng-review
-- Design system/plan review → invoke /design-consultation or /plan-design-review
-- Full review pipeline → invoke /autoplan
-- Bugs/errors → invoke /investigate
-- QA/testing site behavior → invoke /qa or /qa-only
-- Code review/diff check → invoke /review
-- Visual polish → invoke /design-review
-- Ship/deploy/PR → invoke /ship or /land-and-deploy
-- Save progress → invoke /context-save
-- Resume context → invoke /context-restore
+### 세션 시작 — `.author` 없을 때만 온보딩
 
-## Health Stack
+1. 이름 제안 (1순위: 세션 이메일 앞부분 → 2순위: git config → 3순위: OS 사용자명)
+   - 예: "이 작업을 **`chck0527`** 이름으로 기록할게요. 이대로 할까요?"
+2. `docs/worklog/.author` 에 이름 저장.
+3. DB 다운로드 제안:
+   - `DATABASE_URL`이 `postgresql://` + `data/apartment.db` **없음** → `python scripts/download_db.py` 제안
+   - `DATABASE_URL`이 `postgresql://` + **파일 있음** → `--compare-only` → 불일치 시 `--force` 제안
+   - 파일 경로·없음 → 건너뜀
 
-- typecheck: python -m mypy app/
-- lint: python -m flake8 app/
-- test: python -m pytest
+`.author` 있으면 온보딩 생략. 첫 응답에 `📝 작업 일지: <이름>님 작업으로 기록 중` 한 줄만 표시.
+
+### 커밋 요청 시
+
+`git diff` 확인 후 `docs/worklog/<이름>_<YYYY-MM-DD>.md` 맨 위에 추가:
+
+```markdown
+## <YYYY-MM-DD HH:MM> — (작업 제목)
+**의도:** ...
+**최종 상태:** ...
+**건드린 파일·함수:** ...
+**결정 / 버린 대안:** ...
+**DB 변경:** (없으면 "없음". 스키마 변경은 scripts/*.sql 파일명 기록)
+**함정·깨진 것:** ...
+**미완성/TODO:** ...
+```
+
+> 스키마 변경 → `scripts/*.sql` 파일로 git에 남길 것.

@@ -21,9 +21,12 @@ from app.ai import (
     build_regular_comments,
     build_comments,
     card_key,
-    SONNET_MODEL,
-    HAIKU_MODEL,
 )
+from config import cfg
+
+# 모델명은 config에서 가져옴 (ai.py에서 모델 상수 제거됨)
+SONNET_MODEL = cfg.SONNET_MODEL
+HAIKU_MODEL = cfg.HAIKU_MODEL
 
 
 # ── 헬퍼 ─────────────────────────────────────────────────────

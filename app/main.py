@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-IS_SERVERLESS = bool(os.getenv('VERCEL'))
+from config import cfg
 # DEBUG_API=1 로 켜면 /api/_debug 노출 + 500 응답에 traceback 포함
 # 운영 안정화되면 Vercel에서 이 env var 제거하면 됨
 DEBUG_API = os.getenv('DEBUG_API', '0') == '1'
@@ -36,8 +36,10 @@ log = logging.getLogger('app')
 
 # Python stdout 버퍼링 해제 (Vercel은 자동 unbuffered지만 한 번 더 보장)
 try:
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
-    sys.stderr.reconfigure(line_buffering=True)  # type: ignore[union-attr]
+    # Windows 콘솔(cp949)에서 한글/em-dash 출력 시 UnicodeEncodeError 방지.
+    # errors='backslashreplace'로 어떤 문자도 print가 죽지 않게 보장.
+    sys.stdout.reconfigure(encoding='utf-8', errors='backslashreplace', line_buffering=True)  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding='utf-8', errors='backslashreplace', line_buffering=True)  # type: ignore[union-attr]
 except Exception:
     pass
 
@@ -49,56 +51,100 @@ _IMPORT_ERROR: str | None = None
 try:
     log.info('importing app modules...')
     from app.search import router as search_router
-    from app.db import connect as db_connect, USE_PG
-    from config import cfg  # noqa: F401  (env validation)
+    from app.db import connect as db_connect
     log.info('app modules imported OK (backend=%s)',
-             'supabase' if USE_PG else 'sqlite')
+             'supabase' if cfg.USE_PG else 'sqlite')
 except Exception as e:
     _IMPORT_ERROR = f'{type(e).__name__}: {e}\n{traceback.format_exc()}'
     log.error('IMPORT FAILED: %s', _IMPORT_ERROR)
-    USE_PG = False
     search_router = None  # type: ignore[assignment]
     db_connect = None     # type: ignore[assignment]
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    log.info('=== startup === VERCEL=%s DEBUG_API=%s', IS_SERVERLESS, DEBUG_API)
+    import asyncio as _asyncio
+    log.info('=== startup === VERCEL=%s DEBUG_API=%s', cfg.IS_SERVERLESS, DEBUG_API)
     if _IMPORT_ERROR:
         log.error('startup skipped because import failed')
-    elif not USE_PG and db_connect is not None:
-        # SQLite(로컬)에서만 신규 테이블 자동 생성
-        try:
-            conn = db_connect()
+    elif db_connect is not None:
+        if not cfg.USE_PG:
+            # SQLite(로컬)에서만 신규 테이블 자동 생성
             try:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS apt_friend_comment (
-                        apt_seq   TEXT NOT NULL,
-                        wp_id     INTEGER NOT NULL,
-                        tier      TEXT NOT NULL,
-                        comment   TEXT NOT NULL,
-                        model     TEXT DEFAULT 'claude-haiku-4-5',
-                        created_at TEXT DEFAULT (datetime('now','localtime')),
-                        PRIMARY KEY (apt_seq, wp_id)
-                    )
-                """)
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (
-                        apt_seq      TEXT NOT NULL,
-                        pyeong_type  TEXT NOT NULL,
-                        wp_id        INTEGER NOT NULL,
-                        comment      TEXT NOT NULL,
-                        model        TEXT DEFAULT 'claude-haiku-4-5',
-                        created_at   TEXT DEFAULT (datetime('now','localtime')),
-                        PRIMARY KEY (apt_seq, pyeong_type, wp_id)
-                    )
-                """)
-                conn.commit()
-            finally:
+                conn = db_connect()
+                try:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS apt_friend_comment (
+                            apt_seq   TEXT NOT NULL,
+                            wp_id     INTEGER NOT NULL,
+                            tier      TEXT NOT NULL,
+                            comment   TEXT NOT NULL,
+                            model     TEXT DEFAULT 'claude-haiku-4-5-20251001',
+                            created_at TEXT DEFAULT (datetime('now','localtime')),
+                            PRIMARY KEY (apt_seq, wp_id)
+                        )
+                    """)
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS apt_pt_friend_comment (
+                            apt_seq      TEXT NOT NULL,
+                            pyeong_type  TEXT NOT NULL,
+                            wp_id        INTEGER NOT NULL,
+                            comment      TEXT NOT NULL,
+                            model        TEXT DEFAULT 'claude-haiku-4-5-20251001',
+                            created_at   TEXT DEFAULT (datetime('now','localtime')),
+                            PRIMARY KEY (apt_seq, pyeong_type, wp_id)
+                        )
+                    """)
+                    conn.commit()
+                finally:
+                    conn.close()
+                log.info('local sqlite schema ensured')
+            except Exception as e:
+                log.error('sqlite schema ensure failed: %s', e)
+        else:
+            # Postgres 모드: camelCase 컬럼 목록을 information_schema에서 동적 로드
+            # → 스키마 변경(컬럼 추가 등)에 코드 수정 없이 자동 대응
+            try:
+                from app.db import refresh_camel_cols
+                conn = db_connect()
+                try:
+                    refresh_camel_cols(conn)
+                finally:
+                    conn.close()
+            except Exception as e:
+                log.warning('camelCase 컬럼 로드 실패 (non-fatal, fallback 사용): %s', e)
+
+        # ── 백그라운드 캐시 워밍업 (Supabase cold start 대응) ──────
+        # 서버 시작 직후 비동기로 메모리 캐시를 미리 채워둠
+        # → 첫 사용자 요청도 캐시 히트로 응답
+        async def _warm_caches():
+            try:
+                t0 = time.time()
+                from app.search import _get_cached_apts
+                from app.workplaces import _wp_mem_cache
+                from app.portable import list_columns
+                conn = db_connect()
+                # 1) apartments 전체 로드
+                apts = _get_cached_apts(conn)
+                log.info('cache warm: %d apts loaded (%.0fms)', len(apts), (time.time()-t0)*1000)
+                # 2) workplaces 전체를 인메모리 캐시에
+                from app.portable import list_columns as _lc
+                cols = _lc(conn, 'workplaces')
+                rows = conn.execute('SELECT * FROM workplaces').fetchall()
+                for row in rows:
+                    d = dict(zip(cols, [row[c] for c in cols]))
+                    _wp_mem_cache[d['address_input']] = d
+                log.info('cache warm: %d workplaces loaded (%.0fms)', len(rows), (time.time()-t0)*1000)
                 conn.close()
-            log.info('local sqlite schema ensured')
-        except Exception as e:
-            log.error('sqlite schema ensure failed: %s', e)
+            except Exception as e:
+                log.warning('cache warm failed (non-fatal): %s', e)
+
+        # 테스트 환경에서는 워밍을 끈다(BADUGI_NO_WARM): 이 태스크가 라우팅 안 된
+        # 실 db_connect()로 모듈 캐시(_apt_cache/_wp_mem_cache)를 채워, conftest의
+        # 캐시 리셋 직후 요청 처리 중 비동기로 재오염시키는 레이스를 유발한다.
+        if not os.getenv('BADUGI_NO_WARM'):
+            _asyncio.create_task(_warm_caches())
+
     yield
 
 
@@ -141,7 +187,7 @@ ALLOWED_ORIGINS: list[str] = (
     [o.strip() for o in _raw_origins.split(',') if o.strip()]
     or ['http://localhost:8000', 'http://localhost:3000', 'http://127.0.0.1:8000']
 )
-if IS_SERVERLESS and not _raw_origins.strip():
+if cfg.IS_SERVERLESS and not _raw_origins.strip():
     log.warning('ALLOWED_ORIGINS 미설정 — localhost fallback이 production에 적용 중. Vercel 대시보드에서 설정 필요')
 app.add_middleware(
     CORSMiddleware,
@@ -157,7 +203,7 @@ app.add_middleware(
 def health():
     return {
         "status": "ok" if not _IMPORT_ERROR else "import_failed",
-        "backend": "supabase" if USE_PG else "sqlite",
+        "backend": "supabase" if cfg.USE_PG else "sqlite",
         "import_error": _IMPORT_ERROR,
     }
 
@@ -170,7 +216,7 @@ def debug_status():
         return JSONResponse({'error': 'debug disabled'}, status_code=404)
 
     report = {
-        'serverless': IS_SERVERLESS,
+        'serverless': cfg.IS_SERVERLESS,
         'import_error': _IMPORT_ERROR,
         'env': {},
         'db': {},
@@ -242,7 +288,8 @@ def test_odsay():
     results = []
     for i, k in enumerate(cfg.ODSAY_KEYS, 1):
         params = {**base_params, 'apiKey': k['key']}
-        url = 'https://api.odsay.com/v1/api/searchPubTransPathT?' + urllib.parse.urlencode(params)
+        from app.transit import ODSAY_URL as _ODSAY_URL
+        url = _ODSAY_URL + '?' + urllib.parse.urlencode(params)
         req = urllib.request.Request(url, headers={'Referer': k['referer'] or ''})
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
@@ -286,8 +333,9 @@ def test_kakao():
     except Exception as e:
         return {'error': f'{type(e).__name__}: {e}'}
     params = urllib.parse.urlencode({'query': '서울 강남구 테헤란로 504'})
+    from app.workplaces import KAKAO_URL as _KAKAO_URL
     req = urllib.request.Request(
-        f'https://dapi.kakao.com/v2/local/search/address.json?{params}',
+        f'{_KAKAO_URL}?{params}',
         headers={'Authorization': f'KakaoAK {cfg.KAKAO_REST_API_KEY}'},
     )
     try:
@@ -324,6 +372,34 @@ def workplaces_recent(limit: int = 5):
         return []
 
 
+# ── 카카오맵 SDK 로더 (JS 키 환경변수화) ─────────────────────
+# 프론트엔드 HTML이 JS 키를 하드코딩하지 않도록 백엔드가 SDK 로더 JS를 내려줌.
+# 키는 .env의 KAKAO_JS_KEY에서 읽음.
+#
+# [왜 302 리다이렉트가 아니라 document.write인가]
+# 카카오 SDK(sdk.js)는 자신의 <script> 태그 src에서 libraries(services 등)를 파싱한다.
+# 302로 리다이렉트하면 DOM의 태그 src는 프록시 URL(/api/kakao-sdk?...)로 남아
+# 카카오가 sdk.js 태그를 못 찾아 libraries를 못 읽는다 → kakao.maps.services 미로드.
+# 따라서 실제 dapi URL을 가진 <script>를 직접 써넣어 카카오가 libraries를 인식하게 한다.
+# 파싱 중(head)에는 document.write가 동기 로드라 기존 호출부(kakao.maps.load) 호환.
+@app.get("/api/kakao-sdk")
+def kakao_sdk_loader(libraries: str = ""):
+    from fastapi.responses import Response
+    if not cfg.KAKAO_JS_KEY:
+        return JSONResponse({'error': 'KAKAO_JS_KEY not configured'}, status_code=500)
+    src = f"https://dapi.kakao.com/v2/maps/sdk.js?appkey={cfg.KAKAO_JS_KEY}&autoload=false"
+    if libraries:
+        src += f"&libraries={libraries}"
+    js = (
+        "(function(){var u='" + src + "';"
+        "if(document.readyState==='loading'){"
+        "document.write('<script src=\"'+u+'\"><\\/script>');"
+        "}else{var s=document.createElement('script');s.src=u;document.head.appendChild(s);}"
+        "})();"
+    )
+    return Response(content=js, media_type="application/javascript")
+
+
 # ── API 라우터 ───────────────────────────────────────────────
 if search_router is not None:
     app.include_router(search_router, prefix="/api")
@@ -332,7 +408,7 @@ if search_router is not None:
 # ── 정적 프론트엔드 (/web/*) ─────────────────────────────────
 # Vercel에서는 vercel.json의 rewrites가 /web/* 를 CDN에서 직접 서빙.
 # FastAPI 마운트는 로컬 dev 전용.
-if not IS_SERVERLESS:
+if not cfg.IS_SERVERLESS:
     WEB_DIR = Path(__file__).parent.parent / 'web'
     if WEB_DIR.exists():
         app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
