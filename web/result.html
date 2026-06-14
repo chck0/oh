@@ -593,130 +593,137 @@
     /* ════════════════════════════════════════════════════════
        [1] 추천 카드 — AI 친구 코멘트 HERO
        ════════════════════════════════════════════════════════ */
+    /* ── 추천 카드 (compact 3-row) ── */
     .rec-card {
       position: relative;
       background: white;
       border-radius: var(--radius-lg);
       border: 1px solid var(--color-border-strong);
       border-left: 4px solid var(--color-brand-primary);
-      padding: 18px 44px 16px 18px;  /* right 44px: ♥ 버튼 공간 확보 */
-      margin-bottom: 10px;
+      padding: 14px 44px 14px 16px;
+      margin-bottom: 8px;
       cursor: pointer;
       transition: box-shadow 200ms ease;
     }
     .rec-card:hover { box-shadow: var(--shadow-lg); }
+    /* row1: 슬롯 칩 (통근버킷 × 평형) */
     .rec-card__slot {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
       background: var(--color-brand-bg-subtle);
-      padding: 5px 11px;
-      border-radius: var(--radius-sm);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
       letter-spacing: 0.01em;
+      margin-bottom: 8px;
     }
     .rec-card__slot-divider {
       width: 1px; height: 9px;
       background: currentColor; opacity: 0.4;
     }
+    /* row2: 단지명 + 가격 */
     .rec-card__title-row {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; margin: 12px 0 4px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 10px; margin-bottom: 6px;
     }
     .rec-card__title {
-      font-size: 18px; font-weight: 700;
+      font-size: 16px; font-weight: 700;
       letter-spacing: -0.005em;
       color: var(--color-text-primary);
       line-height: 1.3; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .rec-card__price {
-      font-size: 22px; font-weight: 700;
+      font-size: 18px; font-weight: 700;
       letter-spacing: -0.01em;
       color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      white-space: nowrap; line-height: 1.2;
+      white-space: nowrap; flex-shrink: 0;
     }
     .rec-card__price .unit {
-      font-size: 14px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       color: var(--color-text-secondary);
       margin-left: 1px;
     }
+    /* row3: 메타 (동 · 세대수 · 최고층) */
     .rec-card__meta {
-      font-size: 13.5px; color: var(--color-text-secondary);
+      font-size: 12px; color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px; line-height: 1.55;
+      margin-bottom: 8px; line-height: 1.4;
       font-weight: 500;
     }
     .rec-card__meta .dot {
       display: inline-block; width: 2px; height: 2px; border-radius: 50%;
       background: currentColor; opacity: 0.5;
-      margin: 0 6px; vertical-align: middle;
+      margin: 0 5px; vertical-align: middle;
     }
-
-    /* spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral) — 친구 코멘트 위 단독 행 */
+    /* 이유 칩 */
     .rec-card__reasons {
-      display: flex; gap: 6px; flex-wrap: wrap;
-      margin: 10px 0 12px;
+      display: flex; gap: 5px; flex-wrap: wrap;
+      margin-bottom: 8px;
     }
     .reason-chip {
       display: inline-flex; align-items: center;
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: var(--radius-pill);
-      font-size: 12.5px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
       white-space: nowrap;
     }
     .reason-chip--info    { background: var(--blue-100);              color: var(--blue-700); }
-    /* Brand 칩 — 카드 1장당 1개만 (디자인 시스템 §2.2 빨강 5% 이하 원칙) */
     .reason-chip--brand   { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); }
     .reason-chip--neutral { background: var(--color-bg-subtle);       color: var(--color-text-secondary); border: 1px solid var(--color-border-default); }
 
-    /* AI 친구 한마디 — HERO */
+    /* AI 친구 한마디 — 기본 접힘, 클릭 시 펼침 */
+    .rec-card__friend-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      color: var(--color-brand-primary);
+      cursor: pointer; padding: 4px 0; user-select: none;
+      border: none; background: none; font-family: inherit;
+    }
+    .rec-card__friend-toggle .toggle-arrow {
+      font-size: 10px; transition: transform 180ms ease;
+    }
+    .rec-card__friend-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    .rec-card__friend-body-wrap {
+      overflow: hidden;
+      max-height: 0; transition: max-height 250ms ease;
+    }
+    .rec-card__friend-body-wrap.open { max-height: 200px; }
     .rec-card__friend {
-      display: flex; gap: 11px; align-items: flex-start;
+      display: flex; gap: 10px; align-items: flex-start;
       background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
-      border-radius: 10px;
-      padding: 12px 13px 13px;
-      margin-bottom: 12px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 6px;
     }
-    .rec-card__friend.empty {
-      background: var(--color-bg-subtle);
-    }
+    .rec-card__friend.empty { background: var(--color-bg-subtle); }
     .rec-card__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--color-brand-primary);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
-      margin-top: 1px;
+      font-size: 10px; font-weight: 700;
     }
     .rec-card__friend.empty .rec-card__friend-avatar {
       background: var(--color-text-tertiary);
-      box-shadow: none;
     }
-    .rec-card__friend-body { flex: 1; min-width: 0; }
     .rec-card__friend-label {
       font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
-    .rec-card__friend.empty .rec-card__friend-label {
-      color: var(--color-text-tertiary);
-    }
+    .rec-card__friend.empty .rec-card__friend-label { color: var(--color-text-tertiary); }
     .rec-card__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 13px; line-height: 1.55;
       color: var(--color-text-primary);
-      white-space: pre-line;
-      letter-spacing: -0.005em;
-      font-weight: 500;
+      white-space: pre-line; font-weight: 500;
     }
     .rec-card__friend.empty .rec-card__friend-text {
-      font-style: italic; color: var(--color-text-tertiary);
-      font-weight: 400;
+      font-style: italic; color: var(--color-text-tertiary); font-weight: 400;
     }
     .spinner-mini {
       display: inline-block; width: 10px; height: 10px;
@@ -932,67 +939,54 @@
     .bucket-pt-label:first-child { margin-top: 4px; }
     .bucket-pt-label:first-child { margin-top: 4px; }
 
-    /* 일반 list-card (버킷 안) */
+    /* 일반 list-card — 한 줄 row */
     .list-card {
       position: relative;
       background: white;
       border: 1px solid var(--color-border-strong);
-      border-radius: 10px;
-      padding: 13px 40px 13px 14px;  /* right 40px: ♥ 버튼 공간 확보 */
-      margin-bottom: 8px;
+      border-radius: 8px;
+      padding: 11px 40px 11px 14px;
+      margin-bottom: 5px;
       cursor: pointer;
-      transition: box-shadow 200ms, border-color 200ms;
+      transition: box-shadow 150ms, border-color 150ms;
+      display: flex; align-items: center; gap: 10px;
     }
-    .list-card:hover { border-color: var(--color-text-tertiary); }
-    .list-card:hover { box-shadow: var(--shadow-md); }
+    .list-card:hover { border-color: var(--color-text-tertiary); box-shadow: var(--shadow-md); }
     .list-card:last-child { margin-bottom: 0; }
+    /* 왼쪽: 단지명 + 평형 (flex-grow) */
     .list-card__top {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; margin-bottom: 4px;
+      flex: 1; min-width: 0;
     }
     .list-card__name {
-      font-size: 15px; font-weight: 700;
+      font-size: 14px; font-weight: 700;
       color: var(--color-text-primary);
       letter-spacing: -0.005em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .list-card__name .pt {
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       color: var(--color-text-secondary);
-      margin-left: 6px;
-    }
-    .list-card__price {
-      font-size: 16px; font-weight: 700;
-      color: var(--color-text-primary);
-      font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
+      margin-left: 5px;
     }
     .list-card__meta {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 11.5px; color: var(--color-text-tertiary);
+      font-weight: 500; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* 오른쪽: 통근시간 + 가격 (flex-shrink: 0) */
+    .list-card__right {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 3px; flex-shrink: 0;
+    }
+    .list-card__price {
+      font-size: 14px; font-weight: 700;
+      color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      margin-bottom: 8px;
-      line-height: 1.5;
-      font-weight: 500;
     }
     .list-card__row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 4px;
     }
-    .list-card__comment {
-      font-size: 13px; line-height: 1.6;
-      color: var(--color-text-primary);
-      background: var(--color-brand-bg-subtle);
-      border-left: 3px solid var(--color-brand-primary);
-      padding: 8px 11px; border-radius: 5px;
-      margin-top: 8px;
-      white-space: pre-line;
-      font-weight: 500;
-    }
-    .list-card__comment.empty {
-      background: var(--color-bg-subtle);
-      border-color: var(--color-border-default);
-      color: var(--color-text-tertiary);
-      font-style: italic;
-    }
+    .list-card__comment { display: none; } /* 일반 카드는 코멘트 숨김 */
 
     .error-box {
       background: white; padding: 24px;
@@ -2817,6 +2811,11 @@ const CHAT_SUGGESTIONS = [
   '학군이랑 주변 환경은?',
 ];
 
+function _toggleFriend(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+
 function _openChatFromEl(el) {
   openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '',
     parseFloat(el.dataset.lat) || 0, parseFloat(el.dataset.lng) || 0);
@@ -3624,24 +3623,29 @@ function renderRecCard(c, wpId, cmpMode=false){
   </div>`;
 
   const comment = c.friend_comment || '';
-  const friendHtml = comment
-    ? `<div class="rec-card__friend" style="cursor:pointer"
+  const friendInner = comment
+    ? `<div class="rec-card__friend"
         data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
         data-lat="${c.lat||''}" data-lng="${c.lng||''}"
-        onclick="event.stopPropagation();_openChatFromEl(this)" title="더 물어보기">
+        onclick="event.stopPropagation();_openChatFromEl(this)" style="cursor:pointer" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
-        <div class="rec-card__friend-body">
+        <div>
           <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
           <div class="rec-card__friend-text">${escHtml(comment)}</div>
         </div>
       </div>`
     : `<div class="rec-card__friend empty">
         <div class="rec-card__friend-avatar">···</div>
-        <div class="rec-card__friend-body">
+        <div>
           <div class="rec-card__friend-label">한마디 (생성 중)</div>
-          <div class="rec-card__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+          <div class="rec-card__friend-text"><span class="spinner-mini"></span>살펴보는 중...</div>
         </div>
       </div>`;
+  const friendHtml = `
+    <button class="rec-card__friend-toggle" onclick="event.stopPropagation();_toggleFriend(this)" type="button">
+      <span>AI 한마디</span><span class="toggle-arrow">▼</span>
+    </button>
+    <div class="rec-card__friend-body-wrap">${friendInner}</div>`;
 
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
@@ -3749,22 +3753,21 @@ function renderListCard(c, wpId, cmpMode=false){
     ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_lcId)?'checked':''} onchange="toggleCompare('${_lcId}',this)"> 비교</label>`
     : '';
 
+  const commuteChip = dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
+    ? `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num">${c.total_time_min_1}분</strong> · W2 <strong class="num">${c.total_time_min_2}분</strong></span>`
+    : `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')} <strong class="num">${c.total_time_min}분</strong></span>`;
+
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
     ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
-      <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__name">${escHtml(c.apt_nm)}<span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__meta">${metaParts.join(' · ')}</div>
+    </div>
+    <div class="list-card__right">
       <div class="list-card__price num">${shortPrice(c.price_low)}${_priceChgBadge(c.price_chg_6m_pct)}</div>
+      <div class="list-card__row">${commuteChip}</div>
     </div>
-    <div class="list-card__meta">${metaParts.join(' · ')}</div>
-    ${_whyTagsHtml(c.why_tags)}
-    <div class="list-card__row">
-      ${dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
-        ? `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
-        : `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
-    </div>
-    ${_commuteEconRow(c)}
-    ${commentHtml}
   </article>`;
 }
 
