@@ -13,6 +13,7 @@
 
   <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
   <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
   <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
   <script src="/api/kakao-sdk?libraries=services"></script>
 
@@ -359,51 +360,72 @@
     .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
     .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
 
-    /* sort-panel: left-panel 안 칩 패널 */
+    /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
     .sort-panel {
-      display: none; flex-direction: column;
-      background: #fff; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: #f8fafc; flex-shrink: 0;
       border-bottom: 1px solid var(--color-border-strong);
+      padding: 11px 13px 9px;
+      gap: 8px;
     }
-    .sort-panel.open { display: flex; }
+    .sort-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sort-panel-title {
+      font-size: 13px; font-weight: 700; color: var(--color-text-primary);
+      letter-spacing: .02em;
+    }
+    .sort-panel-reset {
+      font-size: 12px; color: var(--color-text-tertiary);
+      background: none; border: none; cursor: pointer; padding: 2px 6px;
+    }
+    .sort-panel-reset:hover { color: var(--color-brand-primary); }
     .sort-chips-wrap {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      padding: 10px 14px 8px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
     }
     .sort-check-item {
-      display: flex; align-items: center; gap: 5px;
-      cursor: pointer; padding: 5px 11px; border-radius: 20px;
-      border: 1px solid var(--color-border-strong);
-      font-size: 12px; font-weight: 500; color: var(--color-text-secondary);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0;
+      cursor: pointer; padding: 11px 0 0;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-size: 11px; font-weight: 600; color: #64748b;
       background: #fff; user-select: none; transition: all .15s;
-      white-space: nowrap;
+      text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      position: relative;
     }
-    .sort-check-item:hover { border-color: #94a3b8; color: var(--color-text-primary); }
-    .sort-check-item.checked {
-      background: #1e293b; color: #fff; border-color: #1e293b;
+    .sort-check-item .icon-bubble {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: transform .15s;
     }
+    .sort-check-item i { font-size: 21px; line-height: 1; color: #e57373; }
+    .sort-check-item:hover { border-color: #e57373; box-shadow: 0 2px 8px rgba(229,115,115,.2); }
+    .sort-check-item:hover .icon-bubble { transform: scale(1.08); background: #fff1f2; }
+    .sort-check-item.checked { border-color: #e57373; background: #fff; }
+    .sort-check-item.checked .icon-bubble { background: #fee2e2; }
+    .sort-chip-label {
+      font-size: 11px; font-weight: 800; color: #fff; line-height: 1.3;
+      word-break: keep-all; white-space: normal; text-align: center;
+      letter-spacing: -.01em;
+      width: 100%; padding: 6px 4px 8px;
+      margin-top: 8px;
+      background: #e57373;
+      border-radius: 0 0 8px 8px;
+    }
+    .sort-check-item.checked .sort-chip-label { background: #c0392b; }
     .sort-check-item .rank-badge {
-      display: none; width: 15px; height: 15px; border-radius: 50%;
-      background: #7c3aed; color: #fff;
-      font-size: 10px; font-weight: 700; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      display: none; position: absolute; top: -8px; right: -8px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #e57373; color: #fff; border: 2px solid #fff;
+      font-size: 12px; font-weight: 800;
+      align-items: center; justify-content: center; line-height: 1;
     }
     .sort-check-item.checked .rank-badge { display: inline-flex; }
     .sort-hint {
-      padding: 0 14px 10px;
       font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
-      min-height: 28px;
+      padding: 0 2px;
     }
     .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
-    .sort-panel-footer {
-      display: flex; justify-content: flex-end;
-      padding: 0 14px 10px;
-    }
-    .sort-panel-reset {
-      font-size: 11px; color: var(--color-text-tertiary);
-      background: none; border: none; cursor: pointer; padding: 2px 4px;
-    }
-    .sort-panel-reset:hover { color: var(--color-brand-primary); }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -1193,13 +1215,7 @@
       background: white; color: var(--color-text-secondary);
       font-size: 12px; cursor: pointer;
     }
-    /* ── 단지 상세 모달 (spec-17) ────────────────────────────── */
-    .detail-overlay {
-      position: fixed; inset: 0; z-index: 600;
-      background: rgba(0,0,0,0.48);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .detail-overlay.hidden { display: none; }
+    /* ── 단지 상세 사이드 패널 (spec-17) ─────────────────────── */
 
     /* spec-18: 경로 상세 팝업 */
     .route-overlay {
@@ -1252,24 +1268,27 @@
     }
 
     .detail-panel {
-      background: white; border-radius: 20px 20px 0 0;
-      width: 100%; max-width: 640px;
-      max-height: 85vh; display: flex; flex-direction: column;
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.22);
+      background: white;
+      width: 0; min-width: 0; overflow: hidden;
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-left: none;
+      transition: width .25s ease, border .25s ease;
     }
-    .detail-panel__drag {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #ddd; margin: 12px auto 0; flex-shrink: 0;
+    .detail-panel.open {
+      width: 420px; min-width: 240px;
+      border-left: 1px solid var(--color-border-strong);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 10px 20px 0;
-      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+      padding: 14px 16px 0;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
-    .detail-panel__title { font-size: 18px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
     .detail-panel__close {
-      flex-shrink: 0; padding: 4px 10px; border-radius: 6px;
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
       border: 1px solid var(--color-border-default); background: white;
-      cursor: pointer; font-size: 13px; color: var(--color-text-secondary);
+      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
       display: flex; padding: 10px 20px 0; flex-shrink: 0;
@@ -2115,11 +2134,9 @@
   <div class="combined-bar">
     <div class="summary-bar" id="summary"></div>
     <div class="sort-bar" id="sort-bar">
-      <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()">
-        정렬 기준
-        <span class="sort-badge" id="sort-badge" style="display:none"></span>
-        <span class="sort-arrow">▾</span>
-      </button>
+      <span style="font-size:13px;color:var(--color-text-secondary);padding:0 16px;font-weight:500">
+        정렬 기준 <span id="sort-badge" style="display:none;color:#7c3aed;font-weight:700"></span>
+      </span>
     </div>
   </div>
 
@@ -2131,11 +2148,12 @@
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
       <div class="sort-panel" id="sort-panel">
-        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-        <div class="sort-hint" id="sort-hint">클릭 순서대로 1순위 → 2순위 → 3순위 자동 지정</div>
-        <div class="sort-panel-footer">
+        <div class="sort-panel-header">
+          <span class="sort-panel-title">정렬 기준</span>
           <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
         </div>
+        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+        <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -2159,25 +2177,23 @@
       </div>
     </div>
 
-    <!-- spec-17: 단지 상세 모달 -->
-    <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-panel__drag"></div>
-        <div class="detail-panel__header">
-          <h2 class="detail-panel__title" id="detail-title">-</h2>
-          <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
-        </div>
-        <div class="detail-panel__tabs">
-          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-        </div>
-        <div class="detail-panel__body" id="detail-body">
-          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-          <div class="detail-tab-pane active" id="detail-tab-info"></div>
-          <div class="detail-tab-pane" id="detail-tab-price"></div>
-          <div class="detail-tab-pane" id="detail-tab-poi"></div>
-        </div>
+    <!-- spec-17: 단지 상세 사이드 패널 -->
+    <div class="resize-handle detail-resize-handle" id="detail-resize-handle" style="display:none"></div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-panel__header">
+        <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-panel__close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-panel__tabs">
+        <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+      </div>
+      <div class="detail-panel__body" id="detail-body">
+        <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+        <div class="detail-tab-pane active" id="detail-tab-info"></div>
+        <div class="detail-tab-pane" id="detail-tab-price"></div>
+        <div class="detail-tab-pane" id="detail-tab-poi"></div>
       </div>
     </div>
 
@@ -2649,10 +2665,10 @@ function openDetail(aptSeq) {
     if (card && card.lat && card.lng)
       kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
   }
-  // 모달 초기화
-  const overlay = document.getElementById('detail-overlay');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  // 사이드 패널 열기
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.body.style.overflow = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -2673,13 +2689,16 @@ function openDetail(aptSeq) {
 }
 
 function closeDetail() {
-  document.getElementById('detail-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
+  if (panelMode === 'detail') {
+    backToList();
+  } else {
+    document.getElementById('detail-panel').classList.remove('open');
+    document.getElementById('detail-resize-handle').style.display = 'none';
+    document.querySelector('.detail-panel__tabs').style.display = '';
+  }
   clearPoiMarker();
 }
-function closeDetailOnBg(e) {
-  if (e.target === document.getElementById('detail-overlay')) closeDetail();
-}
+function closeDetailOnBg(e) {}
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -3351,7 +3370,45 @@ async function validateAndFilterPois() {
   });
 })();
 
-// ── 채팅 패널 좌측 드래그 리사이즈 ──────────────────────────
+// ── 상세 사이드 패널 리사이즈 ────────────────────────────────
+(function() {
+  const handle = document.getElementById('detail-resize-handle');
+  const panel  = document.getElementById('detail-panel');
+  const layout = document.querySelector('.result-layout');
+  if (!handle || !panel || !layout) return;
+
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const layoutW = layout.getBoundingClientRect().width;
+    const newW = Math.max(240, Math.min(layoutW - 560, startW - (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+    panel.style.minWidth = newW + 'px';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+})();
+
+// ── 채팅 패널 좌측 드래그 리사이즈 ────────────────────────────────
 (function() {
   const CHAT_W_KEY = 'chat_panel_w';
   const panel = document.getElementById('chat-panel');
@@ -3396,7 +3453,7 @@ async function validateAndFilterPois() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!document.getElementById('route-overlay').classList.contains('hidden')) { closeRoute(); return; }
-    if (!document.getElementById('detail-overlay').classList.contains('hidden')) closeDetail();
+    if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
     if (!document.getElementById('compare-overlay').classList.contains('hidden')) closeCompare();
   }
 });
@@ -4216,7 +4273,15 @@ async function showDetail(aptSeq, wpId){
   hideTooltip();
   _currentAptSeq = aptSeq;
   clearPoiMarker();
-  const panel = document.getElementById('cards-panel');
+
+  // 사이드 패널 열기
+  const sidePanel = document.getElementById('detail-panel');
+  sidePanel.classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.getElementById('detail-title').textContent = '불러오는 중...';
+  document.querySelector('.detail-panel__tabs').style.display = 'none';
+
+  const panel = document.getElementById('detail-body');
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
 
@@ -4239,7 +4304,7 @@ async function showDetail(aptSeq, wpId){
     renderDetailPanel(detail, routes, wpId);
     if (kakaoMap) validateAndFilterPois();
   } catch(e){
-    panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+    document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -4247,11 +4312,15 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-resize-handle').style.display = 'none';
+  document.querySelector('.detail-panel__tabs').style.display = '';
   if(resultData) renderCards(resultData);
 }
 
 function renderDetailPanel(d, routes, wpId){
-  const panel = document.getElementById('cards-panel');
+  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
   const bld = d.building || {};
@@ -4700,20 +4769,20 @@ function renderPOIHTML(poi){
 
 // ── 체크박스 정렬 패널 ────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
-  { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
-  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
-  { value: 'build_year:desc',              label: '준공연도 신축순',   group: '기본' },
-  { value: 'deal_count:desc',              label: '거래건수 많은순',   group: '기본' },
-  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',     group: '기본' },
-  { value: 'transfer_count:asc',           label: '환승 적은순',       group: '기본' },
-  { value: 'pyeong:desc',                  label: '평수 넓은순',       group: '기본' },
-  { value: 'walk_to_transit_min:asc',      label: '집→대중교통 도보',  group: '도보' },
-  { value: 'nearest_park_min:asc',         label: '공원 도보',         group: '도보' },
-  { value: 'nearest_subway_min:asc',       label: '지하철 도보',       group: '도보' },
-  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',     group: '도보' },
-  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',   group: '도보' },
-  { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',  icon: 'ti-clock',          group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',    icon: 'ti-tag',            group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',    icon: 'ti-coins',          group: '기본' },
+  { value: 'build_year:desc',              label: '신축순',           icon: 'ti-building',       group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',  icon: 'ti-chart-bar',      group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',    icon: 'ti-users',          group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',      icon: 'ti-transfer',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',      icon: 'ti-maximize',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '대중교통 도보',    icon: 'ti-walk',           group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',        icon: 'ti-trees',          group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',      icon: 'ti-train',          group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',    icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',  icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',        icon: 'ti-shopping-cart',  group: '도보' },
 ];
 
 // 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
@@ -4729,7 +4798,7 @@ function initSortBar(cards) {
     const el = document.createElement('div');
     el.className = 'sort-check-item';
     el.dataset.value = o.value;
-    el.innerHTML = `<span class="rank-badge"></span>${o.label}`;
+    el.innerHTML = `<span class="rank-badge"></span><div class="icon-bubble"><i class="ti ${o.icon}"></i></div><span class="sort-chip-label">${o.label}</span>`;
     el.addEventListener('click', () => onSortCheckClick(o.value));
     wrap.appendChild(el);
   });
