@@ -1072,16 +1072,40 @@
       padding: 0 4px; line-height: 16px;
       font-feature-settings: 'tnum';
     }
-    /* 직장·룩업 핀 — 기존 pill 유지 */
-    .pin-lookup, .pin-workplace, .pin-workplace-2 {
+    /* 직장 핀 */
+    .pin-lookup {
       display: inline-block; padding: 5px 12px;
       border-radius: 999px; font-size: 12px; font-weight: 700;
       white-space: nowrap; cursor: pointer; line-height: 1.4;
-      filter: none; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      background:#f59e0b; color:#fff; border:1px solid #d97706;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    .pin-lookup { background:#f59e0b; color:#fff; border:1px solid #d97706; }
-    .pin-workplace { background:var(--color-pin-selected-bg); color:var(--color-pin-selected-text); border:2px solid var(--color-brand-primary); }
-    .pin-workplace-2 { background:#1a56db; color:#fff; border:2px solid #1e429f; }
+    .pin-workplace-wrap, .pin-workplace-2-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+    }
+    .pin-workplace-body, .pin-workplace-2-body {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 10px;
+      font-size: 13px; font-weight: 800; white-space: nowrap;
+      letter-spacing: -0.01em; line-height: 1;
+    }
+    .pin-workplace-body {
+      background: #0f172a; color: #fff;
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+    .pin-workplace-2-body {
+      background: #312e81; color: #fff;
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+    .pin-workplace-tail, .pin-workplace-2-tail {
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+    }
+    .pin-workplace-tail  { border-top: 9px solid #0f172a; }
+    .pin-workplace-2-tail { border-top: 9px solid #312e81; }
+    .pin-workplace-icon { font-size: 15px; line-height: 1; }
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
@@ -3952,7 +3976,7 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin pin-workplace">${dualMode ? 'W1 직장' : '직장'}</div>`,
+    content: `<div class="pin-workplace-wrap"><div class="pin-workplace-body"><span class="pin-workplace-icon">🏢</span>${dualMode ? 'W1 직장' : '직장'}</div><div class="pin-workplace-tail"></div></div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
 
@@ -3960,7 +3984,7 @@ async function initMap(data){
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin pin-workplace-2">W2 직장</div>',
+      content: '<div class="pin-workplace-2-wrap"><div class="pin-workplace-2-body"><span class="pin-workplace-icon">🏢</span>W2 직장</div><div class="pin-workplace-2-tail"></div></div>',
       yAnchor: 1, zIndex: 100,
     }).setMap(kakaoMap);
   }
