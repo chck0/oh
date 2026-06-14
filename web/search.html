@@ -859,10 +859,7 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
 
   const addressEl = document.getElementById('address');
   const addressErrEl = document.getElementById('address-error');
-  const pyeongErrEl = document.getElementById('pyeong-error');
-
   addressErrEl.classList.remove('show');
-  pyeongErrEl.classList.remove('show');
 
   const address = addressEl.value.trim();
   if (!address) {
@@ -882,18 +879,8 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     return;
   }
 
-  const pyeongTypes = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(el => el.value);
-  if (pyeongTypes.length === 0) {
-    pyeongErrEl.textContent = '평형을 하나 이상 선택해주세요';
-    pyeongErrEl.classList.add('show');
-    return;
-  }
-
   const chip = document.querySelector('#commute-chips .chip.active');
   const maxMinutes = parseInt(chip.dataset.value, 10);
-
-  const mincnt = document.querySelector('input[name=mincnt]:checked').value;
-  const buildYearMin = document.querySelector('input[name=build_year_min]:checked').value;
 
   // W2 직장 처리 (선택)
   const address2El = document.getElementById('address2');
@@ -911,11 +898,8 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     workplace_address: address,
     max_price: String(maxPrice),
     max_minutes: String(maxMinutes),
-    pyeong_types: pyeongTypes.join(','),
   });
   if (minPrice !== null) params.set('min_price', String(minPrice));
-  if (mincnt) params.set('min_kaptdaCnt', mincnt);
-  if (buildYearMin) params.set('build_year_min', buildYearMin);
   if (address2) params.set('workplace_address_2', address2);
 
   window.location.href = '/result.html?' + params.toString();
