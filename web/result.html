@@ -1374,6 +1374,14 @@
       border: 2.5px solid #fff; border-radius: 50%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }
+    /* spec-39: POI 위치 확인 실패 안내 토스트 */
+    .poi-notice {
+      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(12px);
+      background: rgba(28,28,46,0.95); color: #fff; font-size: 13px; font-weight: 500;
+      padding: 10px 18px; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      z-index: 600; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    }
+    .poi-notice.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     .compare-overlay {
       position: fixed; inset: 0; z-index: 500;
@@ -3319,16 +3327,75 @@ function showPoiMarker(poiName, walkMin, distM) {
     kakaoMap.panBy(-160, -100);
   }
 
-  // 풀네임 검색 → 실패 시 앞 6글자로 폴백 (validateAndFilterPois와 동일 전략).
-  // "구리여중고교"처럼 축약·결합된 시설명도 마커가 찍히도록 함.
+  // spec-39: 이름 검증 후 배치. 풀네임 검색 → 일치 후보 없으면 앞 6글자 폴백 →
+  //  그래도 없으면 틀린 핀 대신 안내(모르면 모른다). 최근접 무검증(data[0]) 폐기.
   ps.keywordSearch(poiName, (data, status) => {
-    if (status === kakao.maps.services.Status.OK && data.length) { place(data[0]); return; }
+    let best = (status === kakao.maps.services.Status.OK && data.length)
+      ? _pickBestPoi(data, poiName, distM, card.lat, card.lng) : null;
+    if (best) { place(best); return; }
     if (poiName.length > 4) {
       ps.keywordSearch(poiName.substring(0, 6), (d2, s2) => {
-        if (s2 === kakao.maps.services.Status.OK && d2.length) place(d2[0]);
+        const b2 = (s2 === kakao.maps.services.Status.OK && d2.length)
+          ? _pickBestPoi(d2, poiName, distM, card.lat, card.lng) : null;
+        if (b2) place(b2);
+        else _poiNotice('지도에서 위치를 확인하지 못했습니다');
       }, opts);
+    } else {
+      _poiNotice('지도에서 위치를 확인하지 못했습니다');
     }
   }, opts);
+}
+
+// spec-39: POI 마커 위치 신뢰성 헬퍼 ──────────────────────────
+function _normName(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+function _haversine(lat1, lng1, lat2, lng2){
+  const R = 6371000, toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+// Kakao 검색 결과 중 우리가 가진 이름과 일치하는 시설을 고른다.
+//  1순위 정확 일치(최근접), 2순위 부분 일치(거리 모순 없는 최근접), 없으면 null.
+function _pickBestPoi(data, poiName, distM, aptLat, aptLng){
+  const target = _normName(poiName);
+  const scored = data.map(d => {
+    const cand = _normName(d.place_name);
+    const exact = cand === target;
+    const partial = !exact && cand.length >= 2 &&
+                    (cand.includes(target) || target.includes(cand));
+    const straight = (d.y && d.x)
+      ? _haversine(aptLat, aptLng, parseFloat(d.y), parseFloat(d.x)) : null;
+    return { d, exact, partial, straight };
+  });
+  const byNear = (a,b) => (a.straight==null?1e9:a.straight) - (b.straight==null?1e9:b.straight);
+
+  const exacts = scored.filter(s => s.exact).sort(byNear);
+  if (exacts.length) return exacts[0].d;
+
+  // 도보거리(distM)는 직선거리 이상이어야 자연스러움 → 직선거리가 distM*1.5+200m 넘으면 다른 위치로 간주
+  const limit = distM > 0 ? distM*1.5 + 200 : Infinity;
+  const partials = scored
+    .filter(s => s.partial && (s.straight==null || s.straight <= limit))
+    .sort(byNear);
+  if (partials.length) return partials[0].d;
+
+  return null;  // 신뢰 가능한 일치 없음 → 오핀 방지
+}
+// 틀린 핀 대신 짧은 안내 (모르면 모른다)
+let _poiNoticeTimer = null;
+function _poiNotice(msg){
+  let el = document.getElementById('poi-notice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'poi-notice';
+    el.className = 'poi-notice';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_poiNoticeTimer);
+  _poiNoticeTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
 // ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
