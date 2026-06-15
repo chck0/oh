@@ -1071,6 +1071,19 @@
       transition: transform 120ms ease, filter 120ms ease;
     }
     .pin:hover { transform: translateY(-3px); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.36)); }
+    /* 선택된 단지 핀 강조 — 흰 외곽 링 + 글로우 + 확대 + 펄스 (지도에서 식별) */
+    .pin.pin-selected {
+      z-index: 10;
+      filter:
+        drop-shadow(1.6px 0 0 #fff) drop-shadow(-1.6px 0 0 #fff)
+        drop-shadow(0 1.6px 0 #fff) drop-shadow(0 -1.6px 0 #fff)
+        drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+      animation: pinSelPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pinSelPulse {
+      0%, 100% { transform: translateY(-5px) scale(1.18); }
+      50%      { transform: translateY(-7px) scale(1.26); }
+    }
     /* 지붕 (삼각형) */
     .pin-roof {
       width: 0; height: 0;
@@ -2651,6 +2664,31 @@ window.filterMapPins = function(seqs) {
   });
 };
 
+// spec-38: 선택 단지 핀 강조 (지도에서 식별)
+let _activeAptOverlay = null;
+let _activeAptPrevZ = null;
+function setActiveAptPin(aptSeq){
+  // 이전 강조 해제 + zIndex 원복
+  document.querySelectorAll('.pin.pin-selected').forEach(p => p.classList.remove('pin-selected'));
+  if(_activeAptOverlay && _activeAptPrevZ != null && _activeAptOverlay.setZIndex){
+    _activeAptOverlay.setZIndex(_activeAptPrevZ);
+  }
+  _activeAptOverlay = null; _activeAptPrevZ = null;
+  if(!aptSeq) return;
+  // 핀 DOM 강조 (선택자 이스케이프 회피 위해 data-attr 순회)
+  document.querySelectorAll('.pin[data-apt-seq]').forEach(p => {
+    if(p.dataset.aptSeq === String(aptSeq)) p.classList.add('pin-selected');
+  });
+  // 오버레이 최상단으로
+  const overlay = aptOverlayMap[aptSeq];
+  if(overlay && overlay.setZIndex){
+    _activeAptPrevZ = overlay.getZIndex ? overlay.getZIndex() : 5;
+    overlay.setZIndex(200);
+    _activeAptOverlay = overlay;
+  }
+}
+function clearActiveAptPin(){ setActiveAptPin(null); }
+
 // 카드 클릭: 지도 pan + 단지 상세 모달 열기 (spec-17)
 function panToCard(aptSeq){ openDetail(aptSeq); }
 
@@ -2660,6 +2698,7 @@ const _detailCache = {};
 function openDetail(aptSeq) {
   _currentAptSeq = aptSeq;
   clearPoiMarker();
+  setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
   // 지도 pan
   if (kakaoMap && resultData) {
     const card = resultData.cards.find(c => c.apt_seq === aptSeq);
@@ -2698,6 +2737,7 @@ function closeDetail() {
     document.querySelector('.detail-panel__tabs').style.display = '';
   }
   clearPoiMarker();
+  clearActiveAptPin();  // spec-38: 핀 강조 해제
 }
 function closeDetailOnBg(e) {}
 function switchDetailTab(name, btn) {
@@ -4271,6 +4311,7 @@ async function showDetail(aptSeq, wpId){
   hideTooltip();
   _currentAptSeq = aptSeq;
   clearPoiMarker();
+  setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
 
   // 사이드 패널 열기
   const sidePanel = document.getElementById('detail-panel');
@@ -4313,6 +4354,7 @@ function backToList(){
   document.getElementById('detail-panel').classList.remove('open');
   document.getElementById('detail-resize-handle').style.display = 'none';
   document.querySelector('.detail-panel__tabs').style.display = '';
+  clearActiveAptPin();  // spec-38: 핀 강조 해제
   if(resultData) renderCards(resultData);
 }
 
