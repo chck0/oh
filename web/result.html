@@ -3697,6 +3697,8 @@ function _renderCompareTable(cards) {
   // 각 항목별 최솟값 강조용
   const minTime  = Math.min(...cards.map(c => c.total_time_min));
   const minPrice = Math.min(...cards.map(c => c.price_low || Infinity));
+  const pppOf = c => (c.price_low && c.pyeong) ? Math.round(c.price_low / c.pyeong) : null;
+  const minPpp = Math.min(...cards.map(c => pppOf(c) ?? Infinity));
 
   const rows = [
     { label: '통근시간',
@@ -3713,21 +3715,16 @@ function _renderCompareTable(cards) {
         const str = e && m ? `${e}억 ${m.toLocaleString()}만` : e ? `${e}억` : `${(c.price_low||0).toLocaleString()}만`;
         return `<span class="${c.price_low===minPrice?'compare-best':''}">${str}</span>`;
       }},
+    { label: '평당가',
+      fn: c => {
+        const v = pppOf(c);
+        if (v == null) return '-';
+        return `<span class="${v===minPpp?'compare-best':''}">${v.toLocaleString()}만/평</span>`;
+      }},
     { label: '세대수',    fn: c => `${(c.kaptdaCnt||0).toLocaleString()}세대` },
     { label: '연식',      fn: c => c.build_year ? `${c.build_year}년<br>(${THIS_Y - c.build_year}년차)` : '-' },
     { label: '최고층',    fn: c => c.top_floor  ? `${c.top_floor}층` : '-' },
-    { label: '저가 근거', fn: c => {
-      if (!c.why_tags || !c.why_tags.length) return '-';
-      return c.why_tags.slice(0,2).map(t => escHtml(t.label)).join('<br>');
-    }},
-    { label: '6개월 변동', fn: c => {
-      const pct = c.price_chg_6m_pct;
-      if (pct == null) return '-';
-      const cls  = pct > 0 ? 'up' : 'down';
-      const sign  = pct > 0 ? '+' : '';
-      const arrow = pct > 0 ? '▲' : '▼';
-      return `<span class="price-chg-badge price-chg-badge--${cls}">${arrow}${sign}${pct}%</span>`;
-    }},
+    { label: '거래 건수', fn: c => c.deal_count ? `${c.deal_count}건` : '-' },
     { label: '동네',      fn: c => escHtml(c.umd_nm || '-') },
   ];
 
