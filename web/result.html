@@ -3239,32 +3239,62 @@ function _addRouteLine(path, weight, col, style) {
 }
 
 // 4겹 선: 흰 외곽 → 루트색(목적지) → 흰 구분 → 옅은 수단색. 도보는 루트색 점선.
+// 개발용 가시화: 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
+//   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
+// 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
-  const segs = [];
-  best.steps.forEach(step => {
-    if (!step.linestring) return;
+  const sd = window._lastSearchData || {};
+  const wp = (color === '#059669') ? sd.workplace_2 : sd.workplace;
+  const wpLL = (wp && wp.lat) ? new kakao.maps.LatLng(wp.lat, wp.lng) : null;
+  const apt = window._routeAptLatLng;
+  const aptLL = (apt && apt.lat) ? new kakao.maps.LatLng(apt.lat, apt.lng) : null;
+
+  // 1) step 파싱 (도보 또는 linestring 없음 → walk)
+  const parsed = best.steps.map(step => {
+    const isWalk = step.type === '도보' || step.type === '환승도보';
+    if (isWalk || !step.linestring) return { walk: true, type: step.type };
     const pts = step.linestring.trim().split(' ').flatMap(pair => {
-      const parts = pair.split(',');
-      if (parts.length < 2) return [];
-      const lng = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+      const a = pair.split(',');
+      if (a.length < 2) return [];
+      const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
       return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
     });
-    if (pts.length < 2) return;
-    const isWalk = step.type === '도보' || step.type === '환승도보';
-    // 단순화로 잔떨림·이음새 꺾임 제거(≈12m) → 스무딩
-    const clean = simplifyPath(pts, 0.00013);
-    segs.push({ path: isWalk ? clean : smoothPath(clean, 3), isWalk });
+    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null };
   });
-  // 레이어 패스 — 연속된 흰 케이싱이 끊기지 않도록 같은 겹끼리 모아 그림
-  segs.forEach(s => { if (!s.isWalk) _addRouteLine(s.path, 11, '#FFFFFF'); });           // 흰 케이싱
-  segs.forEach(s => { if (!s.isWalk) _addRouteLine(s.path, 7, color); });                // 루트색 실선
-  segs.forEach(s => { if (s.isWalk) _addRouteLine(s.path, 4.5, color, 'shortdash'); });   // 도보 점선
+
+  // 2) 교통(버스·지하철) — 수단별 스타일
+  parsed.forEach(s => {
+    if (s.walk || !s.pts) return;
+    const clean = smoothPath(simplifyPath(s.pts, 0.00013), 3);
+    if (s.type === '지하철') {
+      _addRouteLine(clean, 9, '#FFFFFF');          // 흰 케이싱
+      _addRouteLine(clean, 6, color, 'solid');     // 지하철 = 실선
+    } else {
+      _addRouteLine(clean, 6, color, 'longdash');  // 버스 = longdash
+    }
+  });
+
+  // 3) 도보 — 직선 점선(양 끝점 브리지)
+  parsed.forEach((s, i) => {
+    if (!s.walk) return;
+    let A = null;
+    for (let j = i - 1; j >= 0; j--)
+      if (!parsed[j].walk && parsed[j].pts) { A = parsed[j].pts[parsed[j].pts.length - 1]; break; }
+    if (!A) A = aptLL;
+    let B = null;
+    for (let j = i + 1; j < parsed.length; j++)
+      if (!parsed[j].walk && parsed[j].pts) { B = parsed[j].pts[0]; break; }
+    if (!B) B = wpLL;
+    if (A && B) _addRouteLine([A, B], 4.5, color, 'shortdash');  // 도보 점선
+  });
 }
 
 async function openRoute(aptSeq, wpId, aptNm, event) {
   if (event) event.stopPropagation();
+  const _ac = (window._lastCards || resultData?.cards || []).find(c => c.apt_seq === aptSeq);
+  window._routeAptLatLng = (_ac && _ac.lat) ? { lat: _ac.lat, lng: _ac.lng } : null;
   clearRoutePolylines();
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
@@ -4094,6 +4124,7 @@ async function showDetail(aptSeq, wpId){
     const routes = (await results[1].json()).options || [];
     const routes2 = wpId2 ? ((await results[2].json()).options || []) : null;
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
+    window._routeAptLatLng = currentDetailCard.lat ? {lat:currentDetailCard.lat, lng:currentDetailCard.lng} : null;
     renderDetailPanel(detail, routes, wpId);
     drawRoutePolylines(routes, '#9F1239');
     if (routes2) drawRoutePolylines(routes2, '#059669');
