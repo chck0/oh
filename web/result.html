@@ -3586,8 +3586,121 @@ document.addEventListener('keydown', e => {
 // ── spec-18: 경로 상세 팝업 ─────────────────────────────────────
 const _routeCache = {};
 
+// ── 경로 폴리라인 렌더링 ──────────────────────────────────────
+let _routePolylines = [];
+
+function clearRoutePolylines() {
+  _routePolylines.forEach(p => p.setMap(null));
+  _routePolylines = [];
+}
+
+// Douglas-Peucker 단순화 — 점 잔떨림·이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
+function simplifyPath(pts, tol) {
+  if (pts.length < 3) return pts;
+  const P = pts.map(p => [p.getLng(), p.getLat()]);
+  const keep = new Array(P.length).fill(false);
+  keep[0] = keep[P.length - 1] = true;
+  const stack = [[0, P.length - 1]];
+  while (stack.length) {
+    const seg = stack.pop(), a = seg[0], b = seg[1];
+    const ax = P[a][0], ay = P[a][1], bx = P[b][0], by = P[b][1];
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1e-12;
+    let maxD = 0, idx = -1;
+    for (let i = a + 1; i < b; i++) {
+      const px = P[i][0], py = P[i][1];
+      const t = ((px - ax) * dx + (py - ay) * dy) / len2;
+      const cx = ax + t * dx, cy = ay + t * dy;
+      const d = Math.hypot(px - cx, py - cy);
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > tol && idx > -1) { keep[idx] = true; stack.push([a, idx], [idx, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
+// Chaikin 코너 컷팅 — 각진 모서리를 둥근 곡선으로 스무딩
+function smoothPath(pts, iterations) {
+  let cur = pts;
+  for (let it = 0; it < iterations && cur.length >= 3; it++) {
+    const out = [cur[0]];
+    for (let i = 0; i < cur.length - 1; i++) {
+      const aLat = cur[i].getLat(),   aLng = cur[i].getLng();
+      const bLat = cur[i + 1].getLat(), bLng = cur[i + 1].getLng();
+      out.push(new kakao.maps.LatLng(aLat * 0.75 + bLat * 0.25, aLng * 0.75 + bLng * 0.25));
+      out.push(new kakao.maps.LatLng(aLat * 0.25 + bLat * 0.75, aLng * 0.25 + bLng * 0.75));
+    }
+    out.push(cur[cur.length - 1]);
+    cur = out;
+  }
+  return cur;
+}
+
+function _addRouteLine(path, weight, col, style) {
+  const line = new kakao.maps.Polyline({
+    path: path, strokeWeight: weight, strokeColor: col,
+    strokeOpacity: 1, strokeStyle: style || 'solid',
+  });
+  line.setMap(kakaoMap);
+  _routePolylines.push(line);
+}
+
+// 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
+//   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
+// 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
+function drawRoutePolylines(options, color) {
+  if (!kakaoMap || !options || !options.length) return;
+  const best = options[0]; // rank 1 경로만 표시
+  const sd = window._lastSearchData || {};
+  const wp = (color === '#059669') ? sd.workplace_2 : sd.workplace;
+  const wpLL = (wp && wp.lat) ? new kakao.maps.LatLng(wp.lat, wp.lng) : null;
+  const apt = window._routeAptLatLng;
+  const aptLL = (apt && apt.lat) ? new kakao.maps.LatLng(apt.lat, apt.lng) : null;
+
+  // 1) step 파싱 (도보 또는 linestring 없음 → walk)
+  const parsed = best.steps.map(step => {
+    const isWalk = step.type === '도보' || step.type === '환승도보';
+    if (isWalk || !step.linestring) return { walk: true, type: step.type };
+    const pts = step.linestring.trim().split(' ').flatMap(pair => {
+      const a = pair.split(',');
+      if (a.length < 2) return [];
+      const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
+      return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
+    });
+    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null };
+  });
+
+  // 2) 교통(버스·지하철) — 수단별 스타일
+  parsed.forEach(s => {
+    if (s.walk || !s.pts) return;
+    const clean = smoothPath(simplifyPath(s.pts, 0.00013), 3);
+    if (s.type === '지하철') {
+      _addRouteLine(clean, 9, '#FFFFFF');          // 흰 케이싱
+      _addRouteLine(clean, 6, color, 'solid');     // 지하철 = 실선
+    } else {
+      _addRouteLine(clean, 6, color, 'longdash');  // 버스 = longdash
+    }
+  });
+
+  // 3) 도보 — 직선 점선(양 끝점 브리지)
+  parsed.forEach((s, i) => {
+    if (!s.walk) return;
+    let A = null;
+    for (let j = i - 1; j >= 0; j--)
+      if (!parsed[j].walk && parsed[j].pts) { A = parsed[j].pts[parsed[j].pts.length - 1]; break; }
+    if (!A) A = aptLL;
+    let B = null;
+    for (let j = i + 1; j < parsed.length; j++)
+      if (!parsed[j].walk && parsed[j].pts) { B = parsed[j].pts[0]; break; }
+    if (!B) B = wpLL;
+    if (A && B) _addRouteLine([A, B], 4.5, color, 'shortdash');  // 도보 점선
+  });
+}
+
 async function openRoute(aptSeq, wpId, aptNm, event) {
   if (event) event.stopPropagation();
+  const _ac = (window._lastCards || (typeof resultData !== 'undefined' && resultData?.cards) || []).find(c => c.apt_seq === aptSeq);
+  window._routeAptLatLng = (_ac && _ac.lat) ? { lat: _ac.lat, lng: _ac.lng } : null;
+  clearRoutePolylines();
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -3621,11 +3734,14 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
     return;
   }
   _renderRoutePanel(routes1, routes2);
+  drawRoutePolylines(routes1, '#9F1239');
+  if (routes2) drawRoutePolylines(routes2, '#059669');
 }
 
 function closeRoute() {
   document.getElementById('route-overlay').classList.add('hidden');
   document.body.style.overflow = '';
+  clearRoutePolylines();
 }
 
 function closeRouteOnBg(event) {
