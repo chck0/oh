@@ -1712,36 +1712,52 @@
       margin: 12px 12px 0;
     }
     .dp__meta {
-      font-size: 12.5px;
-      color: var(--color-text-secondary);
+      font-size: 13px;
+      color: var(--color-text-tertiary);
       font-feature-settings: 'tnum';
-      margin-bottom: 12px;
+      margin-bottom: 13px;
       font-weight: 500;
     }
-    /* 스탯 줄 (통근·최저가·세대) — 인스타 프로필 스탯 느낌 */
-    .dp-statrow { display: flex; gap: 8px; margin-bottom: 12px; }
-    .dp-stat {
-      flex: 1; text-align: center;
+    .dp__meta strong { color: var(--color-text-primary); font-weight: 700; }
+    /* 스탯 줄 (통근·최저가·세대) — 하나의 스트립 + 얇은 구분선 */
+    .dp-statrow {
+      display: flex; margin-bottom: 14px;
       background: var(--color-bg-subtle);
-      border-radius: 12px; padding: 11px 6px;
+      border-radius: 14px; padding: 15px 4px;
+    }
+    .dp-stat {
+      flex: 1; min-width: 0; text-align: center;
+      position: relative; padding: 0 8px;
+    }
+    .dp-stat + .dp-stat::before {
+      content: ''; position: absolute; left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 1px; height: 28px;
+      background: var(--color-border-default);
     }
     .dp-stat-num {
-      font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
+      font-size: 20px; font-weight: 800; letter-spacing: -0.03em;
       font-feature-settings: 'tnum'; color: var(--color-text-primary);
-      line-height: 1.1;
+      line-height: 1.15; white-space: nowrap;
     }
     .dp-stat-num.clr-up { color: #C0392B; }
     .dp-stat-num.clr-dn { color: #2471A3; }
+    .dp-stat-unit {
+      font-size: 12px; font-weight: 700;
+      color: var(--color-text-tertiary); margin-left: 1.5px;
+      letter-spacing: 0;
+    }
     .dp-stat-label {
       font-size: 11px; color: var(--color-text-tertiary);
-      margin-top: 4px; font-weight: 600;
+      margin-top: 6px; font-weight: 600; letter-spacing: 0.03em;
     }
     /* 알약 칩 */
-    .dp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .dp-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
     .dp-chip {
-      font-size: 11.5px; font-weight: 700; padding: 5px 11px;
+      font-size: 12px; font-weight: 700; padding: 6px 13px;
       border-radius: 9999px; background: var(--color-bg-muted);
       color: var(--color-text-secondary); white-space: nowrap;
+      letter-spacing: -0.01em;
     }
     .dp-chip.brand { background: var(--red-50); color: var(--color-brand-primary); }
     .dp-chip.cool  { background: var(--blue-100); color: var(--blue-700); }
@@ -2465,6 +2481,15 @@ function fmtPrice(manwon){
   if(e&&m) return `${e}억 ${m.toLocaleString()}만`;
   if(e)    return `${e}억`;
   return `${m.toLocaleString()}만`;
+}
+// spec-42: 단위(억/만)를 작게 — 스탯 숫자 가독성·정렬용
+function fmtPriceRich(manwon){
+  if(!manwon) return '-';
+  const e=Math.floor(manwon/10000), m=manwon%10000;
+  const u=(s)=>`<span class="dp-stat-unit">${s}</span>`;
+  if(e&&m) return `${e}${u('억')} ${m.toLocaleString()}${u('만')}`;
+  if(e)    return `${e}${u('억')}`;
+  return `${m.toLocaleString()}${u('만')}`;
 }
 function shortPrice(manwon){
   if(!manwon) return '-';
@@ -4638,7 +4663,7 @@ function renderDetailPanel(d, routes, wpId){
   const thisYear = THIS_YEAR;
 
   // ── 메타 한 줄
-  const metaParts = [escHtml(d.umd_nm), `${(d.kaptdaCnt||0).toLocaleString()}세대`];
+  const metaParts = [`<strong>${escHtml(d.umd_nm)}</strong>`, `${(d.kaptdaCnt||0).toLocaleString()}세대`];
   if(bld.build_year) metaParts.push(`${bld.build_year}년 (${thisYear-bld.build_year}년차)`);
   if(bld.top_floor) metaParts.push(`최고 ${bld.top_floor}층`);
 
@@ -4701,8 +4726,8 @@ function renderDetailPanel(d, routes, wpId){
   // ── 스탯 줄 + 칩 (spec-42)
   const _bktLabel = (t)=> t==null?null : t<=30?'30분 이하':t<=45?'31~45분':t<=60?'46~60분':'60분+';
   const statTime = cardRef.total_time_min!=null
-    ? `${cardRef.total_time_min}<span style="font-size:12px;font-weight:600;color:var(--color-text-secondary)">분</span>` : '-';
-  const statPrice = cardRef.price_low!=null ? fmtPrice(cardRef.price_low) : '-';
+    ? `${cardRef.total_time_min}<span class="dp-stat-unit">분</span>` : '-';
+  const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
   const statHtml = `<div class="dp-statrow">
     <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
     <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">최저가</div></div>
