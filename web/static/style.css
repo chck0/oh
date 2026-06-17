@@ -2,6 +2,8 @@
    real_estate — BADUGI
    PPT 사양: 색 #C00000, 굴림 Bold, 캔버스 788×784pt (×1.4 → web px)
    ============================================================= */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -9,7 +11,7 @@
 }
 
 html, body {
-  font-family: '굴림', Gulim, 'Malgun Gothic', system-ui, sans-serif;
+  font-family: 'Pretendard', system-ui, sans-serif;
   background: #ffffff;
   color: #000;
   min-height: 100vh;
