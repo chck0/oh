@@ -1311,7 +1311,7 @@
       border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
     }
     .detail-tab-btn.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
-    .detail-panel__body { flex: 1; overflow-y: auto; padding: 16px 20px 32px; }
+    .detail-panel__body { flex: 1; overflow-y: auto; padding: 0 0 24px; background: var(--color-bg-subtle); }
     .detail-tab-pane { display: none; }
     .detail-tab-pane.active { display: block; }
     .detail-section { margin-bottom: 20px; }
@@ -1702,17 +1702,61 @@
       letter-spacing: 0.05em;
     }
 
+    /* spec-42: 인스타 클린카드 — HERO/섹션을 흰 소프트카드로 */
     .dp__hero {
-      padding: 13px 14px 13px;
+      padding: 16px;
       background: white;
-      border-bottom: 1.5px solid var(--color-border-strong);
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 2px 14px rgba(26,24,22,0.05);
+      margin: 12px 12px 0;
     }
     .dp__meta {
       font-size: 12.5px;
       color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 9px;
+      margin-bottom: 12px;
       font-weight: 500;
+    }
+    /* 스탯 줄 (통근·최저가·세대) — 인스타 프로필 스탯 느낌 */
+    .dp-statrow { display: flex; gap: 8px; margin-bottom: 12px; }
+    .dp-stat {
+      flex: 1; text-align: center;
+      background: var(--color-bg-subtle);
+      border-radius: 12px; padding: 11px 6px;
+    }
+    .dp-stat-num {
+      font-size: 19px; font-weight: 800; letter-spacing: -0.02em;
+      font-feature-settings: 'tnum'; color: var(--color-text-primary);
+      line-height: 1.1;
+    }
+    .dp-stat-num.clr-up { color: #C0392B; }
+    .dp-stat-num.clr-dn { color: #2471A3; }
+    .dp-stat-label {
+      font-size: 11px; color: var(--color-text-tertiary);
+      margin-top: 4px; font-weight: 600;
+    }
+    /* 알약 칩 */
+    .dp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .dp-chip {
+      font-size: 11.5px; font-weight: 700; padding: 5px 11px;
+      border-radius: 9999px; background: var(--color-bg-muted);
+      color: var(--color-text-secondary); white-space: nowrap;
+    }
+    .dp-chip.brand { background: var(--red-50); color: var(--color-brand-primary); }
+    .dp-chip.cool  { background: var(--blue-100); color: var(--blue-700); }
+    /* 시세 한 줄 결론 (KPI 3중복 대체) */
+    .dp-verdict {
+      background: var(--color-bg-subtle); border-radius: 12px;
+      padding: 13px 14px; font-size: 14px; font-weight: 600;
+      line-height: 1.5; color: var(--color-text-primary);
+    }
+    .dp-verdict b { font-weight: 800; }
+    .dp-verdict .clr-up { color: #C0392B; }
+    .dp-verdict .clr-dn { color: #2471A3; }
+    .dp-verdict-sub {
+      display: block; font-size: 12px; color: var(--color-text-tertiary);
+      margin-top: 5px; font-weight: 500; font-feature-settings: 'tnum';
     }
     .dp__commute {
       font-size: 13px; font-weight: 700;
@@ -1772,9 +1816,13 @@
     }
 
     .dp__section {
-      border-bottom: 1px solid var(--color-border-strong);
+      background: white;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 2px 14px rgba(26,24,22,0.05);
+      margin: 12px 12px 0;
+      overflow: hidden;
     }
-    .dp__section:last-child { border-bottom: none; }
     .dp__section-head {
       padding: 12px 14px;
       display: flex; align-items: center; gap: 10px;
@@ -4626,6 +4674,23 @@ function renderDetailPanel(d, routes, wpId){
   if(bld.heat_type) bldPreviewParts.push(`난방 ${escHtml(bld.heat_type)}`);
   const bldPreview = bldPreviewParts.length ? bldPreviewParts.slice(0,3).join(' · ') : '건물 정보 없음';
 
+  // ── 스탯 줄 + 칩 (spec-42)
+  const _bktLabel = (t)=> t==null?null : t<=30?'30분 이하':t<=45?'31~45분':t<=60?'46~60분':'60분+';
+  const statTime = cardRef.total_time_min!=null
+    ? `${cardRef.total_time_min}<span style="font-size:12px;font-weight:600;color:var(--color-text-secondary)">분</span>` : '-';
+  const statPrice = cardRef.price_low!=null ? fmtPrice(cardRef.price_low) : '-';
+  const statHtml = `<div class="dp-statrow">
+    <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">최저가</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${(d.kaptdaCnt||0).toLocaleString()}</div><div class="dp-stat-label">세대</div></div>
+  </div>`;
+  const _chips = [];
+  if(cardRef.pyeong_type) _chips.push(`<span class="dp-chip brand">${escHtml(cardRef.pyeong_type)}</span>`);
+  const _bl = _bktLabel(cardRef.total_time_min);
+  if(_bl) _chips.push(`<span class="dp-chip cool">${_bl}</span>`);
+  if(cardRef.transit_summary) _chips.push(`<span class="dp-chip">${escHtml(cardRef.transit_summary)}</span>`);
+  const chipsHtml = _chips.length ? `<div class="dp-chips">${_chips.join('')}</div>` : '';
+
   // SVG 아이콘들
   const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>';
   const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>';
@@ -4642,10 +4707,11 @@ function renderDetailPanel(d, routes, wpId){
       ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
     </div>
 
-    <!-- HERO -->
+    <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
       <div class="dp__meta">${metaParts.join(' · ')}</div>
-      ${transitChip}
+      ${statHtml}
+      ${chipsHtml}
       ${friendHtml}
     </div>
 
@@ -4673,7 +4739,7 @@ function renderDetailPanel(d, routes, wpId){
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
       <div class="dp__section-body">
-        ${renderKPIHTML(d.price_summary)}
+        ${renderKPIHTML(d.price_summary, d.umd_nm)}
         <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
         <div class="dp-chart-legend" style="margin-top:6px">
           <span><i class="dp-legend-dot" style="background:#A82E1B"></i>${escHtml(d.apt_nm)}</span>
@@ -4828,27 +4894,24 @@ function toggleMoreRoutes(btn){
 }
 
 // ── KPI ───────────────────────────────────────────────────────
-function renderKPIHTML(ps){
-  if(!ps) return '<p style="font-size:12px;color:var(--color-text-tertiary);">데이터 없음</p>';
-  const chgCls = ps.change_6m_pct>0?'clr-up':ps.change_6m_pct<0?'clr-dn':'clr-flat';
-  const vsCls  = ps.vs_dong_pct<0?'clr-dn':ps.vs_dong_pct>0?'clr-up':'clr-flat';
-  const diffCls= ps.vs_dong_diff<0?'clr-dn':ps.vs_dong_diff>0?'clr-up':'clr-flat';
-  const diffTxt= ps.vs_dong_diff!=null
-    ? fmtPrice(Math.abs(ps.vs_dong_diff))+(ps.vs_dong_diff<0?' 저렴':' 비쌈') : '-';
-  return `<div class="dp-kpis">
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">단지 6개월</div>
-      <div class="dp-kpi-value num ${chgCls}">${fmtPct(ps.change_6m_pct)}</div>
-    </div>
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">동평균 대비 (${ps.pyeong}평)</div>
-      <div class="dp-kpi-value num ${vsCls}">${fmtPct(ps.vs_dong_pct)}</div>
-    </div>
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">동평균 차액</div>
-      <div class="dp-kpi-value num ${diffCls}" style="font-size:13px">${diffTxt}</div>
-    </div>
-  </div>`;
+// spec-42: KPI 3중복 → 한 줄 결론(verdict). 데이터 없으면 솔직히 '없음'.
+function renderKPIHTML(ps, umdNm){
+  if(!ps) return '<p style="font-size:12px;color:var(--color-text-tertiary);">시세 데이터 없음</p>';
+  const where = `${escHtml(umdNm||'')} ${ps.pyeong?ps.pyeong+'평 ':''}평균`;
+  let main;
+  if(ps.vs_dong_diff!=null && ps.vs_dong_pct!=null){
+    const cls = ps.vs_dong_diff<0?'clr-dn':ps.vs_dong_diff>0?'clr-up':'';
+    const updown = ps.vs_dong_diff<0?'저렴':ps.vs_dong_diff>0?'비쌈':'동일';
+    main = `${where}보다 <b class="${cls}">${fmtPrice(Math.abs(ps.vs_dong_diff))} ${updown}</b> <span class="num ${cls}">(${fmtPct(ps.vs_dong_pct)})</span>`;
+  } else if(ps.vs_dong_pct!=null){
+    const cls = ps.vs_dong_pct<0?'clr-dn':ps.vs_dong_pct>0?'clr-up':'';
+    main = `${where} 대비 <b class="num ${cls}">${fmtPct(ps.vs_dong_pct)}</b>`;
+  } else {
+    main = '동평균 비교 데이터 없음';
+  }
+  const sub = ps.change_6m_pct!=null
+    ? `<span class="dp-verdict-sub">최근 6개월 ${fmtPct(ps.change_6m_pct)}</span>` : '';
+  return `<div class="dp-verdict">${main}${sub}</div>`;
 }
 
 // ── 평수 탭 ───────────────────────────────────────────────────
