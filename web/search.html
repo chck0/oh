@@ -281,7 +281,7 @@
       position: absolute; width: 100%;
       -webkit-appearance: none; appearance: none;
       background: transparent; pointer-events: none;
-      height: 4px; outline: none;
+      height: 8px; outline: none;
     }
     .price-dual-range input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
@@ -299,11 +299,11 @@
     }
     .price-track {
       position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-      height: 4px; border-radius: 2px;
+      height: 8px; border-radius: 4px;
       background: var(--color-border-strong); z-index: 0;
     }
     .price-track-fill {
-      position: absolute; height: 100%; border-radius: 2px;
+      position: absolute; height: 100%; border-radius: 4px;
       background: var(--color-brand-primary);
     }
     .price-ticks {
@@ -578,7 +578,7 @@
 <main class="page">
 
   <header class="page-head">
-    <h2>당신을 위한 최적화 아파트 추천</h2>
+    <h2>출퇴근 시간을 아끼는 확실한 부동산 솔루션</h2>
     <p>직장주소, 금액, 통근시간 3가지 정보를 넣어주세요.</p>
   </header>
 
@@ -900,11 +900,16 @@ function onPriceSlider() {
   const sMax = document.getElementById('slider-max');
   let vMin = parseInt(sMin.value);
   let vMax = parseInt(sMax.value);
-  if (vMin >= vMax) {
-    if (document.activeElement === sMin) vMin = Math.max(0, vMax - 5000);
-    else vMax = Math.min(PRICE_MAX_MAN, vMin + 5000);
-    sMin.value = vMin; sMax.value = vMax;
+  // 가격 범위는 5억(50000만) 고정 폭 — 한쪽을 움직이면 반대쪽이 따라옴
+  const GAP = 50000;
+  if (document.activeElement === sMin) {
+    vMax = Math.min(PRICE_MAX_MAN, vMin + GAP);
+    vMin = Math.max(0, vMax - GAP);
+  } else {
+    // 최대를 움직이거나 초기 호출: 최소는 최대-5억 (0 미만이면 0)
+    vMin = Math.max(0, vMax - GAP);
   }
+  sMin.value = vMin; sMax.value = vMax;
   document.getElementById('price-label-min').innerHTML = `<span>최소</span>${_priceLabel(vMin)}`;
   document.getElementById('price-label-max').innerHTML = `<span>최대</span>${_priceLabel(vMax)}`;
   const pct1 = vMin / PRICE_MAX_MAN * 100;
