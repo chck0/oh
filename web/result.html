@@ -1768,42 +1768,52 @@
       padding: 5px 11px;
       border-radius: var(--radius-pill);
     }
+    /* spec-42: 친구 한마디 — 채팅형(헤더줄 + 본문 풀폭) */
     .dp__friend {
-      display: flex; gap: 10px; align-items: flex-start;
+      display: block;
       background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
-      border-radius: 10px;
-      padding: 11px 12px 12px;
+      border-radius: 14px;
+      padding: 14px 16px 15px;
     }
     .dp__friend.empty {
       background: var(--color-bg-subtle);
     }
-    .dp__friend-body { flex: 1; min-width: 0; }
+    .dp__friend-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
     .dp__friend-label {
-      font-size: 10px; font-weight: 700;
+      font-size: 12.5px; font-weight: 800;
       color: var(--color-brand-primary);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 4px;
+      letter-spacing: -0.01em; flex: 1;
     }
     .dp__friend.empty .dp__friend-label {
       color: var(--color-text-tertiary);
     }
+    .dp__friend-cta {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-brand-primary);
+      background: rgba(168, 46, 27, 0.08);
+      padding: 4px 10px; border-radius: 9999px;
+      white-space: nowrap; transition: background 120ms;
+    }
+    .dp__friend:hover .dp__friend-cta { background: rgba(168, 46, 27, 0.16); }
     .dp__friend-avatar {
       flex-shrink: 0;
-      width: 24px; height: 24px;
+      width: 26px; height: 26px;
       border-radius: 50%;
       background: var(--color-brand-primary);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700;
+      font-size: 13px; font-weight: 700;
       box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
-      margin-top: 1px;
     }
     .dp__friend.empty .dp__friend-avatar {
       background: var(--color-text-tertiary);
       box-shadow: none;
     }
     .dp__friend-text {
-      font-size: 13px; line-height: 1.65;
+      font-size: 14px; line-height: 1.75;
       color: var(--color-text-primary);
       font-weight: 500;
       white-space: pre-line;
@@ -1824,38 +1834,41 @@
       overflow: hidden;
     }
     .dp__section-head {
-      padding: 12px 14px;
-      display: flex; align-items: center; gap: 10px;
+      padding: 15px 16px;
+      display: flex; align-items: center; gap: 12px;
       cursor: pointer; user-select: none;
       transition: background 120ms;
     }
     .dp__section-head:hover { background: var(--color-bg-subtle); }
     .dp__section-icon {
       flex-shrink: 0;
-      width: 28px; height: 28px;
-      border-radius: 7px;
+      width: 34px; height: 34px;
+      border-radius: 10px;
       background: var(--color-bg-subtle);
-      border: 1px solid var(--color-border-default);
+      border: none;
       display: flex; align-items: center; justify-content: center;
-      color: var(--color-text-secondary);
+      color: var(--color-text-tertiary);
       transition: all 200ms;
     }
-    .dp__section-icon svg { width: 15px; height: 15px; }
+    .dp__section-icon svg { width: 17px; height: 17px; }
     .dp__section-titlebox {
       flex: 1; min-width: 0;
-      display: flex; flex-direction: column; gap: 1px;
+      display: flex; flex-direction: column; gap: 2px;
     }
     .dp__section-title {
-      font-size: 13.5px; font-weight: 700;
+      font-size: 14.5px; font-weight: 700;
       color: var(--color-text-primary);
-      letter-spacing: -0.005em;
+      letter-spacing: -0.01em;
     }
     .dp__section-preview {
-      font-size: 12px; color: var(--color-text-secondary);
+      font-size: 12.5px; color: var(--color-text-tertiary);
       font-feature-settings: 'tnum';
-      margin-top: 2px;
+      margin-top: 3px;
       font-weight: 500;
     }
+    /* 프리뷰 속 핵심 숫자 강조 (스캔성↑) */
+    .dp__section-preview .num { color: var(--color-text-secondary); font-weight: 700; }
+    .dp__section-preview strong { font-weight: 700; }
     .dp__section-chev {
       width: 20px; height: 20px;
       display: flex; align-items: center; justify-content: center;
@@ -4626,18 +4639,19 @@ function renderDetailPanel(d, routes, wpId){
         data-apt-seq="${d.apt_seq}" data-apt-nm="${escHtml(d.apt_nm)}" data-pyeong-type="${escHtml(cardRef.pyeong_type||'')}"
         data-lat="${d.lat||''}" data-lng="${d.lng||''}"
         onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
-        <div class="dp__friend-avatar">친구</div>
-        <div class="dp__friend-body">
-          <div class="dp__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 탭해서 더 물어보기 →</span></div>
-          <div class="dp__friend-text">${escHtml(friend)}</div>
+        <div class="dp__friend-head">
+          <div class="dp__friend-avatar">💬</div>
+          <div class="dp__friend-label">친구 한마디</div>
+          <div class="dp__friend-cta">더 물어보기 →</div>
         </div>
+        <div class="dp__friend-text">${escHtml(friend)}</div>
       </div>`
     : `<div class="dp__friend empty">
-        <div class="dp__friend-avatar">···</div>
-        <div class="dp__friend-body">
-          <div class="dp__friend-label">한마디 (생성 중)</div>
-          <div class="dp__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+        <div class="dp__friend-head">
+          <div class="dp__friend-avatar">···</div>
+          <div class="dp__friend-label">친구 한마디 (생성 중)</div>
         </div>
+        <div class="dp__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
       </div>`;
 
   // ── 통근 요약
