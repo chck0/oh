@@ -900,13 +900,13 @@ function onPriceSlider() {
   const sMax = document.getElementById('slider-max');
   let vMin = parseInt(sMin.value);
   let vMax = parseInt(sMax.value);
-  // 가격 범위는 5억(50000만) 고정 폭 — 한쪽을 움직이면 반대쪽이 따라옴
-  const GAP = 50000;
+  const GAP = 50000;     // 최대 이동 시 최소가 따라오는 기본 간격(5억)
+  const MIN_GAP = 5000;  // 핸들 교차 방지(0.5억)
   if (document.activeElement === sMin) {
-    vMax = Math.min(PRICE_MAX_MAN, vMin + GAP);
-    vMin = Math.max(0, vMax - GAP);
+    // 사용자가 최소를 직접 조정 — 자유롭게(최대보다 0.5억 이상 아래로만), 최대는 유지
+    if (vMin > vMax - MIN_GAP) vMin = Math.max(0, vMax - MIN_GAP);
   } else {
-    // 최대를 움직이거나 초기 호출: 최소는 최대-5억 (0 미만이면 0)
+    // 최대를 움직이거나 초기 호출: 최소는 최대-5억(0 미만이면 0)으로 따라옴
     vMin = Math.max(0, vMax - GAP);
   }
   sMin.value = vMin; sMax.value = vMax;
