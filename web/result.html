@@ -1286,7 +1286,7 @@
       transition: width .25s ease, border .25s ease;
     }
     .detail-panel.open {
-      width: 420px; min-width: 240px;
+      width: 480px; min-width: 280px;
       border-left: 1px solid var(--color-border-strong);
       box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
@@ -1832,7 +1832,9 @@
       box-shadow: 0 2px 14px rgba(26,24,22,0.05);
       margin: 12px 12px 0;
       overflow: hidden;
+      transition: box-shadow 160ms ease;
     }
+    .dp__section:hover { box-shadow: 0 4px 18px rgba(26,24,22,0.10); }
     .dp__section-head {
       padding: 15px 16px;
       display: flex; align-items: center; gap: 12px;
@@ -1851,6 +1853,12 @@
       transition: all 200ms;
     }
     .dp__section-icon svg { width: 17px; height: 17px; }
+    /* spec-42: 섹션별 컬러 아이콘 (식별성↑·예쁨↑) */
+    .dp__section-icon.ic-commute { background: var(--blue-100);  color: var(--blue-700); }
+    .dp__section-icon.ic-price   { background: var(--red-50);    color: var(--color-brand-primary); }
+    .dp__section-icon.ic-trade   { background: var(--amber-100); color: var(--amber-700); }
+    .dp__section-icon.ic-poi     { background: var(--green-100); color: var(--green-700); }
+    .dp__section-icon.ic-bld     { background: var(--color-bg-muted); color: var(--color-text-secondary); }
     .dp__section-titlebox {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 2px;
@@ -1877,12 +1885,14 @@
       flex-shrink: 0;
     }
     .dp__section.open .dp__section-chev { transform: rotate(180deg); }
-    .dp__section.open .dp__section-icon {
-      background: var(--color-brand-bg-subtle);
-      color: var(--color-brand-primary);
+    .dp__section.open .dp__section-icon { transform: scale(1.04); }
+    .dp__section-body { display: none; padding: 14px 16px 16px; }
+    .dp__section.open .dp__section-body {
+      display: block;
+      border-top: 1px solid var(--color-bg-muted);
+      margin: 0 16px;
+      padding: 14px 0 16px;
     }
-    .dp__section-body { display: none; padding: 0 14px 14px; }
-    .dp__section.open .dp__section-body { display: block; }
 
     /* 통근 경로 */
     .dp-route {
@@ -4729,10 +4739,10 @@ function renderDetailPanel(d, routes, wpId){
       ${friendHtml}
     </div>
 
-    <!-- 통근 경로 (펼침) -->
-    <div class="dp__section open">
+    <!-- 통근 경로 -->
+    <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_CLOCK}</div>
+        <div class="dp__section-icon ic-commute">${ICON_CLOCK}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">통근 경로</span>
           <span class="dp__section-preview">${routePreview}</span>
@@ -4742,10 +4752,10 @@ function renderDetailPanel(d, routes, wpId){
       <div class="dp__section-body">${renderRoutesHTML(routes)}</div>
     </div>
 
-    <!-- 시세 분석 (펼침) -->
-    <div class="dp__section open">
+    <!-- 시세 분석 -->
+    <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_CHART}</div>
+        <div class="dp__section-icon ic-price">${ICON_CHART}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">시세 분석</span>
           <span class="dp__section-preview">${pricePreview}</span>
@@ -4766,7 +4776,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 실거래 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_TABLE}</div>
+        <div class="dp__section-icon ic-trade">${ICON_TABLE}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">실거래 내역</span>
           <span class="dp__section-preview">${tradePreview}</span>
@@ -4779,7 +4789,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 도보 시설 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_PIN}</div>
+        <div class="dp__section-icon ic-poi">${ICON_PIN}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">도보 주요 시설</span>
           <span class="dp__section-preview">${poiPreview}</span>
@@ -4792,7 +4802,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 건물 정보 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_BUILDING}</div>
+        <div class="dp__section-icon ic-bld">${ICON_BUILDING}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">건물 정보</span>
           <span class="dp__section-preview">${bldPreview}</span>
