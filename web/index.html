@@ -1,106 +1,472 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BADUGI</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
-      background: #f5f6f8;
-      color: #1a1a1a;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      line-height: 1.5;
-    }
-    .card {
-      background: #fff;
-      max-width: 720px;
-      width: 100%;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-      padding: 40px 36px;
-    }
-    .page-tag {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .notice {
-      display: inline-block;
-      font-size: 13px;
-      color: #d23;
-      background: #fde8ea;
-      border-radius: 6px;
-      padding: 4px 10px;
-      margin-bottom: 28px;
-    }
-    h2 {
-      font-size: 18px;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #eee;
-    }
-    ul { list-style: none; }
-    li { margin-bottom: 18px; }
-    .en {
-      font-size: 15px;
-      font-weight: 600;
-    }
-    .en .pct { color: #2a7; }
-    .ko {
-      font-size: 13.5px;
-      color: #666;
-      margin-top: 3px;
-    }
-    .start-wrap { margin-top: 32px; text-align: center; }
-    .start-btn {
-      display: inline-block;
-      background: #1a1a1a;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 600;
-      text-decoration: none;
-      padding: 14px 48px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-    }
-    .start-btn:hover { background: #333; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>BADUGI</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,sans-serif;background:#fff;color:#0A0A0E;}
+#scrollwrap{width:100%;height:100vh;overflow:hidden;}
+#slidetrack{transition:transform .85s cubic-bezier(.77,0,.175,1);will-change:transform;}
+
+/* Fixed CTA */
+#cta-fixed{
+  position:fixed;top:24px;right:32px;z-index:9999;
+  background:#CC2222;color:#fff;border:none;border-radius:12px;
+  padding:14px 32px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  box-shadow:0 4px 24px rgba(204,34,34,.35);
+  transition:background .2s,opacity .4s,transform .4s;
+}
+#cta-fixed:hover{background:#B01A1A;}
+#cta-fixed.gone{opacity:0;transform:translateY(-8px);pointer-events:none;}
+
+/* Sections */
+.sec{
+  width:100%;height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 120px;position:relative;overflow:hidden;
+  background:#fff;
+}
+.sec.gray{background:#F5F5F0;}
+
+/* Animate helpers */
+.ai{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease;}
+.ai.show{opacity:1;transform:none;}
+.af{opacity:0;transition:opacity .7s ease;}
+.af.show{opacity:1;}
+.d1{transition-delay:.1s}.d2{transition-delay:.25s}.d3{transition-delay:.4s}
+.d4{transition-delay:.55s}.d5{transition-delay:.7s}.d6{transition-delay:.85s}
+.d7{transition-delay:1s}
+
+/* journey */
+.jb{
+  flex:1;border:1.5px solid #E0E0E0;border-radius:14px;padding:24px 14px;text-align:center;
+  min-height:150px;display:flex;flex-direction:column;justify-content:center;
+  transition:all .6s ease;
+}
+.jb-name{font-size:16px;font-weight:700;color:#0A0A0E;margin-bottom:8px;line-height:1.3;}
+.jb-sub{font-size:12px;color:#888;line-height:1.5;}
+.jb.badugi-box{background:#FFF5F2;border-color:#CC2222;border-width:2px;padding:40px 20px;min-height:200px;}
+.jb.badugi-box .jb-name{color:#CC2222;font-size:24px;font-weight:900;}
+.jb.badugi-box .jb-sub{color:#991111;font-size:14px;}
+.j-arr{font-size:20px;color:#CCC;padding:0 8px;flex-shrink:0;transition:opacity .4s;}
+
+/* people */
+.person-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s;}
+.person-wrap.on{opacity:1;transform:none;}
+.bubble{background:#F5F5F0;border-radius:14px;padding:12px 14px;font-size:14px;color:#444;line-height:1.55;text-align:center;max-width:180px;}
+
+/* loop card */
+.loop-card{
+  background:#fff;border:2px solid #E8E8E8;border-radius:20px;padding:22px;
+  transition:border-color .25s,box-shadow .25s,opacity .5s,transform .5s;
+  opacity:0;transform:translateY(16px);
+}
+.loop-card.appear{opacity:1;transform:none;}
+.loop-card.lit{border-color:#CC2222;box-shadow:0 0 36px rgba(204,34,34,.2);}
+.lc-label{font-size:11px;color:#aaa;letter-spacing:2px;font-weight:700;margin-bottom:12px;text-transform:uppercase;}
+
+/* hogangnono */
+.hogn-wrap{display:flex;border-radius:18px;overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,.12);height:460px;width:520px;flex-shrink:0;}
+.hogn-side{width:190px;background:#fff;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;font-size:12px;overflow:hidden;flex-shrink:0;}
+.hfr{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #f2f2f2;}
+.hfr-hl{background:#FFF7F5;border-left:3px solid #CC2222;padding-left:7px;}
+.hfr-name{font-weight:600;color:#333;font-size:12px;}
+.hfr-val{color:#aaa;font-size:10px;}
+.hfr-hl .hfr-val{color:#CC2222;font-weight:600;}
+
+@keyframes dash{to{stroke-dashoffset:-32}}
+</style>
 </head>
 <body>
-  <main class="card">
-    <div class="page-tag">[서비스 소개 / 설명 페이지]</div>
-    <span class="notice">발표 전 수정필요</span>
 
-    <h2>Grading Criteria</h2>
-    <ul>
-      <li>
-        <div class="en">• What's new? <span class="pct">(20%)</span> — Who are your competitors and how is your product superior?</div>
-        <div class="ko">무엇이 새로운가? — 경쟁자는 누구이며, 당신의 제품은 어떻게 더 우수한가?</div>
-      </li>
-      <li>
-        <div class="en">• Why You? <span class="pct">(20%)</span> — What differentiated efforts did you invest?</div>
-        <div class="ko">왜 당신인가? — 당신은 어떤 차별화된 노력을 기울였는가?</div>
-      </li>
-      <li>
-        <div class="en">• So, what? <span class="pct">(30%)</span> — What are the real responses from your target users?</div>
-        <div class="ko">그래서? — 타겟 사용자들의 실제 반응은 어떠한가?</div>
-      </li>
-      <li>
-        <div class="en">• Is AI Native? <span class="pct">(30%)</span> — How did you achieve drastic efficiency improvement using AI tools?</div>
-        <div class="ko">AI 네이티브인가? — AI 도구를 활용해 어떻게 극적인 효율 향상을 달성했는가?</div>
-      </li>
-    </ul>
+<button id="cta-fixed" onclick="window.open('/search.html','_blank')">서비스 시작하기</button>
 
-    <div class="start-wrap">
-      <a class="start-btn" href="/search.html">시작하기</a>
+<div id="scrollwrap"><div id="slidetrack">
+<!-- ════ PAGE 1 ════ -->
+<section class="sec" id="s1">
+  <div style="text-align:center;">
+    <div class="ai" id="s1a" style="font-size:72px;font-weight:900;letter-spacing:-3px;color:#bbb;margin-bottom:12px;">출퇴근 소요 시간</div>
+    <h1 class="ai d3" id="s1b" style="font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1.1;white-space:nowrap;">
+      얼마나 <span style="color:#CC2222;">길에서</span> 허비하고 계세요?
+    </h1>
+  </div>
+</section>
+
+<!-- ════ PAGE 2 ════ -->
+<section class="sec" id="s2">
+  <div style="text-align:center;width:100%;">
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:24px;">
+      <span id="s2num" style="font-size:200px;font-weight:900;color:#CC2222;letter-spacing:-10px;line-height:1;font-variant-numeric:tabular-nums;transition:color .3s;">90.4</span>
+      <span style="font-size:60px;font-weight:700;color:#ccc;padding-bottom:18px;">분</span>
     </div>
-  </main>
+    <div id="s2bridge" style="font-size:26px;color:#555;margin-bottom:44px;opacity:0;transition:opacity .6s;">
+      하루 20분씩 절약한 시간이 1년 동안 쌓인다면
+    </div>
+    <div style="font-size:52px;font-weight:900;letter-spacing:-2px;min-height:68px;">
+      <span id="fp1" style="opacity:0;transition:opacity .5s;">20분</span><span id="fp2" style="opacity:0;transition:opacity .5s;"> &times; 240일</span><span id="fp3" style="opacity:0;transition:opacity .5s;"> = <span style="color:#CC2222;">4,800분</span></span><span id="fp4" style="opacity:0;transition:opacity .5s;"> = 80시간 = <span style="color:#CC2222;">3일 8시간</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ════ PAGE 3 ════ -->
+<section class="sec gray" id="s3" style="flex-direction:row;gap:52px;align-items:center;padding:60px 80px;">
+  <!-- Left: text -->
+  <div style="flex:1;min-width:0;max-width:420px;">
+    <div class="ai" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;">
+      <span style="background:#eee;border-radius:24px;padding:10px 22px;font-size:18px;font-weight:600;">호갱노노</span>
+      <span style="background:#eee;border-radius:24px;padding:10px 22px;font-size:18px;font-weight:600;">네이버 부동산</span>
+      <span style="background:#eee;border-radius:24px;padding:10px 22px;font-size:18px;font-weight:600;">다방</span>
+    </div>
+    <h2 class="ai d2" style="font-size:58px;font-weight:900;letter-spacing:-3px;line-height:1.1;margin-bottom:20px;">
+      직주근접은<br>수많은 필터 중<br><span style="color:#CC2222;">단 하나</span>
+    </h2>
+    <div class="ai d3" style="width:56px;height:3px;background:#CC2222;border-radius:2px;margin-bottom:20px;"></div>
+    <p class="ai d4" style="font-size:18px;color:#666;margin-bottom:14px;">지하철 역 근접성 ≠ 실제 통근시간</p>
+    <p class="ai d5" style="font-size:16px;color:#991111;font-weight:600;line-height:1.65;background:#FFF5F2;border-radius:12px;padding:16px 18px;">
+      "강남역이 회사라면,<br>강남역까지 자차 42분인<br>지역을 보여줄 뿐"
+    </p>
+  </div>
+  <!-- Right: Hogangnono actual screenshot -->
+  <div class="ai d2" style="flex-shrink:0;width:580px;height:460px;border-radius:18px;overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,.15);">
+    <img src="/static/images/hogangnono.png" style="width:100%;height:100%;object-fit:cover;object-position:left top;" alt="호갱노노 화면">
+  </div>
+</section>
+
+<!-- ════ PAGE 4 ════ -->
+<section class="sec" id="s4">
+  <div class="ai" style="font-size:13px;color:#bbb;letter-spacing:3px;font-weight:700;margin-bottom:10px;">집 하나 볼 때마다</div>
+  <h2 class="ai d2" style="font-size:72px;font-weight:900;letter-spacing:-4px;margin-bottom:40px;">반복되는 <span style="color:#CC2222;">수동 노동</span></h2>
+
+  <!-- Triangle loop layout -->
+  <div style="position:relative;width:860px;height:340px;flex-shrink:0;">
+    <!-- SVG arrows layer -->
+    <svg id="s4arrows" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 860 340">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#CC2222"/>
+        </marker>
+      </defs>
+      <!-- 1→2: 호갱노노 right → 주소복사 top-left -->
+      <path id="p12" d="M 590,95 C 660,95 660,190 640,190" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+      <!-- 2→3: 주소복사 bottom → 네이버지도 bottom -->
+      <path id="p23" d="M 580,290 C 580,330 280,330 280,290" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+      <!-- 3→1: 네이버지도 right → 호갱노노 left -->
+      <path id="p31" d="M 270,170 C 210,170 210,95 270,95" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+    </svg>
+
+    <!-- Card 1: 호갱노노 · top-center -->
+    <div class="loop-card" id="lc1" style="position:absolute;left:270px;top:10px;width:320px;">
+      <div class="lc-label">01 · 호갱노노 검색</div>
+      <div style="background:#F8F8F8;border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:700;">힐스테이트 동탄</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">경기 화성시 · 84㎡</div>
+        <div style="font-size:16px;font-weight:700;color:#CC2222;margin-top:5px;">9.2억</div>
+      </div>
+      <div style="font-size:12px;color:#22C55E;font-weight:600;">✓ 마음에 드는 집 발견!</div>
+    </div>
+
+    <!-- Card 2: 주소복사 · bottom-right -->
+    <div class="loop-card" id="lc2" style="position:absolute;left:580px;top:180px;width:260px;">
+      <div class="lc-label">02 · 주소 복사</div>
+      <div style="background:#F8F8F8;border-radius:10px;padding:10px;margin-bottom:8px;">
+        <div style="font-size:11px;color:#333;line-height:1.5;">경기 화성시 동탄대로시범길 23, 힐스테이트 동탄 101동</div>
+      </div>
+      <div style="background:#CC2222;color:#fff;border-radius:7px;padding:6px;text-align:center;font-size:13px;font-weight:700;">복사</div>
+    </div>
+
+    <!-- Card 3: 네이버지도 · bottom-left -->
+    <div class="loop-card" id="lc3" style="position:absolute;left:20px;top:180px;width:260px;">
+      <div class="lc-label">03 · 네이버지도 검색</div>
+      <div style="background:#F8F8F8;border-radius:10px;height:72px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+        <svg width="190" height="50" viewBox="0 0 190 50">
+          <path d="M8,25 Q47,12 95,25 Q143,38 182,25" stroke="#ddd" stroke-width="5" fill="none"/>
+          <circle cx="8" cy="25" r="8" fill="#22C55E"/>
+          <circle cx="182" cy="25" r="8" fill="#CC2222"/>
+          <rect x="60" y="6" width="70" height="20" rx="4" fill="#333"/>
+          <text x="95" y="20" text-anchor="middle" font-size="11" fill="#fff" font-weight="700" font-family="Pretendard,sans-serif">47분 소요</text>
+        </svg>
+      </div>
+      <div style="font-size:13px;font-weight:700;">47분... <span style="color:#aaa;font-size:11px;font-weight:400;">다시 찾아봐야지</span></div>
+    </div>
+  </div>
+
+  <div id="s4repeat" style="margin-top:28px;font-size:22px;color:#888;opacity:0;transition:opacity .6s;">이 과정을 <span style="color:#CC2222;font-size:44px;font-weight:900;vertical-align:middle;">수십 번</span> 반복</div>
+</section>
+
+<!-- ════ PAGE 5 ════ -->
+<section class="sec gray" id="s5">
+  <h2 class="ai" style="font-size:72px;font-weight:900;letter-spacing:-4px;margin-bottom:12px;">맞벌이 딜레마</h2>
+  <p class="ai d2" style="font-size:20px;color:#888;margin-bottom:56px;">두 직장 사이, 집은 어디에?</p>
+  <div class="ai d3" style="width:100%;max-width:1100px;">
+    <svg id="s5svg" width="1100" height="240" viewBox="0 0 1100 240">
+      <rect x="20" y="50" width="230" height="140" rx="18" fill="#FAF8F3" stroke="#D4C9B0" stroke-width="2"/>
+      <text x="135" y="96" text-anchor="middle" font-size="12" fill="#7A6E5A" font-weight="700" letter-spacing="2" font-family="Pretendard,sans-serif">우리 회사</text>
+      <text x="135" y="132" text-anchor="middle" font-size="28" fill="#1A1A1A" font-weight="900" font-family="Pretendard,sans-serif">강남역</text>
+      <rect x="850" y="50" width="230" height="140" rx="18" fill="#FAF8F3" stroke="#D4C9B0" stroke-width="2"/>
+      <text x="965" y="96" text-anchor="middle" font-size="12" fill="#7A6E5A" font-weight="700" letter-spacing="2" font-family="Pretendard,sans-serif">배우자 회사</text>
+      <text x="965" y="132" text-anchor="middle" font-size="28" fill="#1A1A1A" font-weight="900" font-family="Pretendard,sans-serif">여의도</text>
+      <line id="s5ll" x1="250" y1="120" x2="430" y2="120" stroke="#CC2222" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
+      <line id="s5lr" x1="670" y1="120" x2="850" y2="120" stroke="#CC2222" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
+      <g id="s5house">
+        <rect x="430" y="30" width="240" height="180" rx="18" fill="#fff" stroke="#CC2222" stroke-width="3"/>
+        <text x="550" y="96" text-anchor="middle" font-size="48" font-family="Pretendard,sans-serif">🏠</text>
+        <text x="550" y="146" text-anchor="middle" font-size="26" fill="#0A0A0E" font-weight="900" font-family="Pretendard,sans-serif">우리 집</text>
+        <text x="550" y="178" text-anchor="middle" font-size="15" fill="#aaa" font-family="Pretendard,sans-serif">어디에?</text>
+      </g>
+    </svg>
+  </div>
+  <div class="ai d5" style="margin-top:44px;text-align:center;">
+    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">서로의 직장 중간 지점을 찾기 위해 <span style="color:#CC2222;font-weight:700;">신경전</span></p>
+    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">결국 한 사람은 직주근접을 처음부터 <span style="color:#CC2222;font-weight:700;">포기</span></p>
+  </div>
+</section>
+
+<!-- ════ PAGE 6 ════ -->
+<section class="sec" id="s6">
+  <h2 class="ai" style="font-size:64px;font-weight:900;letter-spacing:-3px;line-height:1.1;text-align:center;margin-bottom:56px;">
+    집 구매 Journey 맨 앞에<br><span style="color:#CC2222;">BADUGI</span>를 배치
+  </h2>
+  <div id="s6wrap" style="display:flex;align-items:center;width:100%;max-width:1300px;transition:max-width .8s ease;" class="ai d2">
+    <div class="jb ai d2" id="jb1"><div class="jb-name">막막한 상태</div><div class="jb-sub">어떤 동네에 살아야<br>할지조차 모름</div></div>
+    <div class="j-arr ai d3">→</div>
+    <div class="jb ai d3" id="jb2"><div class="jb-name">매물 확인</div><div class="jb-sub">호갱노노 등으로<br>시세 확인</div></div>
+    <div class="j-arr ai d4" id="jarr23">→</div>
+    <div class="jb ai d4" id="jb3"><div class="jb-name">교통 검색</div><div class="jb-sub">교통경로<br>수동 검증</div></div>
+    <div class="j-arr ai d5">→</div>
+    <div class="jb ai d5" id="jb4"><div class="jb-name">동네 압축</div><div class="jb-sub">후보동네 3~5곳으로<br>압축</div></div>
+    <div class="j-arr ai d6">→</div>
+    <div class="jb ai d6" id="jb5"><div class="jb-name">구체적 탐색</div><div class="jb-sub">동네<br>부동산 방문</div></div>
+  </div>
+</section>
+
+<!-- ════ PAGE 7 ════ -->
+<section class="sec" id="s7">
+  <div id="s7title" style="font-size:38px;font-weight:900;letter-spacing:-1.5px;color:#0A0A0E;text-align:center;margin-bottom:52px;opacity:0;transition:opacity .5s;">
+    BADUGI = 출퇴근 소요 시간만 잘 알려준다
+  </div>
+
+  <div style="display:flex;gap:52px;justify-content:center;align-items:flex-start;margin-bottom:44px;" id="s7people">
+    <div class="person-wrap" id="pw1">
+      <img src="/static/images/p1.png" style="width:120px;height:120px;border-radius:50%;object-fit:cover;" alt="">
+      <div class="bubble">"출퇴근이 아무리 빨라도<br>나는 공원 근처에<br>살고 싶다"</div>
+    </div>
+    <div class="person-wrap" id="pw2">
+      <img src="/static/images/p2.png" style="width:120px;height:120px;border-radius:50%;object-fit:cover;" alt="">
+      <div class="bubble">"신축 아파트가<br>아니면<br>싫다"</div>
+    </div>
+    <div class="person-wrap" id="pw3">
+      <img src="/static/images/p3.png" style="width:120px;height:120px;border-radius:50%;object-fit:cover;" alt="">
+      <div class="bubble">"직주근접만큼<br>초품아도<br>중요하다"</div>
+    </div>
+    <div class="person-wrap" id="pw4">
+      <img src="/static/images/p4.png" style="width:120px;height:120px;border-radius:50%;object-fit:cover;" alt="">
+      <div class="bubble">"마트가 가까운<br>집에<br>살고 싶다"</div>
+    </div>
+  </div>
+
+  <div id="s7sub" style="font-size:28px;font-weight:700;color:#0A0A0E;text-align:center;opacity:0;transition:opacity .6s;line-height:1.6;max-width:800px;">
+    직주근접은 매우 중요하지만, <span style="color:#CC2222;">유일한 기준이 아님.</span>
+  </div>
+
+  <div id="s7ctawrap" style="margin-top:36px;opacity:0;transition:opacity .6s;">
+    <button style="background:#CC2222;color:#fff;border:none;border-radius:14px;padding:20px 56px;font-size:22px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#B01A1A'" onmouseout="this.style.background='#CC2222'" onclick="window.open('/search.html','_blank')">
+      ▶ BADUGI 서비스 시작하기
+    </button>
+  </div>
+</section>
+</div></div><!-- /slidetrack /scrollwrap -->
+
+<script>
+// ── Scroll controller ──
+const SECS = ['s1','s2','s3','s4','s5','s6','s7'];
+const PLAY = [playS1,playS2,playS3,playS4,playS5,playS6,playS7];
+let cur = 0;
+let busy = false;
+const animDone = [false,false,false,false,false,false,false];
+const played   = [false,false,false,false,false,false,false];
+const track = document.getElementById('slidetrack');
+
+function goTo(idx) {
+  if (busy || idx < 0 || idx >= SECS.length) return;
+  if (idx > cur && !animDone[cur]) return;
+  busy = true;
+  cur = idx;
+  track.style.transform = `translateY(-${cur * 100}vh)`;
+  document.getElementById('cta-fixed').classList.toggle('gone', cur === 6);
+  setTimeout(() => {
+    busy = false;
+    if (!played[cur]) { played[cur]=true; enterSection(cur); }
+  }, 900);
+}
+
+function enterSection(i) {
+  document.querySelectorAll(`#${SECS[i]} .ai, #${SECS[i]} .af`).forEach(el=>el.classList.add('show'));
+  PLAY[i]();
+}
+
+window.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.deltaY > 0) goTo(cur + 1);
+  else goTo(cur - 1);
+}, { passive: false });
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(cur+1); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); goTo(cur-1); }
+});
+
+let touchY = 0;
+window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive:true });
+window.addEventListener('touchend', e => {
+  const dy = touchY - e.changedTouches[0].clientY;
+  if (Math.abs(dy) > 40) goTo(dy > 0 ? cur+1 : cur-1);
+}, { passive:true });
+
+// Start s1 immediately (script is at bottom of body)
+played[0]=true; enterSection(0);
+
+function T(ms) { return new Promise(r => setTimeout(r, ms)); }
+function show(id) { const el=document.getElementById(id); if(el) el.style.opacity='1'; }
+function on(id) { const el=document.getElementById(id); if(el) el.classList.add('on'); }
+
+// S1
+async function playS1() {
+  await T(300);
+  document.querySelectorAll('#s1 .ai').forEach(el=>el.classList.add('show'));
+  await T(1400);
+  animDone[0] = true;
+}
+
+// S2: 90.4 → wait 1s → count to 70.4 (1s) → subtitle → formula build
+async function playS2() {
+  const numEl = document.getElementById('s2num');
+  numEl.textContent = '90.4';
+  await T(1000);
+  let v = 90.4;
+  await new Promise(r => {
+    const tick = setInterval(() => {
+      v = Math.max(70.4, parseFloat((v-1).toFixed(1)));
+      numEl.textContent = v.toFixed(1);
+      if (v <= 70.4) { clearInterval(tick); r(); }
+    }, 50);
+  });
+  await T(500);
+  show('s2bridge');
+  await T(1000);
+  show('fp1'); await T(800);
+  show('fp2'); await T(800);
+  show('fp3'); await T(800);
+  show('fp4'); await T(800);
+  animDone[1] = true;
+}
+
+// S3: static, just wait for content to appear
+async function playS3() {
+  await T(1200);
+  animDone[2] = true;
+}
+
+// S4: triangle loop
+async function playS4() {
+  await T(400);
+  document.getElementById('lc1').classList.add('appear','lit');
+  await T(700);
+  document.getElementById('p12').style.opacity='1';
+  await T(500);
+  document.getElementById('lc2').classList.add('appear');
+  await T(700);
+  document.getElementById('p23').style.opacity='1';
+  await T(500);
+  document.getElementById('lc3').classList.add('appear');
+  await T(700);
+  document.getElementById('p31').style.opacity='1';
+  await T(500);
+  document.getElementById('s4repeat').style.opacity='1';
+  animDone[3] = true;
+  const ids=['lc1','lc2','lc3'];
+  let ci=0;
+  setInterval(()=>{
+    ids.forEach(id=>document.getElementById(id).classList.remove('lit'));
+    document.getElementById(ids[ci]).classList.add('lit');
+    ci=(ci+1)%3;
+  }, 900);
+}
+
+// S5: house animation
+async function playS5() {
+  await T(400);
+  const house = document.getElementById('s5house');
+  const ll = document.getElementById('s5ll');
+  const lr = document.getElementById('s5lr');
+  const MAX = 170;
+  const kf = [[0,0],[.18,-MAX],[.32,-MAX],[.50,MAX],[.64,MAX],[.78,-MAX*.6],[.88,MAX*.4],[1,0]];
+  const dur = 7000;
+  let t0 = null;
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function getX(p){
+    for(let i=1;i<kf.length;i++){
+      if(p<=kf[i][0]){const t=(p-kf[i-1][0])/(kf[i][0]-kf[i-1][0]);return lerp(kf[i-1][1],kf[i][1],ease(t));}
+    }return 0;
+  }
+  function frame(ts){
+    if(!t0) t0=ts;
+    const p=((ts-t0)%dur)/dur;
+    const dx=getX(p);
+    house.setAttribute('transform',`translate(${dx},0)`);
+    const hcx=550+dx;
+    ll.setAttribute('x2',Math.max(252,hcx-122)+'');
+    lr.setAttribute('x1',Math.min(848,hcx+122)+'');
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  await T(8000);
+  animDone[4] = true;
+}
+
+// S6: show 5 boxes → merge BADUGI
+async function playS6() {
+  await T(4400);
+  const jb2=document.getElementById('jb2');
+  const jb3=document.getElementById('jb3');
+  const arr=document.getElementById('jarr23');
+  [jb2,jb3,arr].forEach(el=>{
+    el.style.transition='opacity .45s,transform .45s';
+    el.style.opacity='0'; el.style.transform='scale(0.88)';
+  });
+  await T(500);
+  arr.style.display='none'; jb3.style.display='none';
+  jb2.className='jb badugi-box';
+  jb2.style.flex='1.4';
+  jb2.innerHTML='<div class="jb-name">★ BADUGI</div><div class="jb-sub">직주근접 + 라이프스타일로<br>동네를 자동 압축</div>';
+  jb2.style.opacity='1'; jb2.style.transform='none';
+  await T(600);
+  document.getElementById('s6wrap').style.maxWidth='760px';
+  await T(1200);
+  animDone[5] = true;
+}
+
+// S7: title → people → subtitle
+async function playS7() {
+  show('s7title'); await T(1000);
+  on('pw1'); await T(900);
+  on('pw2'); await T(900);
+  on('pw3'); await T(900);
+  on('pw4'); await T(1200);
+  const titleEl = document.getElementById('s7title');
+  titleEl.style.opacity = '0';
+  await T(500);
+  titleEl.textContent = 'BADUGI = 출퇴근 소요 시간을 아끼는 확실한 부동산 솔루션';
+  titleEl.style.color = '#CC2222';
+  titleEl.style.opacity = '1';
+  await T(800);
+  show('s7sub'); await T(700);
+  show('s7ctawrap'); await T(600);
+  animDone[6] = true;
+}
+</script>
 </body>
 </html>
