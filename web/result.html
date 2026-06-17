@@ -4730,7 +4730,7 @@ function renderDetailPanel(d, routes, wpId){
   const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
   const statHtml = `<div class="dp-statrow">
     <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
-    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">최저가</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">실거래가</div></div>
     <div class="dp-stat"><div class="dp-stat-num">${(d.kaptdaCnt||0).toLocaleString()}</div><div class="dp-stat-label">세대</div></div>
   </div>`;
   const _chips = [];
