@@ -4723,8 +4723,7 @@ function renderDetailPanel(d, routes, wpId){
   if(bld.heat_type) bldPreviewParts.push(`난방 ${escHtml(bld.heat_type)}`);
   const bldPreview = bldPreviewParts.length ? bldPreviewParts.slice(0,3).join(' · ') : '건물 정보 없음';
 
-  // ── 스탯 줄 + 칩 (spec-42)
-  const _bktLabel = (t)=> t==null?null : t<=30?'30분 이하':t<=45?'31~45분':t<=60?'46~60분':'60분+';
+  // ── 스탯 줄 (spec-42)
   const statTime = cardRef.total_time_min!=null
     ? `${cardRef.total_time_min}<span class="dp-stat-unit">분</span>` : '-';
   const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
@@ -4733,12 +4732,6 @@ function renderDetailPanel(d, routes, wpId){
     <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">실거래가</div></div>
     <div class="dp-stat"><div class="dp-stat-num">${(d.kaptdaCnt||0).toLocaleString()}</div><div class="dp-stat-label">세대</div></div>
   </div>`;
-  const _chips = [];
-  if(cardRef.pyeong_type) _chips.push(`<span class="dp-chip brand">${escHtml(cardRef.pyeong_type)}</span>`);
-  const _bl = _bktLabel(cardRef.total_time_min);
-  if(_bl) _chips.push(`<span class="dp-chip cool">${_bl}</span>`);
-  if(cardRef.transit_summary) _chips.push(`<span class="dp-chip">${escHtml(cardRef.transit_summary)}</span>`);
-  const chipsHtml = _chips.length ? `<div class="dp-chips">${_chips.join('')}</div>` : '';
 
   // SVG 아이콘들
   const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>';
@@ -4760,7 +4753,6 @@ function renderDetailPanel(d, routes, wpId){
     <div class="dp__hero">
       <div class="dp__meta">${metaParts.join(' · ')}</div>
       ${statHtml}
-      ${chipsHtml}
       ${friendHtml}
     </div>
 
