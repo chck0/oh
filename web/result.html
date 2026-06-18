@@ -6,7 +6,7 @@
   <title>BADUGI — 분석 결과</title>
 
   <link rel="stylesheet" as="style" crossorigin
-    href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css" />
+    href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css" />
   <link rel="stylesheet" href="/static/design-system/tokens.css">
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
@@ -21,7 +21,7 @@
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      font-family: 'Pretendard', system-ui, sans-serif;
+      font-family: 'SUIT', system-ui, sans-serif;
       background: var(--color-bg-base);
       color: var(--color-text-primary);
       height: 100vh; line-height: 1.5;
@@ -1067,7 +1067,7 @@
     /* ── 집 모양 핀 (호갱노노 스타일) ─────────────────────── */
     .pin {
       display: inline-flex; flex-direction: column; align-items: center;
-      cursor: pointer; font-family: 'Pretendard', system-ui, sans-serif;
+      cursor: pointer; font-family: 'SUIT', system-ui, sans-serif;
       filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
       transition: transform 120ms ease, filter 120ms ease;
     }
@@ -1168,7 +1168,7 @@
       border: 1px solid var(--color-border-default);
       border-radius: 12px;
       padding: 14px 20px; min-width: 160px;
-      font-size: 13px; font-family: 'Pretendard', sans-serif;
+      font-size: 13px; font-family: 'SUIT', sans-serif;
       box-shadow: 0 2px 12px rgba(0,0,0,0.12); pointer-events: none;
     }
     #map-legend .lg-title {
@@ -4987,8 +4987,8 @@ function initDetailChart(key, aptNm, umdNm){
         tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}}
       },
       scales:{
-        x:{ticks:{font:{family:'Pretendard',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
-        y:{ticks:{font:{family:'Pretendard',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
+        x:{ticks:{font:{family:'SUIT',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
+        y:{ticks:{font:{family:'SUIT',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
       }
     }
   });
