@@ -36,9 +36,11 @@
       display: flex; align-items: center; gap: 20px;
     }
     header h1 {
-      color: var(--color-brand-primary);
-      font-size: 20px; font-weight: 700;
+      font-size: 20px; font-weight: 800;
       letter-spacing: -0.01em;
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .back-link {
       color: var(--color-text-secondary); text-decoration: none;
@@ -3080,8 +3082,8 @@ function _clearChatAttachment() {
 const CHAT_SUGGESTIONS = [
   '최근 시세 트렌드 어때?',
   '주변 단지 대비 시세는?',
-  '단지 장단점 솔직하게 말해봐',
-  '투자 가치 있어?',
+  '실거래 최근 거래 어때?',
+  '주차·교통 편해?',
   '학군이랑 주변 환경은?',
 ];
 
@@ -3833,8 +3835,8 @@ function _renderRoutePanel(routes1, routes2) {
   let html = '';
   if (hasDual) {
     html += `<div class="route-panel__wp-tabs">
-      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">W1 직장</button>
-      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">W2 직장</button>
+      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">내 직장</button>
+      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">배우자 직장</button>
     </div>`;
   }
   html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1)}</div>`;
@@ -4685,8 +4687,8 @@ function renderDetailPanel(d, routes, wpId){
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
     ? [
-        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#C0392B':ps.change_6m_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
-        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#C0392B':ps.vs_dong_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
+        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#FF7E8A':ps.change_6m_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
+        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#FF7E8A':ps.vs_dong_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
       ].filter(Boolean).join(' · ')
     : '시세 데이터 없음';
 
@@ -4771,8 +4773,8 @@ function renderDetailPanel(d, routes, wpId){
         ${renderKPIHTML(d.price_summary, d.umd_nm)}
         <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
         <div class="dp-chart-legend" style="margin-top:6px">
-          <span><i class="dp-legend-dot" style="background:#A82E1B"></i>${escHtml(d.apt_nm)}</span>
-          <span><i class="dp-legend-dot" style="background:#2471A3;opacity:.7"></i>${escHtml(d.umd_nm)} 동평균</span>
+          <span><i class="dp-legend-dot" style="background:#FF6FB5"></i>${escHtml(d.apt_nm)}</span>
+          <span><i class="dp-legend-dot" style="background:#93C5FD;opacity:.9"></i>${escHtml(d.umd_nm)} 동평균</span>
         </div>
         <div class="dp-chart-wrap"><canvas id="dp-chart"></canvas></div>
       </div>
@@ -4984,17 +4986,25 @@ function initDetailChart(key, aptNm, umdNm){
   // 데이터 포인트가 적으면 점만, 충분하면 선+점
   const nonNull = complexData.filter(v=>v!==null).length;
   const sparse = nonNull < 6;
+  const CHART_PINK   = '#FF6FB5';
+  const CHART_BLUE   = '#93C5FD';
+  const CHART_GRID   = 'rgba(255,255,255,0.08)';
+  const CHART_TICK   = 'rgba(255,255,255,0.55)';
   detailChart = new Chart(canvas.getContext('2d'),{
     type:'line',
     data:{
       labels,
       datasets:[
-        { label:aptNm, data:complexData, borderColor:'#A82E1B', backgroundColor:'#A82E1B25',
-          borderWidth: sparse?0:2, pointRadius: sparse?5:3,
-          pointBackgroundColor:'#A82E1B', tension:0.3, fill:false,
-          showLine:!sparse },
-        { label:`${umdNm} 동평균`, data:dongData, borderColor:'#2471A3', backgroundColor:'#2471A315',
-          borderWidth: 1.5, pointRadius:2, borderDash:[4,3], tension:0.3, fill:false },
+        { label:aptNm, data:complexData,
+          borderColor: CHART_PINK, backgroundColor: 'rgba(255,111,181,0.15)',
+          borderWidth: sparse?0:2.5, pointRadius: sparse?6:4,
+          pointBackgroundColor: CHART_PINK, pointBorderColor: '#1D1922', pointBorderWidth: 1.5,
+          tension:0.35, fill:false, showLine:!sparse },
+        { label:`${umdNm} 동평균`, data:dongData,
+          borderColor: CHART_BLUE, backgroundColor: 'rgba(147,197,253,0.08)',
+          borderWidth: 1.5, pointRadius:2, borderDash:[4,3],
+          pointBackgroundColor: CHART_BLUE,
+          tension:0.35, fill:false },
       ]
     },
     options:{
@@ -5002,11 +5012,23 @@ function initDetailChart(key, aptNm, umdNm){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}}
+        tooltip:{
+          backgroundColor:'rgba(28,25,34,0.92)',
+          borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
+          titleColor:'rgba(255,255,255,0.85)', bodyColor:'rgba(255,255,255,0.7)',
+          padding:10,
+          callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}
+        }
       },
       scales:{
-        x:{ticks:{font:{family:'SUIT',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
-        y:{ticks:{font:{family:'SUIT',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
+        x:{
+          ticks:{font:{family:'SUIT',size:10}, color:CHART_TICK, maxTicksLimit:12},
+          grid:{color:CHART_GRID}
+        },
+        y:{
+          ticks:{font:{family:'SUIT',size:10}, color:CHART_TICK, callback:v=>shortPrice(v)},
+          grid:{color:CHART_GRID}
+        },
       }
     }
   });
