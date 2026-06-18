@@ -3382,6 +3382,7 @@ function clearPoiMarker() {  // spec-40: 전체 제거 (단지 전환/패널 닫
 // spec-40: 아파트를 지도 정중앙에 고정 + 활성 POI를 모두 포함하도록 줌 맞춤
 function _recenterApt() {
   if (!kakaoMap) return;
+  kakaoMap.relayout();  // 패널 개폐로 지도 div 크기가 바뀐 직후 stale dimension 방지
   const card = resultData && resultData.cards
     ? resultData.cards.find(c => c.apt_seq === _currentAptSeq) : null;
   if (!card || !card.lat || !card.lng) return;
@@ -4585,11 +4586,17 @@ async function showDetail(aptSeq, wpId){
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
 
-  // 지도 해당 아파트 위치로 이동
+  // 지도 해당 아파트 위치로 이동 (패널 열림 트랜지션 .25s 완료 후 relayout → 정중앙)
   if(kakaoMap && resultData){
     const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
     if(card && card.lat && card.lng){
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+      const aptPos = new kakao.maps.LatLng(card.lat, card.lng);
+      kakaoMap.panTo(aptPos);
+      setTimeout(() => {
+        if(!kakaoMap) return;
+        kakaoMap.relayout();                 // 패널이 차지한 480px 반영
+        kakaoMap.setCenter(aptPos);          // 줄어든 지도 기준으로 아파트 정중앙 재고정
+      }, 280);
     }
   }
 
