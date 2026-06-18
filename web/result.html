@@ -1749,7 +1749,8 @@
     }
     .dp-stat-label {
       font-size: 11px; color: var(--color-text-tertiary);
-      margin-top: 6px; font-weight: 600; letter-spacing: 0.03em;
+      margin-top: 6px; font-weight: 600; letter-spacing: 0.01em;
+      line-height: 1.35;
     }
     /* 알약 칩 */
     .dp-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
@@ -4727,9 +4728,11 @@ function renderDetailPanel(d, routes, wpId){
   const statTime = cardRef.total_time_min!=null
     ? `${cardRef.total_time_min}<span class="dp-stat-unit">분</span>` : '-';
   const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
+  // 중간 스탯: 값은 최근 3개월 평균 실거래가 → 라벨에 '평균 실거래가' + 평형 명시
+  const pyText = cardRef.pyeong_type ? `${escHtml(cardRef.pyeong_type)} ` : '';
   const statHtml = `<div class="dp-statrow">
     <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
-    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">실거래가</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">${pyText}평균 실거래가</div></div>
     <div class="dp-stat"><div class="dp-stat-num">${(d.kaptdaCnt||0).toLocaleString()}</div><div class="dp-stat-label">세대</div></div>
   </div>`;
 
