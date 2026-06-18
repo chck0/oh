@@ -1133,22 +1133,22 @@
       font-size: 14px; line-height: 1; margin-bottom: 1px;
     }
     /* 통근시간 색상 */
-    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
-    .pin-t1 .pin-body { background:#16a34a; }
-    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
-    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
-    .pin-t2 .pin-body { background:#3b82f6; }
-    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
-    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
-    .pin-t3 .pin-body { background:#f97316; }
-    .pin-t3 .pin-body::after { border-top-color:#f97316; }
-    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
-    .pin-t4 .pin-body { background:#ef4444; }
-    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
-    /* 추천 핀 — 보라 */
-    .pin-best .pin-roof { border-bottom-color:#6d28d9; }
-    .pin-best .pin-body { background:#6d28d9; }
-    .pin-best .pin-body::after { border-top-color:#6d28d9; }
+    .pin-t1 .pin-roof { border-bottom-color:#FF6FB5; }
+    .pin-t1 .pin-body { background:#FF6FB5; }
+    .pin-t1 .pin-body::after { border-top-color:#FF6FB5; }
+    .pin-t2 .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-t2 .pin-body { background:#C45ED6; }
+    .pin-t2 .pin-body::after { border-top-color:#C45ED6; }
+    .pin-t3 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t3 .pin-body { background:#7C3FE6; }
+    .pin-t3 .pin-body::after { border-top-color:#7C3FE6; }
+    .pin-t4 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t4 .pin-body { background:#7C3FE6; }
+    .pin-t4 .pin-body::after { border-top-color:#7C3FE6; }
+    /* 추천 핀 — 틸 */
+    .pin-best .pin-roof { border-bottom-color:#00C9A7; }
+    .pin-best .pin-body { background:#00C9A7; }
+    .pin-best .pin-body::after { border-top-color:#00C9A7; }
     /* 복수 평형 뱃지 */
     .pin-multi {
       position: absolute; top: -6px; right: -6px;
@@ -2378,12 +2378,12 @@
     <div class="map-panel" style="position:relative">
       <div id="map"></div>
       <div id="map-legend">
-        <div class="lg-title">통근시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <div class="lg-title">통근 시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#FF6FB5"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>45분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#7C3FE6"></div><span>60분 이하</span></div>
         <hr class="lg-divider">
-        <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#00C9A7"></div><span>BADUGI 추천</span></div>
       </div>
     </div>
   </div>
@@ -2681,11 +2681,11 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#FF6FB5'; // ≤30분 → 핑크
     const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
-    if (start <= 45) return '#f97316'; // 46~60분 → 주황
-    return '#f97316';
+    if (start <= 31) return '#C45ED6'; // 31~45분 → 퍼플
+    if (start <= 45) return '#7C3FE6'; // 46~60분 → 바이올렛
+    return '#7C3FE6';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
