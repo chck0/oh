@@ -17,7 +17,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       font-family: 'Pretendard', system-ui, sans-serif;
-      background: white;
+      background: var(--color-bg-base);
       color: var(--color-text-primary);
       min-height: 100vh;
       letter-spacing: -0.0025em;
@@ -29,7 +29,7 @@
 
     /* ─── Top nav ─────────────────────────────────────────── */
     .top-nav {
-      background: white;
+      background: var(--color-bg-panel);
       border-bottom: 1px solid var(--color-border-strong);
       padding: 14px 22px;
     }
@@ -70,7 +70,7 @@
 
     /* ─── Section card ─────────────────────────────────────── */
     .section {
-      background: white;
+      background: var(--color-bg-panel);
       padding: 22px 24px;
       margin-bottom: 14px;
       border: 1.5px solid var(--color-border-strong);
@@ -86,7 +86,7 @@
       display: inline-flex; align-items: center; justify-content: center;
       width: 26px; height: 26px;
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       border-radius: 50%;
       font-size: 13px; font-weight: 700;
       font-feature-settings: 'tnum';
@@ -131,7 +131,7 @@
       z-index: 50;
       width: 320px;
       max-width: calc(100vw - 44px);
-      background: white;
+      background: var(--color-bg-panel);
       border: 1.5px solid var(--color-border-strong);
       border-radius: 10px;
       padding: 14px 16px;
@@ -156,7 +156,7 @@
       position: absolute;
       top: -7px; right: 8px;
       width: 12px; height: 12px;
-      background: white;
+      background: var(--color-bg-panel);
       border-top: 1px solid var(--color-border-strong);
       border-left: 1px solid var(--color-border-strong);
       transform: rotate(45deg);
@@ -197,7 +197,7 @@
       padding: 11px 14px;
       border: 1px solid var(--color-border-strong);
       border-radius: 8px;
-      background: white;
+      background: var(--color-bg-subtle);
       color: var(--color-text-primary);
       letter-spacing: -0.0025em;
       transition: border-color 120ms, box-shadow 120ms;
@@ -209,7 +209,7 @@
     }
     input.invalid {
       border-color: var(--color-brand-primary);
-      background: #FDF8F7;
+      background: var(--color-brand-bg-subtle);
     }
     input[readonly] {
       background: var(--color-bg-subtle);
@@ -240,7 +240,7 @@
     .btn-remove-wp2:hover { color: var(--color-text-primary); }
     .btn-secondary {
       padding: 11px 18px;
-      background: white;
+      background: var(--color-bg-panel);
       color: var(--color-text-primary);
       border: 1px solid var(--color-border-strong);
       border-radius: 8px;
@@ -286,14 +286,14 @@
     .price-dual-range input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
       width: 22px; height: 22px; border-radius: 50%;
-      background: white; border: 3px solid var(--color-brand-primary);
+      background: var(--color-bg-panel); border: 3px solid var(--color-brand-primary);
       cursor: pointer; pointer-events: all;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       position: relative; z-index: 2;
     }
     .price-dual-range input[type=range]::-moz-range-thumb {
       width: 22px; height: 22px; border-radius: 50%;
-      background: white; border: 3px solid var(--color-brand-primary);
+      background: var(--color-bg-panel); border: 3px solid var(--color-brand-primary);
       cursor: pointer; pointer-events: all;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
@@ -317,23 +317,23 @@
     .price-warn {
       display: none;
       padding: 10px 14px;
-      background: #FFF8E1;
-      border: 1px solid #FFB300;
+      background: var(--color-status-warning-bg);
+      border: 1px solid var(--color-status-warning-text);
       border-radius: 8px;
       font-size: 13px;
-      color: #5D4037;
+      color: var(--color-status-warning-text);
       margin-top: 10px;
       line-height: 1.6;
     }
     .price-warn.show { display: block; }
-    .price-warn strong { color: #E65100; font-weight: 600; }
+    .price-warn strong { color: var(--color-status-warning-text); font-weight: 600; }
 
     /* ─── 칩 그룹 ──────────────────────────────────────────── */
     .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip {
       padding: 9px 20px;
       border: 1px solid var(--color-border-strong);
-      background: white;
+      background: var(--color-bg-subtle);
       color: var(--color-text-primary);
       border-radius: var(--radius-pill);
       font-family: inherit;
@@ -347,7 +347,7 @@
     }
     .chip.active {
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       border-color: var(--color-brand-primary);
       box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
     }
@@ -362,7 +362,7 @@
       display: inline-flex; align-items: center; gap: 8px;
       padding: 9px 16px 9px 14px;
       border: 1px solid var(--color-border-strong);
-      background: white;
+      background: var(--color-bg-subtle);
       color: var(--color-text-primary);
       border-radius: var(--radius-pill);
       font-size: 14px; font-weight: 600;
@@ -383,7 +383,7 @@
       width: 16px; height: 16px;
       border: 1.5px solid var(--color-border-strong);
       border-radius: 4px;
-      background: white;
+      background: var(--color-bg-muted);
       position: relative;
       transition: all 120ms;
     }
@@ -415,7 +415,7 @@
       padding: 12px 14px;
       border: 1px solid var(--color-border-strong);
       border-radius: 10px;
-      background: white;
+      background: var(--color-bg-panel);
       cursor: pointer;
       transition: all 120ms;
       user-select: none;
@@ -432,7 +432,7 @@
       width: 18px; height: 18px;
       border: 1.5px solid var(--color-border-strong);
       border-radius: 50%;
-      background: white;
+      background: var(--color-bg-muted);
       position: relative;
       transition: all 120ms;
     }
@@ -532,7 +532,7 @@
       width: 100%;
       padding: 16px;
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       border: none;
       border-radius: 12px;
       font-family: inherit;
