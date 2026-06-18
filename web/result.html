@@ -6,7 +6,7 @@
   <title>BADUGI — 분석 결과</title>
 
   <link rel="stylesheet" as="style" crossorigin
-    href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css" />
+    href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css" />
   <link rel="stylesheet" href="/static/design-system/tokens.css">
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
@@ -21,8 +21,8 @@
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      font-family: 'Pretendard', system-ui, sans-serif;
-      background: white;
+      font-family: 'SUIT', system-ui, sans-serif;
+      background: var(--color-bg-base);
       color: var(--color-text-primary);
       height: 100vh; line-height: 1.5;
       display: flex; flex-direction: column;
@@ -30,15 +30,17 @@
       -webkit-font-smoothing: antialiased;
     }
     header {
-      flex-shrink: 0; background: white;
+      flex-shrink: 0; background: var(--color-bg-panel);
       padding: 16px 22px;
       border-bottom: 1px solid var(--color-border-strong);
       display: flex; align-items: center; gap: 20px;
     }
     header h1 {
-      color: var(--color-brand-primary);
-      font-size: 20px; font-weight: 700;
+      font-size: 20px; font-weight: 800;
       letter-spacing: -0.01em;
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .back-link {
       color: var(--color-text-secondary); text-decoration: none;
@@ -61,7 +63,7 @@
        [5] 로딩 오버레이 — 3단계 진행 표시
        ════════════════════════════════════════════════════════ */
     .loading-overlay {
-      position: fixed; inset: 0; background: white; z-index: 1000;
+      position: fixed; inset: 0; background: var(--color-bg-base); z-index: 1000;
       display: flex; flex-direction: column; align-items: center;
       padding: 40px 24px 32px; overflow-y: auto;
     }
@@ -160,7 +162,7 @@
     .video-stage {
       flex-shrink: 0;
       width: 280px; aspect-ratio: 9/16;
-      background: #1A1816;
+      background: var(--color-bg-base);
       border-radius: 12px; overflow: hidden;
       position: relative;
       box-shadow: var(--shadow-xl);
@@ -178,7 +180,7 @@
       flex: 1; min-width: 0;
     }
     .mute-btn {
-      padding: 10px 14px; background: white;
+      padding: 10px 14px; background: var(--color-bg-panel);
       color: var(--color-text-primary);
       border: 1px solid var(--color-border-default);
       border-radius: 10px;
@@ -197,7 +199,7 @@
       color: var(--color-brand-primary);
     }
     .playlist {
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-default);
       border-radius: 10px; overflow: hidden;
       flex: 1; display: flex; flex-direction: column;
@@ -247,20 +249,20 @@
     .done-btn {
       margin-top: 24px;
       padding: 14px 36px;
-      background: var(--color-brand-primary); color: white;
+      background: var(--color-brand-gradient); color: var(--color-text-on-brand);
       border: none; border-radius: 12px;
       font-family: inherit;
       font-size: 15px; font-weight: 700;
       letter-spacing: -0.005em;
       cursor: pointer; display: none;
       align-items: center; gap: 8px;
-      box-shadow: 0 4px 16px rgba(168, 46, 27, 0.30);
+      box-shadow: var(--shadow-brand);
       transition: all 200ms;
     }
     .done-btn:hover {
-      background: var(--color-brand-hover);
+      background: var(--color-brand-gradient-hover);
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(168, 46, 27, 0.38);
+      box-shadow: var(--shadow-brand-strong);
     }
     .done-btn .arrow { font-size: 16px; transition: transform 200ms; }
     .done-btn:hover .arrow { transform: translateX(3px); }
@@ -279,11 +281,11 @@
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .combined-bar {
       display: flex; align-items: center; flex-shrink: 0;
-      background: white;
+      background: var(--color-bg-panel);
       border-bottom: 1px solid var(--color-border-strong);
     }
     .summary-bar {
-      flex: 1; min-width: 0; background: white;
+      flex: 1; min-width: 0; background: var(--color-bg-panel);
       padding: 14px 22px;
       font-size: 14px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
@@ -330,7 +332,7 @@
     }
     .cards-panel {
       overflow-y: auto;
-      background: white;
+      background: var(--color-bg-base);
       padding: 14px;
       flex: 1; min-height: 0;
     }
@@ -367,7 +369,7 @@
     /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
     .sort-panel {
       display: flex; flex-direction: column;
-      background: #f8fafc; flex-shrink: 0;
+      background: var(--color-bg-subtle); flex-shrink: 0;
       border-bottom: 1px solid var(--color-border-strong);
       padding: 11px 13px 9px;
       gap: 8px;
@@ -391,30 +393,30 @@
       display: flex; flex-direction: row; align-items: center;
       gap: 10px;
       cursor: pointer; padding: 10px 12px;
-      border-radius: 10px; border: 1.5px solid #e2e8f0;
-      background: #fff; user-select: none; transition: all .15s;
+      border-radius: 10px; border: 1.5px solid var(--color-border-default);
+      background: var(--color-bg-panel); user-select: none; transition: all .15s;
       box-shadow: 0 1px 3px rgba(0,0,0,.06);
       position: relative;
     }
     .sort-check-item .icon-bubble {
       width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      transition: transform .15s; background: #f8fafc;
+      transition: transform .15s; background: var(--color-bg-subtle);
     }
-    .sort-check-item i { font-size: 18px; line-height: 1; color: #e57373; }
-    .sort-check-item:hover { border-color: #e57373; box-shadow: 0 2px 8px rgba(229,115,115,.2); }
-    .sort-check-item:hover .icon-bubble { background: #fff1f2; }
-    .sort-check-item.checked { border-color: #e57373; background: #fff1f2; }
-    .sort-check-item.checked .icon-bubble { background: #fee2e2; }
+    .sort-check-item i { font-size: 18px; line-height: 1; color: var(--color-brand-primary); }
+    .sort-check-item:hover { border-color: var(--color-brand-primary); box-shadow: 0 2px 8px rgba(229,115,115,.2); }
+    .sort-check-item:hover .icon-bubble { background: var(--color-brand-bg-subtle); }
+    .sort-check-item.checked { border-color: transparent; background: var(--color-brand-gradient); }
+    .sort-check-item.checked .icon-bubble { background: rgba(255,255,255,0.18); }
     .sort-chip-label {
-      font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.3;
+      font-size: 13px; font-weight: 800; color: var(--color-text-primary); line-height: 1.3;
       word-break: keep-all; text-align: left; letter-spacing: -.01em;
     }
-    .sort-check-item.checked .sort-chip-label { color: #c0392b; }
+    .sort-check-item.checked .sort-chip-label { color: #ffffff; }
     .sort-check-item .rank-badge {
       display: none; position: absolute; top: -8px; right: -8px;
       width: 22px; height: 22px; border-radius: 50%;
-      background: #e57373; color: #fff; border: 2px solid #fff;
+      background: var(--color-brand-gradient); color: #fff; border: 2px solid var(--color-bg-panel);
       font-size: 12px; font-weight: 800;
       align-items: center; justify-content: center; line-height: 1;
     }
@@ -423,9 +425,9 @@
       font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
       padding: 0 2px;
     }
-    .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
+    .sort-hint .hint-order { color: var(--color-brand-primary); font-weight: 600; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
-    #map { width: 100%; height: 100%; background: #f0f0f0; }
+    #map { width: 100%; height: 100%; background: var(--color-bg-muted); }
     /* spec-19: 리사이즈 핸들 */
     .resize-handle {
       width: 6px; flex-shrink: 0;
@@ -440,7 +442,7 @@
        [2] 통계 패널 — 미니 막대그래프
        ════════════════════════════════════════════════════════ */
     .stats-panel {
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: var(--radius-lg);
       padding: 16px 16px 14px;
@@ -583,55 +585,56 @@
        spec-26: 아파트 직접 검색
        ════════════════════════════════════════════════════════ */
     .apt-search-bar {
-      padding: 10px 14px 4px; background: #f8f8fb; border-radius: 12px; margin-bottom: 10px;
+      padding: 10px 14px 4px; background: var(--color-bg-subtle); border-radius: 12px; margin-bottom: 10px;
     }
     .apt-search-input-wrap { position: relative; }
     .apt-search-bar input {
       width: 100%; box-sizing: border-box;
-      border: 1px solid #dde; border-radius: 20px;
+      border: 1px solid var(--color-border-default); border-radius: 20px;
       padding: 8px 16px; font-size: 13px; outline: none; font-family: inherit;
+      background: var(--color-bg-panel); color: var(--color-text-primary);
     }
     .apt-search-bar input:focus { border-color: var(--color-brand-primary); }
     .apt-search-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: #fff; border: 1px solid #dde4ff; border-radius: 12px;
+      background: var(--color-bg-panel); border: 1px solid var(--color-border-default); border-radius: 12px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 200; overflow: hidden;
     }
     .apt-dropdown-item {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 16px; cursor: pointer; gap: 8px;
     }
-    .apt-dropdown-item:hover { background: #f0f3ff; }
-    .apt-dropdown-nm { font-size: 13px; font-weight: 600; }
-    .apt-dropdown-meta { font-size: 11px; color: #999; flex-shrink: 0; }
+    .apt-dropdown-item:hover { background: var(--color-bg-subtle); }
+    .apt-dropdown-nm { font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
+    .apt-dropdown-meta { font-size: 11px; color: var(--color-text-tertiary); flex-shrink: 0; }
     .apt-dropdown-tag {
-      font-size: 10px; background: #e8f0ff; color: var(--color-brand-primary);
+      font-size: 10px; background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
       border-radius: 6px; padding: 1px 6px; margin-left: 4px;
     }
-    .apt-dropdown-empty, .apt-dropdown-loading { padding: 10px 16px; font-size: 13px; color: #999; }
+    .apt-dropdown-empty, .apt-dropdown-loading { padding: 10px 16px; font-size: 13px; color: var(--color-text-tertiary); }
     .apt-lookup-card {
-      background: #fff; border: 2px solid var(--color-brand-primary);
+      background: var(--color-bg-panel); border: 2px solid var(--color-brand-primary);
       border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px;
       position: relative;
     }
     .apt-lookup-card__badge {
-      display: inline-block; background: var(--color-brand-primary); color: #fff;
+      display: inline-block; background: var(--color-brand-primary); color: var(--color-text-on-brand);
       font-size: 11px; font-weight: 700; border-radius: 6px;
       padding: 2px 8px; margin-bottom: 6px;
     }
-    .apt-lookup-card__title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-    .apt-lookup-card__meta { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .apt-lookup-card__title { font-size: 15px; font-weight: 700; margin-bottom: 3px; color: var(--color-text-primary); }
+    .apt-lookup-card__meta { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 6px; }
     .apt-lookup-card__price { font-size: 14px; font-weight: 600; color: var(--red-600); }
-    .apt-lookup-card__transit { font-size: 12px; color: #555; margin-top: 3px; }
+    .apt-lookup-card__transit { font-size: 12px; color: var(--color-text-secondary); margin-top: 3px; }
     .apt-lookup-card__footer {
       display: flex; justify-content: flex-end; margin-top: 10px;
     }
     .apt-lookup-card__chat {
-      background: #f0f3ff; color: var(--color-brand-primary);
-      border: 1px solid #dde4ff; border-radius: 16px;
+      background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
+      border: 1px solid var(--color-border-default); border-radius: 16px;
       font-size: 12px; padding: 5px 14px; cursor: pointer;
     }
-    .apt-search-empty { color: #999; font-size: 13px; padding: 8px 14px; }
+    .apt-search-empty { color: var(--color-text-tertiary); font-size: 13px; padding: 8px 14px; }
 
        /* 추천 섹션 헤더
        ════════════════════════════════════════════════════════ */
@@ -657,7 +660,7 @@
     /* ── 추천 카드 (compact 3-row) ── */
     .rec-card {
       position: relative;
-      background: white;
+      background: var(--color-bg-panel);
       border-radius: var(--radius-lg);
       border: 1px solid var(--color-border-strong);
       border-left: 4px solid var(--color-brand-primary);
@@ -754,7 +757,7 @@
     .rec-card__friend-body-wrap.open { max-height: 200px; }
     .rec-card__friend {
       display: flex; gap: 10px; align-items: flex-start;
-      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
+      background: var(--color-brand-bg-subtle);
       border-radius: 8px;
       padding: 10px 12px;
       margin-top: 6px;
@@ -765,7 +768,7 @@
       width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       display: flex; align-items: center; justify-content: center;
       font-size: 10px; font-weight: 700;
     }
@@ -805,12 +808,12 @@
       vertical-align: middle;
       letter-spacing: -0.3px;
     }
-    .price-chg-badge--up   { background: #fff0f0; color: #e53e3e; }
-    .price-chg-badge--down { background: #ebf8ff; color: #2b6cb0; }
+    .price-chg-badge--up   { background: var(--red-50); color: var(--red-600); }
+    .price-chg-badge--down { background: var(--blue-100); color: var(--blue-700); }
 
     .why-tags {
       font-size: 11px;
-      color: #888;
+      color: var(--color-text-tertiary);
       margin-top: 3px;
       margin-bottom: 2px;
       white-space: nowrap;
@@ -818,9 +821,9 @@
       text-overflow: ellipsis;
     }
     .commute-econ-row {
-      font-size: 11.5px; color: #777;
+      font-size: 11.5px; color: var(--color-text-tertiary);
       margin-top: 7px; padding-top: 6px;
-      border-top: 1px dashed #eee;
+      border-top: 1px dashed var(--color-border-default);
       display: flex; align-items: center; gap: 4px;
     }
 
@@ -828,7 +831,7 @@
     .fav-btn {
       position: absolute; top: 10px; right: 12px;
       background: none; border: none; cursor: pointer;
-      font-size: 20px; line-height: 1; color: #ddd;
+      font-size: 20px; line-height: 1; color: var(--color-border-strong);
       padding: 4px; border-radius: 50%;
       transition: color 0.15s, transform 0.12s;
       z-index: 2;
@@ -840,7 +843,7 @@
     .fav-tabs {
       display: flex; gap: 0;
       border-bottom: 1px solid var(--color-border-strong);
-      background: white;
+      background: var(--color-bg-panel);
       position: sticky; top: 0; z-index: 10;
       margin-bottom: 12px;
     }
@@ -852,8 +855,9 @@
       transition: color 0.15s, border-color 0.15s;
     }
     .fav-tab-btn.active {
-      color: var(--color-brand-primary);
-      border-bottom-color: var(--color-brand-primary);
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      border-bottom-color: var(--purple-500);
     }
     .fav-tab-btn:disabled { opacity: 0.38; cursor: not-allowed; }
     .fav-empty {
@@ -902,7 +906,7 @@
       padding: 18px 4px 10px;
     }
     .bucket-section {
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: var(--radius-lg);
       margin-bottom: 10px;
@@ -1003,7 +1007,7 @@
     /* 일반 list-card — 한 줄 row */
     .list-card {
       position: relative;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: 8px;
       padding: 11px 40px 11px 14px;
@@ -1050,7 +1054,7 @@
     .list-card__comment { display: none; } /* 일반 카드는 코멘트 숨김 */
 
     .error-box {
-      background: white; padding: 24px;
+      background: var(--color-bg-panel); padding: 24px;
       border: 1px solid var(--color-brand-primary);
       border-radius: var(--radius-lg);
       text-align: center;
@@ -1059,6 +1063,14 @@
       color: var(--color-brand-primary); margin-bottom: 12px;
       font-size: 18px; font-weight: 700;
     }
+    .error-box a {
+      display: inline-block; margin-top: 4px;
+      padding: 9px 20px; border-radius: var(--radius-pill);
+      background: var(--color-brand-gradient);
+      color: #ffffff; font-weight: 700; font-size: 14px;
+      text-decoration: none; transition: opacity 0.15s;
+    }
+    .error-box a:hover { opacity: 0.85; }
 
     /* ════════════════════════════════════════════════════════
        지도 핀 (디자인 시스템 §4 핀 체계)
@@ -1066,7 +1078,7 @@
     /* ── 집 모양 핀 (호갱노노 스타일) ─────────────────────── */
     .pin {
       display: inline-flex; flex-direction: column; align-items: center;
-      cursor: pointer; font-family: 'Pretendard', system-ui, sans-serif;
+      cursor: pointer; font-family: 'SUIT', system-ui, sans-serif;
       filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
       transition: transform 120ms ease, filter 120ms ease;
     }
@@ -1140,8 +1152,8 @@
     /* 복수 평형 뱃지 */
     .pin-multi {
       position: absolute; top: -6px; right: -6px;
-      background: white; color: #374151;
-      border: 1.5px solid #d1d5db; border-radius: 99px;
+      background: var(--color-bg-panel); color: var(--color-text-secondary);
+      border: 1.5px solid var(--color-border-default); border-radius: 99px;
       font-size: 9px; font-weight: 700;
       padding: 0 4px; line-height: 16px;
       font-feature-settings: 'tnum';
@@ -1162,24 +1174,24 @@
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
-      background: rgba(255,255,255,0.94);
+      background: rgba(21,18,26,0.94);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(0,0,0,0.08);
+      border: 1px solid var(--color-border-default);
       border-radius: 12px;
       padding: 14px 20px; min-width: 160px;
-      font-size: 13px; font-family: 'Pretendard', sans-serif;
+      font-size: 13px; font-family: 'SUIT', sans-serif;
       box-shadow: 0 2px 12px rgba(0,0,0,0.12); pointer-events: none;
     }
     #map-legend .lg-title {
       font-weight: 700; font-size: 11px;
-      color: #94a3b8;
+      color: var(--color-text-tertiary);
       letter-spacing: 0.08em; text-transform: uppercase;
       margin-bottom: 10px;
     }
     #map-legend .lg-row {
       display: flex; align-items: center; gap: 10px;
       margin-bottom: 8px; line-height: 1.4;
-      color: #1e293b; font-size: 13px; font-weight: 500;
+      color: var(--color-text-primary); font-size: 13px; font-weight: 500;
     }
     #map-legend .lg-dot {
       width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
@@ -1199,7 +1211,7 @@
       display: flex; align-items: center; gap: 4px;
       font-size: 11px; font-weight: 600;
       color: var(--color-text-secondary);
-      background: rgba(255,255,255,0.92);
+      background: rgba(21,18,26,0.88);
       border: 1px solid var(--color-border-default);
       border-radius: 5px; padding: 2px 7px;
       cursor: pointer; user-select: none;
@@ -1217,13 +1229,13 @@
     .compare-bar__count { flex: 1; font-weight: 600; color: var(--color-text-primary); }
     .compare-bar__btn {
       padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer;
-      background: var(--color-brand-primary); color: #fff;
+      background: var(--color-brand-gradient); color: #fff;
       font-size: 13px; font-weight: 700;
     }
     .compare-bar__btn:disabled { background: var(--color-bg-muted); color: var(--color-text-tertiary); cursor: not-allowed; }
     .compare-bar__clear {
       padding: 5px 10px; border-radius: 6px; border: 1px solid var(--color-border-default);
-      background: white; color: var(--color-text-secondary);
+      background: var(--color-bg-panel); color: var(--color-text-secondary);
       font-size: 12px; cursor: pointer;
     }
     /* ── 단지 상세 사이드 패널 (spec-17) ─────────────────────── */
@@ -1236,13 +1248,13 @@
     }
     .route-overlay.hidden { display: none; }
     .route-panel {
-      background: white; border-radius: 20px 20px 0 0;
+      background: var(--color-bg-panel); border-radius: 20px 20px 0 0;
       width: 100%; max-width: 640px;
       max-height: 70vh; display: flex; flex-direction: column;
       overflow: hidden;
     }
     .route-panel__drag {
-      width: 40px; height: 4px; background: #ddd; border-radius: 2px;
+      width: 40px; height: 4px; background: var(--color-border-strong); border-radius: 2px;
       margin: 10px auto 6px; flex-shrink: 0;
     }
     .route-panel__header {
@@ -1269,17 +1281,17 @@
       padding: 5px 14px; border-radius: 16px;
       font-size: 13px; font-weight: 600;
       border: 1.5px solid var(--color-border-default);
-      cursor: pointer; background: white;
+      cursor: pointer; background: var(--color-bg-subtle);
       color: var(--color-text-secondary);
       transition: background 150ms, color 150ms;
     }
     .route-panel__wp-tab.active {
-      background: var(--color-brand-primary); color: white;
-      border-color: var(--color-brand-primary);
+      background: var(--color-brand-gradient); color: var(--color-text-on-brand);
+      border-color: transparent;
     }
 
     .detail-panel {
-      background: white;
+      background: var(--color-bg-panel);
       width: 0; min-width: 0; overflow: hidden;
       flex-shrink: 0; display: flex; flex-direction: column;
       border-left: none;
@@ -1297,35 +1309,39 @@
     .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
     .detail-panel__close {
       flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid var(--color-border-default); background: white;
+      border: 1px solid var(--color-border-default); background: var(--color-bg-subtle);
       cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
       display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
       display: flex; padding: 10px 20px 0; flex-shrink: 0;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--color-border-default);
     }
     .detail-tab-btn {
       flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 600;
-      border: none; background: none; cursor: pointer; color: #aaa;
+      border: none; background: none; cursor: pointer; color: var(--color-text-tertiary);
       border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
     }
-    .detail-tab-btn.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
-    .detail-panel__body { flex: 1; overflow-y: auto; padding: 0 0 24px; background: var(--color-bg-subtle); }
+    .detail-tab-btn.active {
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      border-bottom-color: var(--purple-500);
+    }
+    .detail-panel__body { flex: 1; overflow-y: auto; padding: 0 20px 24px; background: var(--color-bg-subtle); }
     .detail-tab-pane { display: none; }
     .detail-tab-pane.active { display: block; }
     .detail-section { margin-bottom: 20px; }
     .detail-section__title {
-      font-size: 11px; font-weight: 700; color: #aaa;
+      font-size: 11px; font-weight: 700; color: var(--color-text-tertiary);
       letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px;
     }
     .detail-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
-    .detail-kv__label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
-    .detail-kv__value { font-size: 14px; font-weight: 600; color: #1a1a1a; }
-    .detail-kv__sub { font-size: 12px; font-weight: 500; color: #8A857E; }
+    .detail-kv__label { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 2px; }
+    .detail-kv__value { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+    .detail-kv__sub { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
     /* spec-31: 경사 인디케이터 — 이모지 금지, CSS 막대 4단계 */
     .slope-ind { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 6px; }
-    .slope-ind > i { width: 4px; background: #E8E6E3; border-radius: 1px; display: inline-block; }
+    .slope-ind > i { width: 4px; background: var(--color-border-strong); border-radius: 1px; display: inline-block; }
     .slope-ind > i:nth-child(1) { height: 4px; }
     .slope-ind > i:nth-child(2) { height: 7px; }
     .slope-ind > i:nth-child(3) { height: 10px; }
@@ -1336,39 +1352,39 @@
     .slope-ind[data-lv="4"] > i:nth-child(-n+4) { background: #A82E1B; }
     .detail-trade-row {
       display: grid; grid-template-columns: 90px 1fr 1fr 40px;
-      gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid var(--color-border-default); font-size: 13px;
     }
     .detail-trade-row:last-child { border-bottom: none; }
-    .detail-trade-date { color: #aaa; font-size: 12px; }
-    .detail-trade-amount { font-weight: 700; }
-    .detail-trade-floor { color: #aaa; font-size: 12px; text-align: right; }
+    .detail-trade-date { color: var(--color-text-tertiary); font-size: 12px; }
+    .detail-trade-amount { font-weight: 700; color: var(--color-text-primary); }
+    .detail-trade-floor { color: var(--color-text-tertiary); font-size: 12px; text-align: right; }
     .detail-poi-row {
       display: flex; gap: 8px; align-items: center;
-      padding: 7px 4px; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      padding: 7px 4px; border-bottom: 1px solid var(--color-border-default); font-size: 13px;
       cursor: pointer; border-radius: 4px; transition: background 0.1s;
     }
     .detail-poi-row:last-child { border-bottom: none; }
-    .detail-poi-row:hover { background: #f5f7ff; }
-    .detail-poi-row.poi-active { background: #EEF3FF; }
-    .detail-poi-dist { color: #aaa; font-size: 12px; margin-left: auto; white-space: nowrap; }
+    .detail-poi-row:hover { background: var(--color-bg-subtle); }
+    .detail-poi-row.poi-active { background: var(--color-brand-bg-subtle); }
+    .detail-poi-dist { color: var(--color-text-tertiary); font-size: 12px; margin-left: auto; white-space: nowrap; }
     .detail-price-badge {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
       font-size: 12px; font-weight: 700;
     }
-    .detail-price-badge--up { background: #fff0f0; color: #e53e3e; }
-    .detail-price-badge--down { background: #ebf8ff; color: #2b6cb0; }
-    .detail-price-badge--flat { background: #f5f5f5; color: #666; }
-    .detail-loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+    .detail-price-badge--up { background: var(--red-50); color: var(--red-600); }
+    .detail-price-badge--down { background: var(--blue-100); color: var(--blue-700); }
+    .detail-price-badge--flat { background: var(--color-bg-muted); color: var(--color-text-secondary); }
+    .detail-loading { text-align: center; padding: 40px; color: var(--color-text-tertiary); font-size: 14px; }
     /* POI 커스텀 핀 */
     .poi-custom-pin { display: flex; flex-direction: column; align-items: center; }
     .poi-pin__bubble {
-      background: #1c1c2e; color: #fff; border-radius: 10px;
+      background: var(--color-bg-base); color: var(--color-text-primary); border-radius: 10px;
       padding: 7px 12px; font-size: 12px; white-space: nowrap;
       box-shadow: 0 4px 14px rgba(0,0,0,0.35); line-height: 1.5;
     }
     .poi-pin__name { font-weight: 600; font-size: 13px; }
-    .poi-pin__dist { color: #aab; font-size: 11px; margin-top: 1px; }
-    .poi-pin__stem { width: 2px; height: 7px; background: #1c1c2e; }
+    .poi-pin__dist { color: var(--color-text-tertiary); font-size: 11px; margin-top: 1px; }
+    .poi-pin__stem { width: 2px; height: 7px; background: var(--color-bg-base); }
     .poi-pin__dot {
       width: 12px; height: 12px; background: #e53e3e;
       border: 2.5px solid #fff; border-radius: 50%;
@@ -1377,7 +1393,7 @@
     /* spec-39: POI 위치 확인 실패 안내 토스트 */
     .poi-notice {
       position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(12px);
-      background: rgba(28,28,46,0.95); color: #fff; font-size: 13px; font-weight: 500;
+      background: rgba(12,10,14,0.95); color: var(--color-text-primary); font-size: 13px; font-weight: 500;
       padding: 10px 18px; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
       z-index: 600; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
     }
@@ -1395,7 +1411,7 @@
     .chat-panel {
       position: fixed; top: 54px; right: 0;
       width: 440px; height: calc(100vh - 54px);
-      background: #fff; z-index: 850;
+      background: var(--color-bg-panel); z-index: 850;
       box-shadow: -6px 0 24px rgba(0,0,0,0.13);
       border-radius: 16px 0 0 16px;
       display: flex; flex-direction: column;
@@ -1412,12 +1428,12 @@
     .chat-panel__resize.dragging { background: rgba(91,155,213,0.35); }
     .chat-panel__header {
       display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px 12px; border-bottom: 1px solid #f0f0f0;
-      background: #1c1c2e; border-radius: 16px 0 0 0; color: #fff;
+      padding: 14px 16px 12px; border-bottom: 1px solid var(--color-border-default);
+      background: var(--color-bg-base); border-radius: 16px 0 0 0; color: var(--color-text-primary);
     }
     .chat-panel__avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: var(--color-brand-primary); color: #fff;
+      background: var(--color-brand-primary); color: var(--color-text-on-brand);
       font-size: 11px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
@@ -1430,67 +1446,69 @@
       flex: 1; overflow-y: auto; padding: 14px 14px 6px; display: flex; flex-direction: column; gap: 10px;
     }
     .chat-msg { max-width: 88%; font-size: 13px; line-height: 1.5; padding: 9px 13px; border-radius: 14px; }
-    .chat-msg--user { align-self: flex-end; background: var(--color-brand-primary); color: #fff; border-radius: 14px 14px 4px 14px; }
-    .chat-msg--assistant { align-self: flex-start; background: #f4f4f8; color: #222; border-radius: 14px 14px 14px 4px; }
+    .chat-msg--user { align-self: flex-end; background: var(--color-brand-gradient); color: var(--color-text-on-brand); border-radius: 14px 14px 4px 14px; }
+    .chat-msg--assistant { align-self: flex-start; background: var(--color-bg-subtle); color: var(--color-text-primary); border-radius: 14px 14px 14px 4px; }
     .chat-panel__suggestions {
       padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 7px;
     }
     .chat-chip {
-      background: #f0f3ff; color: var(--color-brand-primary);
-      border: 1px solid #dde4ff; border-radius: 20px;
-      font-size: 12px; padding: 5px 12px; cursor: pointer;
-      white-space: nowrap; transition: background 0.15s;
+      background: var(--color-brand-gradient); color: #ffffff;
+      border: none; border-radius: 20px;
+      font-size: 12px; font-weight: 700; padding: 6px 14px; cursor: pointer;
+      white-space: nowrap; transition: opacity 0.15s;
     }
-    .chat-chip:hover { background: #dde4ff; }
+    .chat-chip:hover { opacity: 0.85; }
     .chat-attachment-bar { padding: 0 12px 4px; }
     .chat-attach-preview {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      background: #f0f3ff; border-radius: 10px; padding: 6px 10px; font-size: 12px;
+      background: var(--color-brand-bg-subtle); border-radius: 10px; padding: 6px 10px; font-size: 12px;
     }
     .chat-attach-preview img { max-height: 56px; border-radius: 6px; object-fit: cover; }
     .chat-attach-preview span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chat-attach-preview button {
-      background: none; border: none; cursor: pointer; color: #aaa;
+      background: none; border: none; cursor: pointer; color: var(--color-text-tertiary);
       font-size: 15px; line-height: 1; padding: 0 2px; flex-shrink: 0;
     }
     .chat-attach-btn {
-      background: none; border: 1px solid #dde; border-radius: 50%;
+      background: none; border: 1px solid var(--color-border-default); border-radius: 50%;
       width: 36px; height: 36px; font-size: 17px; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; color: #666;
+      display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary);
     }
-    .chat-attach-btn:hover { background: #f0f3ff; }
+    .chat-attach-btn:hover { background: var(--color-brand-bg-subtle); }
     .chat-panel__input-row {
       display: flex; gap: 8px; padding: 10px 12px 14px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid var(--color-border-default);
     }
     .chat-panel__input-row input {
-      flex: 1; border: 1px solid #e0e0e0; border-radius: 22px;
+      flex: 1; border: 1px solid var(--color-border-default); border-radius: 22px;
       padding: 8px 14px; font-size: 13px; outline: none;
-      font-family: inherit;
+      font-family: inherit; background: var(--color-bg-subtle); color: var(--color-text-primary);
     }
     .chat-panel__input-row input:focus { border-color: var(--color-brand-primary); }
     .chat-panel__send {
-      background: var(--color-brand-primary); color: #fff;
+      background: var(--color-brand-gradient); color: var(--color-text-on-brand);
       border: none; border-radius: 22px; padding: 8px 16px;
       font-size: 13px; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow-brand);
     }
+    .chat-panel__send:hover { background: var(--color-brand-gradient-hover); }
     .chat-price-links {
       display: flex; align-items: center; gap: 7px;
-      padding: 7px 14px; background: #f8f8fb;
-      border-bottom: 1px solid #eee; font-size: 11.5px; flex-shrink: 0;
+      padding: 7px 14px; background: var(--color-bg-subtle);
+      border-bottom: 1px solid var(--color-border-default); font-size: 11.5px; flex-shrink: 0;
     }
-    .chat-price-links__label { color: #999; margin-right: 2px; }
+    .chat-price-links__label { color: var(--color-text-tertiary); margin-right: 2px; }
     .chat-price-links a {
-      color: #555; text-decoration: none;
-      padding: 3px 10px; border: 1px solid #ddd;
-      border-radius: 12px; background: #fff;
+      color: var(--color-text-secondary); text-decoration: none;
+      padding: 3px 10px; border: 1px solid var(--color-border-default);
+      border-radius: 12px; background: var(--color-bg-panel);
       transition: background 0.15s;
     }
-    .chat-price-links a:hover { background: #f0f3ff; color: var(--color-brand-primary); border-color: #c5d0ff; }
+    .chat-price-links a:hover { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); border-color: var(--color-brand-primary); }
     .dp__friend { cursor: pointer; }
     .dp__friend:hover { opacity: 0.85; }
     .compare-panel {
-      background: white; border-radius: 16px;
+      background: var(--color-bg-panel); border-radius: 16px;
       max-width: 860px; width: 100%;
       max-height: 88vh; overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.25);
@@ -1504,7 +1522,7 @@
     .compare-panel__close {
       padding: 4px 12px; border-radius: 6px;
       border: 1px solid var(--color-border-default);
-      background: white; cursor: pointer; font-size: 13px;
+      background: var(--color-bg-subtle); cursor: pointer; font-size: 13px;
       color: var(--color-text-secondary);
     }
     .compare-table {
@@ -1556,7 +1574,7 @@
     .pin-tooltip {
       position: fixed; z-index: 900;
       width: 310px;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: 12px;
       box-shadow: var(--shadow-xl);
@@ -1580,7 +1598,7 @@
       font-size: 10px; font-weight: 700;
       letter-spacing: 0.05em;
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       padding: 2px 7px;
       border-radius: var(--radius-sm);
       flex-shrink: 0;
@@ -1608,8 +1626,9 @@
     }
     .pin-tooltip__tab:hover { color: var(--color-text-secondary); }
     .pin-tooltip__tab.active {
-      color: var(--color-brand-primary);
-      border-bottom-color: var(--color-brand-primary);
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      border-bottom-color: var(--purple-500);
     }
     .pin-tooltip__body { padding: 12px 16px 0; }
     .pin-tooltip__metric-row {
@@ -1670,7 +1689,7 @@
       background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
       padding: 11px 14px;
       display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.20);
     }
     .dp__back {
       background: rgba(255, 255, 255, 0.18);
@@ -1705,7 +1724,7 @@
     /* spec-42: 인스타 클린카드 — HERO/섹션을 흰 소프트카드로 */
     .dp__hero {
       padding: 16px;
-      background: white;
+      background: var(--color-bg-panel);
       border: none;
       border-radius: 16px;
       box-shadow: 0 2px 14px rgba(26,24,22,0.05);
@@ -1737,19 +1756,21 @@
     }
     .dp-stat-num {
       font-size: 20px; font-weight: 800; letter-spacing: -0.03em;
-      font-feature-settings: 'tnum'; color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
       line-height: 1.15; white-space: nowrap;
     }
-    .dp-stat-num.clr-up { color: #C0392B; }
-    .dp-stat-num.clr-dn { color: #2471A3; }
+    .dp-stat-num.clr-up { background: none; -webkit-text-fill-color: #FF7E8A; }
+    .dp-stat-num.clr-dn { background: none; -webkit-text-fill-color: var(--blue-700); }
     .dp-stat-unit {
       font-size: 12px; font-weight: 700;
-      color: var(--color-text-tertiary); margin-left: 1.5px;
-      letter-spacing: 0;
+      margin-left: 1.5px; letter-spacing: 0;
     }
     .dp-stat-label {
-      font-size: 11px; color: var(--color-text-tertiary);
-      margin-top: 6px; font-weight: 600; letter-spacing: 0.01em;
+      font-size: 12px; color: var(--color-text-primary);
+      margin-top: 6px; font-weight: 700; letter-spacing: 0.01em;
       line-height: 1.35; white-space: nowrap;
     }
     .dp-stat-py { display: inline; white-space: nowrap; font-size: 9px; font-weight: 600; opacity: 0.85; }
@@ -1770,8 +1791,8 @@
       line-height: 1.5; color: var(--color-text-primary);
     }
     .dp-verdict b { font-weight: 800; }
-    .dp-verdict .clr-up { color: #C0392B; }
-    .dp-verdict .clr-dn { color: #2471A3; }
+    .dp-verdict .clr-up { color: #FF7E8A; }
+    .dp-verdict .clr-dn { color: var(--blue-700); }
     .dp-verdict-sub {
       display: block; font-size: 12px; color: var(--color-text-tertiary);
       margin-top: 5px; font-weight: 500; font-feature-settings: 'tnum';
@@ -1789,7 +1810,7 @@
     /* spec-42: 친구 한마디 — 채팅형(헤더줄 + 본문 풀폭) */
     .dp__friend {
       display: block;
-      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
+      background: var(--color-brand-bg-subtle);
       border-radius: 14px;
       padding: 14px 16px 15px;
     }
@@ -1811,20 +1832,20 @@
     .dp__friend-cta {
       font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
-      background: rgba(168, 46, 27, 0.08);
+      background: rgba(124, 63, 230, 0.08);
       padding: 4px 10px; border-radius: 9999px;
       white-space: nowrap; transition: background 120ms;
     }
-    .dp__friend:hover .dp__friend-cta { background: rgba(168, 46, 27, 0.16); }
+    .dp__friend:hover .dp__friend-cta { background: rgba(124, 63, 230, 0.16); }
     .dp__friend-avatar {
       flex-shrink: 0;
       width: 26px; height: 26px;
       border-radius: 50%;
       background: var(--color-brand-primary);
-      color: white;
+      color: var(--color-text-on-brand);
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+      box-shadow: 0 2px 6px rgba(124, 63, 230, 0.25);
     }
     .dp__friend.empty .dp__friend-avatar {
       background: var(--color-text-tertiary);
@@ -1844,7 +1865,7 @@
     }
 
     .dp__section {
-      background: white;
+      background: var(--color-bg-panel);
       border: none;
       border-radius: 16px;
       box-shadow: 0 2px 14px rgba(26,24,22,0.05);
@@ -1921,7 +1942,7 @@
       margin-bottom: 6px;
     }
     .dp-route.best {
-      background: white;
+      background: var(--color-bg-panel);
       border-color: var(--color-brand-primary);
       border-width: 1.5px;
     }
@@ -1985,7 +2006,7 @@
     .dp-route-more-btn {
       width: 100%;
       padding: 9px;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-default);
       border-radius: 8px;
       font-size: 12px; font-weight: 600;
@@ -2043,8 +2064,8 @@
       font-feature-settings: 'tnum';
       letter-spacing: -0.005em;
     }
-    .clr-up   { color: #C0392B; }
-    .clr-dn   { color: #2471A3; }
+    .clr-up   { color: #FF7E8A; }
+    .clr-dn   { color: var(--blue-700); }
     .clr-flat { color: var(--color-text-secondary); }
 
     /* 차트 */
@@ -2058,16 +2079,16 @@
       border: 1px solid var(--color-border-strong);
       font-size: 12.5px; font-weight: 600;
       cursor: pointer; font-family: inherit;
-      background: white;
+      background: var(--color-bg-subtle);
       color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
       transition: all 100ms;
     }
     .dp-tab:hover { border-color: var(--color-text-tertiary); }
     .dp-tab.active {
-      background: var(--color-brand-primary);
-      color: white;
-      border-color: var(--color-brand-primary);
+      background: var(--color-brand-gradient);
+      color: var(--color-text-on-brand);
+      border-color: transparent;
     }
     .dp-chart-legend {
       display: flex; gap: 14px;
@@ -2153,11 +2174,10 @@
     }
 
 
-    /* ── 텍스트 색상 강화 (회색 → 더 진하게) ─────────────── */
-    /* tertiary: gray-500 → gray-600 (눈에 거의 안 보이던 톤 강화) */
+    /* ── 텍스트 색상 강화 (다크 테마) ─────────────────────── */
     html, body {
-      --color-text-tertiary: var(--gray-600);
-      --color-text-secondary: var(--gray-800);
+      --color-text-tertiary: var(--gray-500);
+      --color-text-secondary: var(--gray-700);
     }
 
     /* ── 입체감을 위한 패널 분리 ─────────────────────────── */
@@ -2165,10 +2185,10 @@
     .bucket-section,
     .rec-card,
     .list-card {
-      background: white;
+      background: var(--color-bg-panel);
     }
     .bucket-body {
-      background: #FAF9F7;  /* 매우 살짝 톤 다운 */
+      background: var(--color-bg-subtle);
     }
   </style>
 </head>
@@ -2804,16 +2824,17 @@ function openDetail(aptSeq) {
   _currentAptSeq = aptSeq;
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
-  // 지도 pan
-  if (kakaoMap && resultData) {
-    const card = resultData.cards.find(c => c.apt_seq === aptSeq);
-    if (card && card.lat && card.lng)
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
-  }
-  // 사이드 패널 열기
+  // 사이드 패널 먼저 열기 → relayout → setCenter (패널 열린 후 실제 지도 영역 기준으로 정중앙)
   document.getElementById('detail-panel').classList.add('open');
   document.getElementById('detail-resize-handle').style.display = '';
   document.body.style.overflow = '';
+  if (kakaoMap && resultData) {
+    const card = resultData.cards.find(c => c.apt_seq === aptSeq);
+    if (card && card.lat && card.lng) {
+      kakaoMap.relayout();
+      kakaoMap.setCenter(new kakao.maps.LatLng(card.lat, card.lng));
+    }
+  }
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -3061,8 +3082,8 @@ function _clearChatAttachment() {
 const CHAT_SUGGESTIONS = [
   '최근 시세 트렌드 어때?',
   '주변 단지 대비 시세는?',
-  '단지 장단점 솔직하게 말해봐',
-  '투자 가치 있어?',
+  '실거래 최근 거래 어때?',
+  '주차·교통 편해?',
   '학군이랑 주변 환경은?',
 ];
 
@@ -3814,8 +3835,8 @@ function _renderRoutePanel(routes1, routes2) {
   let html = '';
   if (hasDual) {
     html += `<div class="route-panel__wp-tabs">
-      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">W1 직장</button>
-      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">W2 직장</button>
+      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">내 직장</button>
+      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">배우자 직장</button>
     </div>`;
   }
   html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1)}</div>`;
@@ -4666,8 +4687,8 @@ function renderDetailPanel(d, routes, wpId){
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
     ? [
-        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#C0392B':ps.change_6m_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
-        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#C0392B':ps.vs_dong_pct<0?'#2471A3':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
+        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#FF7E8A':ps.change_6m_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
+        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#FF7E8A':ps.vs_dong_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
       ].filter(Boolean).join(' · ')
     : '시세 데이터 없음';
 
@@ -4715,7 +4736,6 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 헤더 -->
     <div class="dp__header">
       <button class="dp__back" onclick="backToList()">← 목록</button>
-      <span class="dp__name">${escHtml(d.apt_nm)}</span>
       ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
     </div>
 
@@ -4753,8 +4773,8 @@ function renderDetailPanel(d, routes, wpId){
         ${renderKPIHTML(d.price_summary, d.umd_nm)}
         <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
         <div class="dp-chart-legend" style="margin-top:6px">
-          <span><i class="dp-legend-dot" style="background:#A82E1B"></i>${escHtml(d.apt_nm)}</span>
-          <span><i class="dp-legend-dot" style="background:#2471A3;opacity:.7"></i>${escHtml(d.umd_nm)} 동평균</span>
+          <span><i class="dp-legend-dot" style="background:#FF6FB5"></i>${escHtml(d.apt_nm)}</span>
+          <span><i class="dp-legend-dot" style="background:#93C5FD;opacity:.9"></i>${escHtml(d.umd_nm)} 동평균</span>
         </div>
         <div class="dp-chart-wrap"><canvas id="dp-chart"></canvas></div>
       </div>
@@ -4966,17 +4986,25 @@ function initDetailChart(key, aptNm, umdNm){
   // 데이터 포인트가 적으면 점만, 충분하면 선+점
   const nonNull = complexData.filter(v=>v!==null).length;
   const sparse = nonNull < 6;
+  const CHART_PINK   = '#FF6FB5';
+  const CHART_BLUE   = '#93C5FD';
+  const CHART_GRID   = 'rgba(255,255,255,0.08)';
+  const CHART_TICK   = 'rgba(255,255,255,0.55)';
   detailChart = new Chart(canvas.getContext('2d'),{
     type:'line',
     data:{
       labels,
       datasets:[
-        { label:aptNm, data:complexData, borderColor:'#A82E1B', backgroundColor:'#A82E1B25',
-          borderWidth: sparse?0:2, pointRadius: sparse?5:3,
-          pointBackgroundColor:'#A82E1B', tension:0.3, fill:false,
-          showLine:!sparse },
-        { label:`${umdNm} 동평균`, data:dongData, borderColor:'#2471A3', backgroundColor:'#2471A315',
-          borderWidth: 1.5, pointRadius:2, borderDash:[4,3], tension:0.3, fill:false },
+        { label:aptNm, data:complexData,
+          borderColor: CHART_PINK, backgroundColor: 'rgba(255,111,181,0.15)',
+          borderWidth: sparse?0:2.5, pointRadius: sparse?6:4,
+          pointBackgroundColor: CHART_PINK, pointBorderColor: '#1D1922', pointBorderWidth: 1.5,
+          tension:0.35, fill:false, showLine:!sparse },
+        { label:`${umdNm} 동평균`, data:dongData,
+          borderColor: CHART_BLUE, backgroundColor: 'rgba(147,197,253,0.08)',
+          borderWidth: 1.5, pointRadius:2, borderDash:[4,3],
+          pointBackgroundColor: CHART_BLUE,
+          tension:0.35, fill:false },
       ]
     },
     options:{
@@ -4984,11 +5012,23 @@ function initDetailChart(key, aptNm, umdNm){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}}
+        tooltip:{
+          backgroundColor:'rgba(28,25,34,0.92)',
+          borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
+          titleColor:'rgba(255,255,255,0.85)', bodyColor:'rgba(255,255,255,0.7)',
+          padding:10,
+          callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}
+        }
       },
       scales:{
-        x:{ticks:{font:{family:'Pretendard',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
-        y:{ticks:{font:{family:'Pretendard',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
+        x:{
+          ticks:{font:{family:'SUIT',size:10}, color:CHART_TICK, maxTicksLimit:12},
+          grid:{color:CHART_GRID}
+        },
+        y:{
+          ticks:{font:{family:'SUIT',size:10}, color:CHART_TICK, callback:v=>shortPrice(v)},
+          grid:{color:CHART_GRID}
+        },
       }
     }
   });

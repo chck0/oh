@@ -17,38 +17,61 @@
      PRIMITIVE — 원시 색상 스케일 (직접 사용 X)
      ───────────────────────────────────────── */
 
-  /* Baduki Red — 벽돌 톤 빨강 */
-  --red-50:  #FDF4F2;
-  --red-100: #F9DDD6;
-  --red-200: #F2BAA9;
-  --red-300: #E89789;
-  --red-400: #DA6E58;
-  --red-500: #C8462F;
-  --red-600: #A82E1B;  /* MAIN */
-  --red-700: #8E2618;
-  --red-800: #7E2113;  /* hover */
-  --red-900: #4D140C;  /* active */
+  /* Pink→Purple — 핑크에서 보라로 흐르는 액센트 (v0.5 Dark) */
+  --pink-50:  #FBF0FA;
+  --pink-100: #F6D9F2;
+  --pink-200: #EFB3E4;
+  --pink-300: #E892D6;   /* 흐린 액센트 텍스트 */
+  --pink-400: #E56FB8;
+  --pink-500: #D95BB0;   /* MAIN (핑크-퍼플 중간) */
+  --pink-600: #B94FCB;
+  --pink-700: #9A45D6;
+  --purple-400: #9B5DE5;
+  --purple-500: #7C3FE6;  /* 그라데이션 보라 끝점 */
+  --purple-600: #6A2FD0;
 
-  /* Warm Gray — 따뜻한 회색 (2% 옐로우-브라운) */
+  /* 그라데이션 (액센트 면) — 핑크 → 보라 */
+  --grad-accent: linear-gradient(120deg, #FF6FB5 0%, #C45ED6 50%, #7C3FE6 100%);
+
+  /* Dark Neutral — 핑크빛 살짝 도는 다크 중성색 */
   --gray-white: #FFFFFF;
-  --gray-50:    #FAF9F7;
-  --gray-100:   #F1EFEB;
-  --gray-200:   #E8E6E3;
-  --gray-300:   #C9C5BF;
-  --gray-400:   #A6A19A;
-  --gray-500:   #8A857E;
-  --gray-600:   #6B6661;
-  --gray-700:   #4A4642;
-  --gray-800:   #2E2B28;
-  --gray-900:   #1A1816;
+  --ink-0:   #0C0A0E;  /* body 최하단 배경 */
+  --ink-1:   #15121A;  /* 패널 기본 */
+  --ink-2:   #1D1922;  /* 카드/호버 */
+  --ink-3:   #28222F;  /* 비활성/구분 */
+  --ink-line: rgba(255,255,255,0.09);  /* 보더 */
+  --ink-line-strong: rgba(255,255,255,0.16);
+  --text-hi:  #F0EDEF;  /* primary */
+  --text-mid: #C2B6BE;  /* secondary */
+  --text-lo:  #948690;  /* tertiary */
+  --text-dim: #6E636B;  /* disabled */
 
-  /* Status — 채도 낮춤 (지도 마커와 충돌 방지) */
-  --green-100: #E6F0E5;
-  --green-700: #2D6A3F;
-  --amber-100: #FBF1DC;
-  --amber-700: #8C5E0E;
-  --blue-100:  #E4ECF4;
-  --blue-700:  #2E4E6E;
+  /* 하위호환: --gray-* 참조처가 남아있어 다크 매핑으로 유지 */
+  --gray-50:    var(--ink-2);
+  --gray-100:   var(--ink-3);
+  --gray-200:   var(--ink-line);
+  --gray-300:   var(--ink-line-strong);
+  --gray-400:   var(--text-dim);
+  --gray-500:   var(--text-lo);
+  --gray-600:   var(--text-lo);
+  --gray-700:   var(--text-mid);
+  --gray-800:   #E2DCE0;
+  --gray-900:   var(--text-hi);
+
+  /* red-* 하위호환 (가격 상승 지표 등에서 직접 참조) — 밝은 톤 유지 */
+  --red-50:  rgba(180,79,203,0.14);
+  --red-300: var(--pink-300);
+  --red-600: var(--pink-500);
+  --red-800: var(--pink-600);
+  --red-900: var(--pink-700);
+
+  /* Status — 다크 배경용 */
+  --green-100: rgba(74,222,128,0.14);
+  --green-700: #6EE7A0;
+  --amber-100: rgba(251,191,36,0.14);
+  --amber-700: #FFcF6B;
+  --blue-100:  rgba(96,165,250,0.14);
+  --blue-700:  #93C5FD;
 
 
   /* ─────────────────────────────────────────
@@ -56,28 +79,33 @@
      ───────────────────────────────────────── */
 
   /* Brand */
-  --color-brand-primary:   var(--red-600);
-  --color-brand-hover:     var(--red-800);
-  --color-brand-active:    var(--red-900);
-  --color-brand-disabled:  var(--red-300);
-  --color-brand-bg-subtle: var(--red-50);
+  --color-brand-primary:   var(--pink-500);
+  --color-brand-hover:     var(--pink-600);
+  --color-brand-active:    var(--pink-700);
+  --color-brand-disabled:  var(--ink-3);
+  --color-brand-bg-subtle: rgba(180,79,203,0.14);
+  --color-brand-gradient:  var(--grad-accent);            /* 핑크→퍼플 CTA 면 */
+  --color-brand-gradient-hover: linear-gradient(120deg, #FF7FC0 0%, #CB6BDD 50%, #8A53F0 100%);
+  --shadow-brand:        0 4px 16px rgba(124, 63, 230, 0.32);
+  --shadow-brand-strong: 0 6px 22px rgba(124, 63, 230, 0.45);
 
   /* Background */
-  --color-bg-panel:  var(--gray-white);  /* 모든 패널 기본 */
-  --color-bg-subtle: var(--gray-50);     /* 호버, 섹션 구분 */
-  --color-bg-muted:  var(--gray-100);    /* 비활성 카드 */
+  --color-bg-panel:  var(--ink-1);   /* 모든 패널 기본 */
+  --color-bg-subtle: var(--ink-2);   /* 호버, 섹션 구분 */
+  --color-bg-muted:  var(--ink-3);   /* 비활성 카드 */
+  --color-bg-base:   var(--ink-0);   /* body 최하단 */
 
   /* Border */
-  --color-border-default: var(--gray-200);
-  --color-border-strong:  var(--gray-300);
-  --color-border-focus:   var(--red-600);
+  --color-border-default: var(--ink-line);
+  --color-border-strong:  var(--ink-line-strong);
+  --color-border-focus:   var(--pink-500);
 
   /* Text */
-  --color-text-primary:   var(--gray-900);
-  --color-text-secondary: var(--gray-700);
-  --color-text-tertiary:  var(--gray-500);
-  --color-text-disabled:  var(--gray-400);
-  --color-text-on-brand:  var(--gray-white);
+  --color-text-primary:   var(--text-hi);
+  --color-text-secondary: var(--text-mid);
+  --color-text-tertiary:  var(--text-lo);
+  --color-text-disabled:  var(--text-dim);
+  --color-text-on-brand:  #ffffff;
 
   /* Status */
   --color-status-success-bg:   var(--green-100);
@@ -109,7 +137,7 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
   --shadow-xl: 0 8px 28px rgba(0, 0, 0, 0.14);
-  --shadow-pin-recommended: 0 3px 10px rgba(168, 46, 27, 0.40);
+  --shadow-pin-recommended: 0 3px 12px rgba(255, 107, 158, 0.45);
 
 
   /* ─────────────────────────────────────────

@@ -3,14 +3,14 @@
    v0.1
    
    사용법:
-     1. <head>에서 import (Pretendard CDN + 이 파일):
-        @import url("https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css");
+     1. <head>에서 import (SUIT CDN + 이 파일):
+        @import url("https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css");
         @import url("./typography.css");
      2. 컴포넌트에서 클래스 사용:
         <h2 class="text-heading-2">제목</h2>
    
    원칙:
-     - Pretendard 단일 폰트
+     - SUIT 단일 폰트
      - 4개 웨이트만 사용 (400/500/600/700)
      - letter-spacing은 크기에 반비례
      - 숫자는 항상 tnum 적용
@@ -21,7 +21,7 @@
   /* ─────────────────────────────────────────
      FONT FAMILY
      ───────────────────────────────────────── */
-  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+  --font-sans: 'SUIT', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
                'Malgun Gothic', system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -57,7 +57,7 @@
   --lh-loose:   1.6;
 
   /* ─────────────────────────────────────────
-     LETTER SPACING (Pretendard 보정값)
+     LETTER SPACING (SUIT 보정값)
      ───────────────────────────────────────── */
   --ls-tighter: -0.02em;   /* display */
   --ls-tight:   -0.015em;  /* h1 */
@@ -75,7 +75,7 @@
 
 html, body {
   font-family: var(--font-sans);
-  font-weight: var(--fw-regular);
+  font-weight: var(--fw-medium);
   font-size: var(--fs-body);
   line-height: var(--lh-loose);
   letter-spacing: var(--ls-body);
