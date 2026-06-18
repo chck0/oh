@@ -10,10 +10,12 @@ search.py에서 router.include_router(chat_router)로 합쳐진다.
 search 모듈을 import하지 않으므로 순환 의존 없음.
 """
 import hashlib
+import json
 import re
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.db import get_db
@@ -100,6 +102,21 @@ def _parse_reply(raw: str) -> "tuple[str, list[str]]":
     return raw[: chips_match.start()].strip(), suggestions
 
 
+# ── SSE (스트리밍) 헬퍼 ────────────────────────────────────────
+_CHIPS_MARK = "\nCHIPS:"
+
+_SSE_HEADERS = {
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",      # nginx/프록시 버퍼링 방지
+    "Connection": "keep-alive",
+}
+
+
+def _sse(obj: dict) -> str:
+    """dict → SSE data 프레임."""
+    return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
+
+
 # ── POST /api/apt/{apt_seq}/chat  (spec-22: 친구 채팅) ─────────
 class AptChatRequest(BaseModel):
     pyeong_type: str | None = None
@@ -143,7 +160,14 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         cached = _chat_cache_get(cache_key)
         if cached:
             reply, suggestions = _parse_reply(cached)
-            return {'reply': reply, 'suggestions': suggestions}
+
+            def _cached_gen():
+                if reply:
+                    yield _sse({'type': 'delta', 'text': reply})
+                yield _sse({'type': 'done', 'suggestions': suggestions})
+
+            return StreamingResponse(
+                _cached_gen(), media_type='text/event-stream', headers=_SSE_HEADERS)
 
     def _fmt(v: int) -> str:
         e, m = v // 10000, v % 10000
@@ -311,42 +335,74 @@ CHIPS: 질문1 | 질문2 | 질문3
     else:
         messages.append({'role': 'user', 'content': user_text})
 
-    raw = "잠깐, 다시 시도해봐."
-    try:
-        client = _anth.Anthropic(api_key=cfg.ANTHROPIC_API_KEY)
+    def _gen():
+        """SSE 스트림 — 토큰을 받는 대로 흘려보낸다.
 
-        # F3: tool_use agentic loop (최대 3턴)
-        MAX_TOOL_TURNS = 3
-        for _ in range(MAX_TOOL_TURNS + 1):
-            msg = client.messages.create(
-                model=cfg.OPUS_MODEL,
-                max_tokens=700,
-                system=system,
-                messages=messages,
-                tools=_SEARCH_TOOLS,
-            )
-            if msg.stop_reason != 'tool_use':
-                break
-            # 검색 도구 실행
-            messages.append({'role': 'assistant', 'content': msg.content})
-            tool_results = []
-            for block in msg.content:
-                if block.type == 'tool_use':
-                    search_result = _do_search(block.input.get('query', ''))
-                    tool_results.append({
-                        'type': 'tool_result',
-                        'tool_use_id': block.id,
-                        'content': search_result,
-                    })
-            messages.append({'role': 'user', 'content': tool_results})
+        - delta : 화면에 즉시 누적할 텍스트 조각
+        - done  : 종료 + 후속질문(chips)
+        - error : 오류 메시지
+        CHIPS: 마커 이후는 화면에 흘리지 않고 done의 suggestions로 분리한다.
+        """
+        full = ''       # 모델이 생성한 누적 원문(프리앰블+답변)
+        emitted = 0     # 이미 delta로 내보낸 길이
+        suggestions: list[str] = []
+        try:
+            client = _anth.Anthropic(api_key=cfg.ANTHROPIC_API_KEY)
 
-        text_parts = [b.text for b in msg.content if hasattr(b, 'text') and b.text]
-        raw = '\n'.join(text_parts).strip() or "잠깐, 다시 시도해봐."
-    except Exception as e:
-        raw = f"에러가 났어. 잠깐 기다려봐. ({type(e).__name__}: {str(e)[:80]})"
+            # F3: tool_use agentic loop (최대 3턴) — 각 턴을 스트리밍
+            MAX_TOOL_TURNS = 3
+            final_msg = None
+            for _ in range(MAX_TOOL_TURNS + 1):
+                with client.messages.stream(
+                    model=cfg.OPUS_MODEL,
+                    max_tokens=700,
+                    system=system,
+                    messages=messages,
+                    tools=_SEARCH_TOOLS,
+                ) as stream:
+                    for delta in stream.text_stream:
+                        full += delta
+                        idx = full.find(_CHIPS_MARK)
+                        # CHIPS 마커가 보이면 그 앞까지만, 아니면 마커 길이만큼 홀드백
+                        safe = idx if idx != -1 else max(emitted, len(full) - len(_CHIPS_MARK))
+                        if safe > emitted:
+                            yield _sse({'type': 'delta', 'text': full[emitted:safe]})
+                            emitted = safe
+                    final_msg = stream.get_final_message()
 
-    if not has_attachment and history_len <= 2:
-        _chat_cache_set(cache_key, raw)
+                if final_msg.stop_reason != 'tool_use':
+                    break
+                # 검색 도구 실행 후 다음 턴 진행
+                messages.append({'role': 'assistant', 'content': final_msg.content})
+                tool_results = []
+                for block in final_msg.content:
+                    if block.type == 'tool_use':
+                        search_result = _do_search(block.input.get('query', ''))
+                        tool_results.append({
+                            'type': 'tool_result',
+                            'tool_use_id': block.id,
+                            'content': search_result,
+                        })
+                messages.append({'role': 'user', 'content': tool_results})
 
-    reply, suggestions = _parse_reply(raw)
-    return {'reply': reply, 'suggestions': suggestions}
+            # 종료 — CHIPS 분리 + 잔여 텍스트 flush
+            idx = full.find(_CHIPS_MARK)
+            if idx != -1:
+                reply_text = full[:idx]
+                m = re.search(r'CHIPS:\s*(.+)', full[idx:])
+                if m:
+                    suggestions = [s.strip() for s in m.group(1).split('|') if s.strip()][:3]
+            else:
+                reply_text = full
+            if len(reply_text) > emitted:
+                yield _sse({'type': 'delta', 'text': reply_text[emitted:]})
+
+            if not has_attachment and history_len <= 2 and full.strip():
+                _chat_cache_set(cache_key, full)
+
+            yield _sse({'type': 'done', 'suggestions': suggestions})
+        except Exception as e:
+            yield _sse({'type': 'error',
+                        'message': f'에러가 났어. 잠깐 기다려봐. ({type(e).__name__})'})
+
+    return StreamingResponse(_gen(), media_type='text/event-stream', headers=_SSE_HEADERS)
