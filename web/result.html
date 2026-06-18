@@ -472,18 +472,19 @@
     .sort-panel-reset:hover { color: var(--color-brand-primary); }
     /* 플로팅 드롭다운 패널 */
     .sort-panel-body {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+      position: fixed; z-index: 1000;
+      left: 448px; top: 390px;
       background: #fff;
       border: 1px solid var(--color-border-strong);
-      border-top: none;
-      border-radius: 0 0 12px 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.12);
-      padding: 12px;
-      display: flex; flex-direction: column; gap: 8px;
-      transform-origin: top center;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      padding: 8px 0;
+      display: flex; flex-direction: column; gap: 0;
+      transform-origin: top left;
       transition: opacity .18s, transform .18s;
-      opacity: 1; transform: scaleY(1);
-      max-height: 60vh; overflow-y: auto;
+      opacity: 1; transform: scale(1);
+      max-height: 70vh; overflow-y: auto;
+      min-width: 200px;
     }
     .sort-panel-body.collapsed {
       opacity: 0; transform: scaleY(0);
@@ -2328,10 +2329,6 @@
             <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
             <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
           </div>
-        </div>
-        <div class="sort-panel-body collapsed" id="sort-panel-body">
-          <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-          <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
         </div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
@@ -5034,12 +5031,7 @@ function _refreshSortUI() {
   hint.innerHTML = parts.join(' &nbsp;→&nbsp; ');
 }
 
-function toggleSortPanel() {
-  const panel = document.getElementById('sort-panel');
-  const btn = document.getElementById('sort-toggle-btn');
-  const open = panel.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}
+// toggleSortPanel은 아래에 정의됨
 
 // 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
 function updateSortDropdowns() {}
@@ -5092,12 +5084,18 @@ function resetSort() {
 let _sortPanelOpen = false;
 function toggleSortPanel() {
   _sortPanelOpen = !_sortPanelOpen;
-  document.getElementById('sort-panel-body').classList.toggle('collapsed', !_sortPanelOpen);
+  const body = document.getElementById('sort-panel-body');
+  const header = document.getElementById('sort-panel');
+  body.classList.toggle('collapsed', !_sortPanelOpen);
   document.getElementById('sort-panel-arrow').classList.toggle('collapsed', !_sortPanelOpen);
+  if (_sortPanelOpen) {
+    const rect = header.getBoundingClientRect();
+    body.style.top = rect.top + 'px';
+  }
 }
 // 드롭다운 외부 클릭 시 닫기
 document.addEventListener('click', e => {
-  if (_sortPanelOpen && !document.getElementById('sort-panel').contains(e.target)) {
+  if (_sortPanelOpen && !document.getElementById('sort-panel').contains(e.target) && !document.getElementById('sort-panel-body').contains(e.target)) {
     _sortPanelOpen = false;
     document.getElementById('sort-panel-body').classList.add('collapsed');
     document.getElementById('sort-panel-arrow').classList.add('collapsed');
@@ -5398,5 +5396,9 @@ function _filterCardsByAdv(cards) {
 // ── 실행 ─────────────────────────────────────────────────────
 runSearch();
 </script>
+<div class="sort-panel-body collapsed" id="sort-panel-body">
+  <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+  <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+</div>
 </body>
 </html>
