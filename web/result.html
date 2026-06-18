@@ -2200,6 +2200,77 @@
     .bucket-body {
       background: var(--color-bg-subtle);
     }
+
+    /* ════════════════════════════════════════════════════════════
+       spec-12 · 모바일 전용 UX (≤767px 한정)
+       ⚠️ PC 무영향 원칙: 이 블록 규칙은 모바일에서만 적용되며
+       데스크톱(≥768px) 렌더링·동작에 일절 영향을 주지 않는다.
+       기존 데스크톱 선언은 수정하지 않고 여기서 override만 한다.
+       (소스 맨 끝 배치 → 동일 특이도 규칙을 소스순서로 안전하게 덮어씀)
+       ════════════════════════════════════════════════════════════ */
+    /* 모바일 토글 버튼 기본값: 데스크톱에선 숨김(추가 셀렉터 — 기존 요소 무영향) */
+    .mobile-view-toggle { display: none; }
+
+    @media (max-width: 767px) {
+      /* A·C. 레이아웃: .result-layout이 flex이므로 flex-direction으로 세로 스택
+         (기존 315행 블록은 flex에 무효한 grid-template이라 실제 동작 안 했음) */
+      .result-layout { flex-direction: column; }
+      .left-panel {
+        width: 100%; min-width: 0; flex: 1 1 auto; min-height: 0;
+        border-right: none; border-bottom: 1px solid var(--color-border-strong);
+      }
+      .map-panel {
+        width: 100%; min-width: 0;
+        flex: 0 0 46vh; min-height: 46vh;
+      }
+
+      /* C. 지도 우선 모드 — 토글로 .mobile-map-focus 부여 시 리스트 접고 지도 확대 */
+      .result-layout.mobile-map-focus .left-panel {
+        flex: 0 0 0; height: 0; min-height: 0; overflow: hidden; border: none;
+      }
+      .result-layout.mobile-map-focus .map-panel {
+        flex: 1 1 auto; height: 100%; min-height: 0;
+      }
+
+      /* C. 모바일 전용 플로팅 토글 버튼 (position:fixed → flex 흐름 무영향) */
+      .mobile-view-toggle {
+        display: inline-flex; align-items: center; gap: 6px;
+        position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+        z-index: 880;
+        padding: 10px 18px;
+        background: var(--color-brand-gradient); color: #fff;
+        border: none; border-radius: var(--radius-pill);
+        font-family: inherit; font-size: 14px; font-weight: 700;
+        box-shadow: var(--shadow-brand-strong); cursor: pointer;
+      }
+      /* 상세/채팅 열려 있으면 토글 숨김(겹침 방지) — :has() CSS만, JS 무변경 */
+      .result-layout:has(.detail-panel.open) .mobile-view-toggle,
+      .result-layout:has(.chat-panel:not(.hidden)) .mobile-view-toggle {
+        display: none;
+      }
+
+      /* A. 상세 패널 → 하단 바텀시트 (데스크톱 480px 사이드패널은 무손상) */
+      .detail-panel {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; min-width: 0; height: 88vh; max-height: 88vh;
+        transform: translateY(101%);
+        transition: transform .28s ease;
+        border-left: none; border-radius: 16px 16px 0 0;
+        overflow: hidden; z-index: 910;
+      }
+      .detail-panel.open {            /* 데스크톱 .open(480px·border·shadow) 재정의 */
+        width: 100%; min-width: 0;
+        transform: translateY(0);
+        border-left: none;
+        box-shadow: 0 -8px 28px rgba(0,0,0,0.35);
+      }
+
+      /* B. 친구 채팅 패널 → 전폭 (데스크톱 440px 사이드패널은 무손상) */
+      .chat-panel {
+        width: 100%; min-width: 0; max-width: none; border-radius: 0;
+      }
+      .chat-panel__resize { display: none; }   /* 모바일에선 가로 리사이즈 불필요 */
+    }
   </style>
 </head>
 <body>
@@ -2279,6 +2350,11 @@
   </div>
 
   <div class="result-layout">
+    <!-- spec-12: 모바일 전용 지도↔리스트 토글 (데스크톱 display:none, position:fixed) -->
+    <button class="mobile-view-toggle" id="mobile-view-toggle"
+            onclick="toggleMobileView()" aria-label="지도/리스트 전환">
+      <span id="mvt-label">지도 보기</span>
+    </button>
     <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
@@ -2877,6 +2953,28 @@ function closeDetail() {
   clearActiveAptPin();  // spec-38: 핀 강조 해제
 }
 function closeDetailOnBg(e) {}
+
+// ── spec-12: 모바일 전용 — 지도↔리스트 포커스 전환 ──────────────
+// 데스크톱에선 토글 버튼이 display:none이라 호출되지 않으며,
+// 호출돼도 matchMedia 가드로 즉시 종료 → PC 동작 경로 무영향.
+function toggleMobileView() {
+  if (!window.matchMedia('(max-width: 767px)').matches) return;  // 데스크톱 무동작
+  const layout = document.querySelector('.result-layout');
+  if (!layout) return;
+  const mapFocus = layout.classList.toggle('mobile-map-focus');
+  const label = document.getElementById('mvt-label');
+  if (label) label.textContent = mapFocus ? '리스트 보기' : '지도 보기';
+  // 지도 컨테이너 크기 변경 → Kakao 재배치 (레이아웃 정착 후)
+  setTimeout(() => {
+    try {
+      if (typeof kakaoMap !== 'undefined' && kakaoMap) {
+        kakaoMap.relayout();
+        if (typeof _recenterApt === 'function') _recenterApt();
+      }
+    } catch (e) {}
+  }, 80);
+}
+
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
