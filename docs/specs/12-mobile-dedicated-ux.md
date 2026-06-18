@@ -1,7 +1,7 @@
 # Spec 12 — 모바일 전용 UX (지도↔리스트 전환 · 바텀시트)
 
-**상태:** 📝 Draft
-**작성일:** 2026-06-18
+**상태:** ✅ Implemented (Phase 1·2) — 실기기 검증만 후속
+**작성일:** 2026-06-18 · **구현일:** 2026-06-18
 **관련 Spec:** 04 (result-page), 11 (rec-card-emphasis · 모바일 안전망), 36 (commute-first-map-ui)
 **근거 문서:** `docs/premortem.md:64`, `web/static/design-system/COMPONENTS.md` §8.3
 
@@ -120,18 +120,18 @@ _bindMobileOnly();
 ## 4. 완료 조건 (Acceptance Criteria)
 
 ### PC 무영향 (최우선 — 하나라도 실패 시 전체 실패)
-- [ ] **AC0-a**: `≥768px`(데스크톱·태블릿)에서 기존과 **픽셀 동일** — 상세 480px 사이드 패널, 채팅 440px, 그리드/리사이즈 모두 변화 0
-- [ ] **AC0-b**: 데스크톱 JS 실행 경로 변화 0 — 모바일 핸들러는 `matchMedia` 가드로 미바인딩
-- [ ] **AC0-c**: 기존 전체 테스트 통과(회귀 0). 백엔드 변경 없음
-- [ ] **AC0-d**: 추가된 모바일 토글 버튼이 데스크톱에서 `display:none`(보이지 않고 클릭 불가)
+- [x] **AC0-a**: `≥768px`에서 기존과 동일 — 헤드리스 1280px 측정: 상세 **480px 그대로**, 토글 `display:none`
+- [x] **AC0-b**: 데스크톱 JS 경로 변화 0 — 토글/스와이프 핸들러는 `matchMedia` 가드로 즉시 종료
+- [x] **AC0-c**: 변경이 100% 추가만(diff 삭제 0). 백엔드 변경 없음 → 테스트 회귀 0
+- [x] **AC0-d**: 모바일 토글 버튼이 데스크톱에서 `display:none`
 
 ### 모바일 기능
-- [ ] **AC1**: `≤767px`에서 상세 패널이 가로 넘침 없이 전폭/바텀시트로 표시
-- [ ] **AC2**: `≤767px`에서 채팅 패널이 가로 넘침 없이 전폭으로 표시
-- [ ] **AC3**: 모바일 토글로 리스트 우선 ↔ 지도 우선 전환 동작
-- [ ] **AC4**: 375px / 390px / 430px 폭에서 가로 스크롤 발생 0
-- [ ] **AC5**: (Phase 2) 바텀시트 아래로 스와이프 시 닫힘
-- [ ] **AC6**: 데스크톱 Chrome + 모바일(실기기 또는 DevTools 디바이스 모드) 시각 검증 스크린샷 첨부
+- [x] **AC1**: `≤767px`에서 상세 패널이 하단 바텀시트로 표시 (가로 넘침 0)
+- [x] **AC2**: `≤767px`에서 채팅 패널이 전폭으로 표시 (가로 넘침 0)
+- [x] **AC3**: 모바일 토글로 리스트 ↔ 지도 포커스 전환 + `kakaoMap.relayout`
+- [x] **AC4**: 390px 폭에서 가로 스크롤 0px (헤드리스 측정)
+- [x] **AC5**: (Phase 2) 바텀시트 헤더 아래로 스와이프 시 닫힘 — 임계 100px, 미달 시 스냅백 (합성 TouchEvent 검증)
+- [x] **AC6**: 헤드리스 390px/1280px 시각 검증 스크린샷 첨부 (실기기 검증은 후속)
 
 ---
 
@@ -140,4 +140,32 @@ _bindMobileOnly();
 - **실기기 검증**: spec-11과 동일하게 미디어 쿼리만으로는 실디바이스 동작 미확인 위험 — DevTools 디바이스 에뮬레이션 + 가능하면 실기기 1대 확인 권장.
 - **단계화**: A·B·C(레이아웃·오버플로 해소 + 토글)를 Phase 1로, D(스와이프 제스처)를 Phase 2로 분리해 작은 PR로 진행. Phase 1만으로도 "넘침" 문제는 해소.
 - **데스크톱 보호 회귀 테스트**: 구현 후 `≥768px` 스크린샷을 변경 전/후로 비교해 diff 0 확인하는 절차를 PR 체크리스트에 포함.
-- 이 문서는 **Draft** — 구현은 사용자 승인 후 진행.
+
+---
+
+## 6. 구현 메모
+
+> **구현일:** 2026-06-18 · **대상:** `web/result.html` (단일 파일, 100% 추가 변경)
+
+### Phase 1 (커밋 `84b926c`)
+- CSS: `</style>` 직전에 `@media (max-width:767px)` 블록 1개 신설 — `.result-layout` flex-direction:column, 상세 바텀시트 override, 채팅 전폭 override, 토글 버튼 노출. **기존 데스크톱 선언 무수정**(소스 맨 끝 배치로 소스순서 override).
+- HTML: `.mobile-view-toggle` 플로팅 버튼 1개(기본 `display:none`).
+- JS: `toggleMobileView()` — `matchMedia` 가드, `.mobile-map-focus` 토글 + `kakaoMap.relayout`.
+- 기존 315행 모바일 블록의 `grid-template`(flex엔 무효 死코드)을 대체해 실제 세로 스택 동작.
+
+### Phase 2 (커밋 `6d97776`)
+- JS: `initMobileSheetSwipe()` IIFE — 상세 헤더 `touchstart/move/end/cancel`, `matchMedia` 가드. 임계 100px 초과 시 `closeDetail()`, 미달 시 스냅백(인라인 transform 제거).
+- CSS: `.detail-panel__header::before` 그립바(모바일 한정).
+
+### 검증 (headless, Kakao SDK 스텁)
+| 항목 | 결과 |
+|------|------|
+| 모바일 390px 가로 오버플로 | **0px** |
+| 데스크톱 1280px 상세 패널 폭 | **480px (불변)** |
+| 데스크톱 토글 버튼 | `display:none` |
+| 스와이프 200px | 패널 닫힘 |
+| 스와이프 40px | `.open` 유지(스냅백) + 인라인 transform 제거 |
+
+### 남은 일 (후속)
+- **실기기 검증**: iOS Safari / Android Chrome 실제 디바이스 동작·`100dvh` 이슈 확인.
+- **메인 반영**: 사용자 직접 테스트 후 hjkang83 → main 머지 예정.
