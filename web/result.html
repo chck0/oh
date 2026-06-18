@@ -361,6 +361,95 @@
     .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
 
     /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
+    /* ── 상세조건 필터 패널 ── */
+    .adv-filter-panel {
+      display: flex; flex-direction: column;
+      background: var(--color-surface);
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+      padding: 10px 13px 8px;
+    }
+    .adv-filter-header {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .adv-filter-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .adv-filter-subtitle {
+      font-size: 11px; color: var(--color-text-secondary);
+    }
+    .adv-filter-reset {
+      margin-left: auto; background: none; border: none;
+      font-size: 11px; color: var(--color-text-secondary);
+      cursor: pointer; padding: 2px 4px;
+    }
+    .adv-filter-reset:hover { color: #c0392b; }
+    .adv-filter-row {
+      display: flex; align-items: flex-start; gap: 6px;
+      margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .adv-filter-row:last-child { margin-bottom: 0; }
+    .adv-filter-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--color-text-secondary);
+      white-space: nowrap; padding-top: 3px; min-width: 36px;
+    }
+    .adv-filter-multi-hint {
+      font-size: 10px; color: var(--color-text-secondary);
+      padding-top: 4px;
+    }
+    .adv-filter-chips {
+      display: flex; flex-wrap: wrap; gap: 4px;
+    }
+    .adv-chip {
+      padding: 3px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      border: 1px solid var(--color-border-strong);
+      background: var(--color-surface);
+      color: var(--color-text-secondary);
+      transition: all 0.15s;
+    }
+    .adv-chip:hover {
+      border-color: var(--color-brand-primary); color: var(--color-brand-primary);
+    }
+    .adv-chip--active {
+      background: var(--color-brand-primary); border-color: var(--color-brand-primary);
+      color: #fff !important;
+    }
+    /* 준공연도 슬라이더 */
+    .adv-filter-row--column { flex-direction: column; gap: 4px; }
+    .adv-year-header { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .adv-year-range-label { font-size: 11px; font-weight: 600; color: var(--color-brand-primary); }
+    .adv-year-slider-wrap { width: 100%; padding: 0 4px; box-sizing: border-box; }
+    .adv-year-histogram { display: flex; align-items: flex-end; gap: 2px; height: 36px; margin-bottom: 4px; }
+    .adv-year-bar {
+      flex: 1; border-radius: 2px 2px 0 0;
+      background: var(--color-brand-bg-subtle); transition: background 0.15s;
+      min-height: 2px; border: 1px solid rgba(168,46,27,.15);
+    }
+    .adv-year-bar.in-range { background: var(--color-brand-primary); border-color: var(--color-brand-primary); }
+    .adv-year-track {
+      position: relative; height: 4px;
+      background: var(--color-border-strong); border-radius: 2px;
+      margin: 2px 0 6px;
+    }
+    .adv-year-fill {
+      position: absolute; height: 100%;
+      background: var(--color-brand-primary); border-radius: 2px;
+    }
+    .adv-year-thumb {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--color-brand-primary);
+      cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+      z-index: 2;
+    }
+    .adv-year-thumb:active { cursor: grabbing; }
+    .adv-year-tick-row { display: flex; justify-content: space-between; }
+    .adv-year-tick { font-size: 10px; color: var(--color-text-secondary); }
+
     .sort-panel {
       display: flex; flex-direction: column;
       background: #f8fafc; flex-shrink: 0;
@@ -419,7 +508,7 @@
       font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
       padding: 0 2px;
     }
-    .sort-hint .hint-order { color: #7c3aed; font-weight: 600; }
+    .sort-hint .hint-order { color: var(--color-brand-primary); font-weight: 600; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -2129,7 +2218,7 @@
     <div class="summary-bar" id="summary"></div>
     <div class="sort-bar" id="sort-bar">
       <span style="font-size:13px;color:var(--color-text-secondary);padding:0 16px;font-weight:500">
-        정렬 기준 <span id="sort-badge" style="display:none;color:#7c3aed;font-weight:700"></span>
+        정렬 기준 <span id="sort-badge" style="display:none;color:var(--color-brand-primary);font-weight:700"></span>
       </span>
     </div>
   </div>
@@ -2141,6 +2230,60 @@
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
+      <!-- 상세조건 필터 패널 -->
+      <div class="adv-filter-panel" id="adv-filter-panel">
+        <div class="adv-filter-header">
+          <span class="adv-filter-title">상세조건</span>
+          <button class="adv-filter-reset" id="adv-filter-reset-btn" onclick="resetAdvFilter()" style="display:none">✕ 초기화</button>
+        </div>
+
+        <div class="adv-filter-row">
+          <span class="adv-filter-label">평형</span>
+          <span class="adv-filter-multi-hint">복수 선택</span>
+          <div class="adv-filter-chips" id="adv-pyeong-chips">
+            <button class="adv-chip adv-chip--active" data-val="" onclick="toggleAdvChip(this,'pyeong')">전체</button>
+            <button class="adv-chip" data-val="10평미만" onclick="toggleAdvChip(this,'pyeong')">10평 미만</button>
+            <button class="adv-chip" data-val="10평대" onclick="toggleAdvChip(this,'pyeong')">10평대</button>
+            <button class="adv-chip" data-val="20평대" onclick="toggleAdvChip(this,'pyeong')">20평대</button>
+            <button class="adv-chip" data-val="30평대" onclick="toggleAdvChip(this,'pyeong')">30평대</button>
+            <button class="adv-chip" data-val="40평대" onclick="toggleAdvChip(this,'pyeong')">40평대</button>
+            <button class="adv-chip" data-val="50평대+" onclick="toggleAdvChip(this,'pyeong')">50평대+</button>
+          </div>
+        </div>
+
+        <div class="adv-filter-row adv-filter-row--column">
+          <div class="adv-year-header">
+            <span class="adv-filter-label">준공연도</span>
+            <span class="adv-year-range-label" id="adv-year-range-label">제한없음</span>
+          </div>
+          <div class="adv-year-slider-wrap" id="adv-year-slider-wrap">
+            <div class="adv-year-histogram" id="adv-year-histogram"></div>
+            <div class="adv-year-track" id="adv-year-track">
+              <div class="adv-year-fill" id="adv-year-fill"></div>
+              <div class="adv-year-thumb" id="adv-year-thumb-min" data-which="min"></div>
+              <div class="adv-year-thumb" id="adv-year-thumb-max" data-which="max"></div>
+            </div>
+            <div class="adv-year-tick-row" id="adv-year-tick-row"></div>
+          </div>
+        </div>
+
+        <div class="adv-filter-row adv-filter-row--column">
+          <div class="adv-year-header">
+            <span class="adv-filter-label">세대수</span>
+            <span class="adv-year-range-label" id="adv-units-range-label">제한없음</span>
+          </div>
+          <div class="adv-year-slider-wrap" id="adv-units-slider-wrap">
+            <div class="adv-year-histogram" id="adv-units-histogram"></div>
+            <div class="adv-year-track" id="adv-units-track">
+              <div class="adv-year-fill" id="adv-units-fill"></div>
+              <div class="adv-year-thumb" id="adv-units-thumb-min" data-which="min"></div>
+              <div class="adv-year-thumb" id="adv-units-thumb-max" data-which="max"></div>
+            </div>
+            <div class="adv-year-tick-row" id="adv-units-tick-row"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="sort-panel" id="sort-panel">
         <div class="sort-panel-header">
           <span class="sort-panel-title">정렬 기준</span>
@@ -3933,7 +4076,9 @@ function renderCards(data){
     _updateFavTab();
   }
 
-  if(!data.cards.length){
+  const allCards = _isAdvFilterActive() ? _filterCardsByAdv(data.cards) : data.cards;
+
+  if(!allCards.length){
     const emptyMsg = dualMode
       ? `<div class="error-box">
            <h2>두 직장 반경 교집합에 매물이 없어요 😅</h2>
@@ -3948,8 +4093,12 @@ function renderCards(data){
     return;
   }
 
-  const recommended = data.cards.filter(c=>c.is_recommended);
-  const rest        = data.cards.filter(c=>!c.is_recommended);
+  // 첫 로드 시 슬라이더 초기화 (이미 초기화된 경우 스킵)
+  if (!_yearSlider.years.length) _initYearSlider(data.cards);
+  if (!_unitsSlider.buckets.length) _initUnitsSlider(data.cards);
+
+  const recommended = allCards.filter(c=>c.is_recommended);
+  const rest        = allCards.filter(c=>!c.is_recommended);
   const wpId = data.wp_id;
   const totalRest = rest.length || 1;
 
@@ -4892,6 +5041,297 @@ function resetSort() {
   _sortChecked = [];
   _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
+}
+
+// ── 상세조건 필터 ──────────────────────────────────────────────
+const _advFilter = { pyeong: [], yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
+
+// 준공연도 슬라이더 상태
+const _yearSlider = { years: [], counts: {}, minIdx: 0, maxIdx: 0 };
+// 세대수 슬라이더 상태
+const _unitsSlider = { buckets: [], counts: {}, minIdx: 0, maxIdx: 0 };
+
+function _initYearSlider(cards) {
+  const countMap = {};
+  cards.forEach(c => {
+    const yr = parseInt(c.build_year);
+    if (yr >= 1960 && yr <= new Date().getFullYear()) countMap[yr] = (countMap[yr] || 0) + 1;
+  });
+  const years = Object.keys(countMap).map(Number).sort((a,b)=>a-b);
+  if (!years.length) return;
+  _yearSlider.years = years;
+  _yearSlider.counts = countMap;
+  _yearSlider.minIdx = 0;
+  _yearSlider.maxIdx = years.length - 1;
+  _renderYearSlider();
+  _initYearSliderDrag();
+}
+
+function _renderYearSlider() {
+  const { years, counts, minIdx, maxIdx } = _yearSlider;
+  if (!years.length) return;
+  const maxCount = Math.max(...years.map(y => counts[y] || 0));
+
+  // 히스토그램
+  const hist = document.getElementById('adv-year-histogram');
+  if (hist) {
+    hist.innerHTML = years.map((y, i) => {
+      const h = Math.max(2, Math.round(((counts[y]||0) / maxCount) * 36));
+      const inRange = i >= minIdx && i <= maxIdx;
+      return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${y}년 ${counts[y]||0}개"></div>`;
+    }).join('');
+  }
+
+  // 슬라이더 핸들 + 채움
+  const pct = i => (i / (years.length - 1)) * 100;
+  const minP = pct(minIdx), maxP = pct(maxIdx);
+  const fill = document.getElementById('adv-year-fill');
+  const tMin = document.getElementById('adv-year-thumb-min');
+  const tMax = document.getElementById('adv-year-thumb-max');
+  if (fill) { fill.style.left = minP + '%'; fill.style.width = (maxP - minP) + '%'; }
+  if (tMin) tMin.style.left = minP + '%';
+  if (tMax) tMax.style.left = maxP + '%';
+
+  // 틱
+  const tickRow = document.getElementById('adv-year-tick-row');
+  if (tickRow) {
+    const step = Math.ceil(years.length / 5);
+    const ticks = [];
+    for (let i = 0; i < years.length; i += step) ticks.push(years[i]);
+    if (ticks[ticks.length-1] !== years[years.length-1]) ticks.push(years[years.length-1]);
+    tickRow.innerHTML = ticks.map(y => `<span class="adv-year-tick">${y}</span>`).join('');
+  }
+
+  // 라벨 + 필터 상태
+  const label = document.getElementById('adv-year-range-label');
+  const isAll = minIdx === 0 && maxIdx === years.length - 1;
+  if (label) label.textContent = isAll ? '제한없음' : `${years[minIdx]}년 ~ ${years[maxIdx]}년`;
+  _advFilter.yearMin = isAll ? null : years[minIdx];
+  _advFilter.yearMax = isAll ? null : years[maxIdx];
+  document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
+}
+
+function _initYearSliderDrag() {
+  ['min','max'].forEach(which => {
+    const thumb = document.getElementById(`adv-year-thumb-${which}`);
+    if (!thumb) return;
+    thumb.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-year-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_yearSlider.years.length - 1));
+        if (which === 'min') _yearSlider.minIdx = Math.min(idx, _yearSlider.maxIdx);
+        else _yearSlider.maxIdx = Math.max(idx, _yearSlider.minIdx);
+        _renderYearSlider();
+        _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+    // 터치 지원
+    thumb.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-year-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.touches[0].clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_yearSlider.years.length - 1));
+        if (which === 'min') _yearSlider.minIdx = Math.min(idx, _yearSlider.maxIdx);
+        else _yearSlider.maxIdx = Math.max(idx, _yearSlider.minIdx);
+        _renderYearSlider();
+        _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: false });
+  });
+}
+
+function toggleAdvChip(el, type) {
+  // 평형: 복수 선택. "전체" 선택 시 나머지 해제, 나머지 선택 시 "전체" 해제
+  const val = el.dataset.val;
+  const wrap = el.closest('.adv-filter-chips');
+  const allBtn = wrap.querySelector('[data-val=""]');
+
+  if (val === '') {
+    _advFilter.pyeong = [];
+    wrap.querySelectorAll('.adv-chip').forEach(b => b.classList.remove('adv-chip--active'));
+    allBtn.classList.add('adv-chip--active');
+  } else {
+    allBtn.classList.remove('adv-chip--active');
+    el.classList.toggle('adv-chip--active');
+    const idx = _advFilter.pyeong.indexOf(val);
+    if (idx >= 0) _advFilter.pyeong.splice(idx, 1);
+    else _advFilter.pyeong.push(val);
+    if (_advFilter.pyeong.length === 0) allBtn.classList.add('adv-chip--active');
+  }
+  _applyAdvFilter();
+}
+
+function selectAdvChip(el, type) {
+  // 준공연도·세대수: 단일 선택
+  const wrap = el.closest('.adv-filter-chips');
+  wrap.querySelectorAll('.adv-chip').forEach(b => b.classList.remove('adv-chip--active'));
+  el.classList.add('adv-chip--active');
+  _advFilter[type] = el.dataset.val;
+  _applyAdvFilter();
+}
+
+function _initUnitsSlider(cards) {
+  // 50세대 단위 버킷으로 분포 계산
+  const BUCKET = 50;
+  const countMap = {};
+  cards.forEach(c => {
+    const n = parseInt(c.kaptdaCnt || 0);
+    if (n > 0) {
+      const b = Math.floor(n / BUCKET) * BUCKET;
+      countMap[b] = (countMap[b] || 0) + 1;
+    }
+  });
+  const buckets = Object.keys(countMap).map(Number).sort((a,b)=>a-b);
+  if (!buckets.length) return;
+  _unitsSlider.buckets = buckets;
+  _unitsSlider.counts = countMap;
+  _unitsSlider.minIdx = 0;
+  _unitsSlider.maxIdx = buckets.length - 1;
+  _renderUnitsSlider();
+  _initUnitsSliderDrag();
+}
+
+function _renderUnitsSlider() {
+  const { buckets, counts, minIdx, maxIdx } = _unitsSlider;
+  if (!buckets.length) return;
+  const maxCount = Math.max(...buckets.map(b => counts[b] || 0));
+
+  const hist = document.getElementById('adv-units-histogram');
+  if (hist) {
+    hist.innerHTML = buckets.map((b, i) => {
+      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 36));
+      const inRange = i >= minIdx && i <= maxIdx;
+      return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${b.toLocaleString()}세대 ${counts[b]||0}개"></div>`;
+    }).join('');
+  }
+
+  const pct = i => (i / (buckets.length - 1)) * 100;
+  const minP = pct(minIdx), maxP = pct(maxIdx);
+  const fill = document.getElementById('adv-units-fill');
+  const tMin = document.getElementById('adv-units-thumb-min');
+  const tMax = document.getElementById('adv-units-thumb-max');
+  if (fill) { fill.style.left = minP + '%'; fill.style.width = (maxP - minP) + '%'; }
+  if (tMin) tMin.style.left = minP + '%';
+  if (tMax) tMax.style.left = maxP + '%';
+
+  const tickRow = document.getElementById('adv-units-tick-row');
+  if (tickRow) {
+    const step = Math.ceil(buckets.length / 4);
+    const ticks = [];
+    for (let i = 0; i < buckets.length; i += step) ticks.push(buckets[i]);
+    if (ticks[ticks.length-1] !== buckets[buckets.length-1]) ticks.push(buckets[buckets.length-1]);
+    tickRow.innerHTML = ticks.map(b => {
+      const label = b >= 1000 ? (b/1000).toFixed(b%1000===0?0:1)+'천' : b+'';
+      return `<span class="adv-year-tick">${label}</span>`;
+    }).join('');
+  }
+
+  const label = document.getElementById('adv-units-range-label');
+  const isAll = minIdx === 0 && maxIdx === buckets.length - 1;
+  if (label) label.textContent = isAll ? '제한없음' : `${buckets[minIdx].toLocaleString()} ~ ${buckets[maxIdx].toLocaleString()}세대`;
+  _advFilter.unitsMin = isAll ? null : buckets[minIdx];
+  _advFilter.unitsMax = isAll ? null : buckets[maxIdx];
+  document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
+}
+
+function _initUnitsSliderDrag() {
+  ['min','max'].forEach(which => {
+    const thumb = document.getElementById(`adv-units-thumb-${which}`);
+    if (!thumb) return;
+    thumb.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-units-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_unitsSlider.buckets.length - 1));
+        if (which === 'min') _unitsSlider.minIdx = Math.min(idx, _unitsSlider.maxIdx);
+        else _unitsSlider.maxIdx = Math.max(idx, _unitsSlider.minIdx);
+        _renderUnitsSlider();
+        _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+    thumb.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-units-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.touches[0].clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_unitsSlider.buckets.length - 1));
+        if (which === 'min') _unitsSlider.minIdx = Math.min(idx, _unitsSlider.maxIdx);
+        else _unitsSlider.maxIdx = Math.max(idx, _unitsSlider.minIdx);
+        _renderUnitsSlider();
+        _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: false });
+  });
+}
+
+function resetAdvFilter() {
+  _advFilter.pyeong = []; _advFilter.yearMin = null; _advFilter.yearMax = null; _advFilter.unitsMin = null; _advFilter.unitsMax = null;
+  document.querySelectorAll('.adv-filter-chips').forEach(wrap => {
+    wrap.querySelectorAll('.adv-chip').forEach(b => b.classList.remove('adv-chip--active'));
+    const allBtn = wrap.querySelector('[data-val=""]');
+    if (allBtn) allBtn.classList.add('adv-chip--active');
+  });
+  if (_yearSlider.years.length) {
+    _yearSlider.minIdx = 0; _yearSlider.maxIdx = _yearSlider.years.length - 1;
+    _renderYearSlider();
+  }
+  if (_unitsSlider.buckets.length) {
+    _unitsSlider.minIdx = 0; _unitsSlider.maxIdx = _unitsSlider.buckets.length - 1;
+    _renderUnitsSlider();
+  }
+  document.getElementById('adv-filter-reset-btn').style.display = 'none';
+  if (window._lastSearchData) renderCards(window._lastSearchData);
+}
+
+function _isAdvFilterActive() {
+  return _advFilter.pyeong.length > 0 || _advFilter.yearMin !== null || _advFilter.unitsMin !== null;
+}
+
+function _applyAdvFilter() {
+  document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
+  if (window._lastSearchData) {
+    const filtered = _isAdvFilterActive() ? _filterCardsByAdv(window._lastCards) : null;
+    if (window.filterMapPins) window.filterMapPins(filtered ? filtered.map(c => c.apt_seq) : null);
+    renderCards(window._lastSearchData);
+  }
+}
+
+function _filterCardsByAdv(cards) {
+  return cards.filter(c => {
+    if (_advFilter.pyeong.length > 0 && !_advFilter.pyeong.includes(c.pyeong_type)) return false;
+    if (_advFilter.yearMin !== null || _advFilter.yearMax !== null) {
+      const yr = parseInt(c.build_year);
+      if (!yr) return false;
+      if (_advFilter.yearMin && yr < _advFilter.yearMin) return false;
+      if (_advFilter.yearMax && yr > _advFilter.yearMax) return false;
+    }
+    if (_advFilter.unitsMin !== null || _advFilter.unitsMax !== null) {
+      const cnt = parseInt(c.kaptdaCnt || 0);
+      if (_advFilter.unitsMin && cnt < _advFilter.unitsMin) return false;
+      if (_advFilter.unitsMax && cnt > _advFilter.unitsMax + 49) return false;
+    }
+    return true;
+  });
 }
 
 // ── 실행 ─────────────────────────────────────────────────────
