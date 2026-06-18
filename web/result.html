@@ -2264,6 +2264,14 @@
         border-left: none;
         box-shadow: 0 -8px 28px rgba(0,0,0,0.35);
       }
+      /* D(Phase 2). 바텀시트 상단 그립바 — 스와이프 닫기 시각 단서 (CSS만) */
+      .detail-panel__header { padding-top: 18px; position: relative; }
+      .detail-panel__header::before {
+        content: ''; position: absolute; top: 7px; left: 50%;
+        transform: translateX(-50%);
+        width: 40px; height: 4px; border-radius: 2px;
+        background: rgba(255,255,255,0.55); pointer-events: none;
+      }
 
       /* B. 친구 채팅 패널 → 전폭 (데스크톱 440px 사이드패널은 무손상) */
       .chat-panel {
@@ -2974,6 +2982,43 @@ function toggleMobileView() {
     } catch (e) {}
   }, 80);
 }
+
+// ── spec-12 Phase 2: 모바일 바텀시트 헤더를 아래로 스와이프 → 닫기 ──
+// 헤더(그립바)만 대상이라 본문 스크롤과 충돌 없음. 데스크톱은 matchMedia
+// 가드로 touchstart에서 즉시 종료 → PC 동작/렌더 무영향 (순수 추가).
+(function initMobileSheetSwipe() {
+  const mq = window.matchMedia('(max-width: 767px)');
+  const panel = document.getElementById('detail-panel');
+  if (!panel) return;
+  const header = panel.querySelector('.detail-panel__header');
+  if (!header) return;
+  let startY = 0, dy = 0, dragging = false;
+  const CLOSE_PX = 100;
+
+  header.addEventListener('touchstart', (e) => {
+    if (!mq.matches || !panel.classList.contains('open')) return;  // 데스크톱/닫힘 무동작
+    startY = e.touches[0].clientY; dy = 0; dragging = true;
+    panel.style.transition = 'none';
+  }, { passive: true });
+
+  header.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy < 0) dy = 0;                       // 아래로만 따라감
+    panel.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  function end() {
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = '';              // CSS 전환 복원
+    panel.style.transform = '';               // 인라인 제거 → CSS 클래스가 제어
+    if (dy > CLOSE_PX && typeof closeDetail === 'function') closeDetail();  // 닫기
+    dy = 0;                                    // 임계 미달 시 .open이 제자리 스냅백
+  }
+  header.addEventListener('touchend', end, { passive: true });
+  header.addEventListener('touchcancel', end, { passive: true });
+})();
 
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
