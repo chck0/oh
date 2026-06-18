@@ -211,7 +211,7 @@ async def apt_detail(apt_seq: str, wp_id: int):
         c = db_connect()
         try:
             return c.execute("""
-                SELECT a.apt_nm, a.umd_nm, a.kaptdaCnt, a.lat, a.lng,
+                SELECT a.apt_nm, a.umd_nm, a."kaptAddr", a.kaptdaCnt, a.lat, a.lng,
                        k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
                        k.kaptDongCnt, k.kaptdEcnt,
                        k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
@@ -533,10 +533,14 @@ async def apt_detail(apt_seq: str, wp_id: int):
     timings['TOTAL'] = round((time.time()-t0)*1000)
     print(f'[detail {apt_seq}] timings(ms): {timings}')
 
+    kapt_addr = apt.get('kaptAddr', '') or ''
+    gu_nm = next((t for t in kapt_addr.split() if t.endswith('구')), '')
+
     return {
         'apt_seq':   apt_seq,
         'apt_nm':    apt['apt_nm'],
         'umd_nm':    umd_nm,
+        'gu_nm':     gu_nm,
         'kaptdaCnt': apt['kaptdaCnt'],
         'lat':       apt['lat'],
         'lng':       apt['lng'],

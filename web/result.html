@@ -1133,22 +1133,22 @@
       font-size: 14px; line-height: 1; margin-bottom: 1px;
     }
     /* 통근시간 색상 */
-    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
-    .pin-t1 .pin-body { background:#16a34a; }
-    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
-    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
-    .pin-t2 .pin-body { background:#3b82f6; }
-    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
-    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
-    .pin-t3 .pin-body { background:#f97316; }
-    .pin-t3 .pin-body::after { border-top-color:#f97316; }
-    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
-    .pin-t4 .pin-body { background:#ef4444; }
-    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
-    /* 추천 핀 — 보라 */
-    .pin-best .pin-roof { border-bottom-color:#6d28d9; }
-    .pin-best .pin-body { background:#6d28d9; }
-    .pin-best .pin-body::after { border-top-color:#6d28d9; }
+    .pin-t1 .pin-roof { border-bottom-color:#FF6FB5; }
+    .pin-t1 .pin-body { background:#FF6FB5; }
+    .pin-t1 .pin-body::after { border-top-color:#FF6FB5; }
+    .pin-t2 .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-t2 .pin-body { background:#C45ED6; }
+    .pin-t2 .pin-body::after { border-top-color:#C45ED6; }
+    .pin-t3 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t3 .pin-body { background:#7C3FE6; }
+    .pin-t3 .pin-body::after { border-top-color:#7C3FE6; }
+    .pin-t4 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t4 .pin-body { background:#7C3FE6; }
+    .pin-t4 .pin-body::after { border-top-color:#7C3FE6; }
+    /* 추천 핀 — 틸 */
+    .pin-best .pin-roof { border-bottom-color:#00C9A7; }
+    .pin-best .pin-body { background:#00C9A7; }
+    .pin-best .pin-body::after { border-top-color:#00C9A7; }
     /* 복수 평형 뱃지 */
     .pin-multi {
       position: absolute; top: -6px; right: -6px;
@@ -1303,14 +1303,24 @@
       box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 14px 16px 0;
+      padding: 13px 14px;
       display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      background: var(--color-brand-gradient);
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.22);
     }
-    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 14px; font-weight: 700; flex: 1; line-height: 1.4; color: #fff; }
+    .detail-fav-btn {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      font-size: 20px; color: rgba(255,255,255,0.7);
+      padding: 2px 4px; line-height: 1;
+      transition: color 150ms, transform 150ms;
+    }
+    .detail-fav-btn:hover { color: #fff; transform: scale(1.2); }
+    .detail-fav-btn.active { color: #fff; }
     .detail-panel__close {
       flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid var(--color-border-default); background: var(--color-bg-subtle);
-      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.18);
+      cursor: pointer; font-size: 14px; color: #fff;
       display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
@@ -2313,6 +2323,7 @@
     <div class="detail-panel" id="detail-panel">
       <div class="detail-panel__header">
         <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-fav-btn" id="detail-fav-btn" title="찜하기" onclick="_toggleDetailFav(this)">♡</button>
         <button class="detail-panel__close" onclick="closeDetail()">✕</button>
       </div>
       <div class="detail-panel__tabs">
@@ -2367,12 +2378,12 @@
     <div class="map-panel" style="position:relative">
       <div id="map"></div>
       <div id="map-legend">
-        <div class="lg-title">통근시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <div class="lg-title">통근 시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#FF6FB5"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>45분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#7C3FE6"></div><span>60분 이하</span></div>
         <hr class="lg-divider">
-        <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#00C9A7"></div><span>BADUGI 추천</span></div>
       </div>
     </div>
   </div>
@@ -2670,11 +2681,11 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#FF6FB5'; // ≤30분 → 핑크
     const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
-    if (start <= 45) return '#f97316'; // 46~60분 → 주황
-    return '#f97316';
+    if (start <= 31) return '#C45ED6'; // 31~45분 → 퍼플
+    if (start <= 45) return '#7C3FE6'; // 46~60분 → 바이올렛
+    return '#7C3FE6';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
@@ -2875,7 +2886,19 @@ function switchDetailTab(name, btn) {
 
 function _renderDetail(d) {
   document.getElementById('detail-loading').style.display = 'none';
-  document.getElementById('detail-title').textContent = d.apt_nm || '-';
+  const _titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = _titleParts.join(' ') || '-';
+
+  // fav 버튼 상태 동기화
+  const _favBtn = document.getElementById('detail-fav-btn');
+  if(_favBtn){
+    const seq = d.apt_seq; const pt = '';
+    _favBtn.dataset.aptSeq = seq; _favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    _favBtn.textContent = active ? '♥' : '♡';
+    _favBtn.classList.toggle('active', active);
+    _favBtn.title = active ? '찜 해제' : '찜하기';
+  }
 
   // ── 단지정보 탭 ────────────────────────────────────────────
   const b = d.building || {};
@@ -3915,6 +3938,20 @@ function toggleFav(seq, pt, btn, ev) {
   _updateFavTab();
 }
 
+function _toggleDetailFav(btn) {
+  const seq = btn.dataset.aptSeq; const pt = btn.dataset.pyeongType || '';
+  if(!seq) return;
+  const favs = loadFavs();
+  const id = favId(seq, pt);
+  const nowActive = favs.has(id);
+  if(nowActive) { favs.delete(id); } else { favs.add(id); }
+  saveFavs(favs);
+  btn.textContent = nowActive ? '♡' : '♥';
+  btn.classList.toggle('active', !nowActive);
+  btn.title = nowActive ? '찜하기' : '찜 해제';
+  _updateFavTab();
+}
+
 function _updateFavTab() {
   const favCnt = window._lastCards.filter(c => isFav(c.apt_seq, c.pyeong_type)).length;
   const allCnt = window._lastCards.length;
@@ -4640,10 +4677,22 @@ function backToList(){
 }
 
 function renderDetailPanel(d, routes, wpId){
-  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = titleParts.join(' ');
   const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
+
+  // fav 버튼 상태 동기화
+  const favBtn = document.getElementById('detail-fav-btn');
+  if(favBtn){
+    const seq = d.apt_seq; const pt = cardRef.pyeong_type || '';
+    favBtn.dataset.aptSeq = seq; favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    favBtn.textContent = active ? '♥' : '♡';
+    favBtn.classList.toggle('active', active);
+    favBtn.title = active ? '찜 해제' : '찜하기';
+  }
   const bld = d.building || {};
   const thisYear = THIS_YEAR;
 
@@ -4741,7 +4790,6 @@ function renderDetailPanel(d, routes, wpId){
 
     <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
-      <div class="dp__meta">${metaParts.join(' · ')}</div>
       ${statHtml}
       ${friendHtml}
     </div>
