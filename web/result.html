@@ -4731,10 +4731,14 @@ function renderDetailPanel(d, routes, wpId){
   const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
   // 중간 스탯: 값은 최근 3개월 평균 실거래가 → '평균 실거래가' + 평형(둘째 줄)
   const pyText = cardRef.pyeong_type ? `<span class="dp-stat-py">(${escHtml(cardRef.pyeong_type)})</span>` : '';
+  // 셋째 스탯: 세대당 주차 (주차총대수 ÷ 세대수) — 위 메타에 없는 실용 지표
+  const statParking = (bld.parking && d.kaptdaCnt)
+    ? `${(bld.parking / d.kaptdaCnt).toFixed(1)}<span class="dp-stat-unit">대</span>`
+    : '-';
   const statHtml = `<div class="dp-statrow">
     <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
     <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">평균 실거래가${pyText}</div></div>
-    <div class="dp-stat"><div class="dp-stat-num">${(d.kaptdaCnt||0).toLocaleString()}</div><div class="dp-stat-label">세대</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statParking}</div><div class="dp-stat-label">세대당 주차</div></div>
   </div>`;
 
   // SVG 아이콘들
