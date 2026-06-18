@@ -450,12 +450,13 @@
     .adv-year-tick-row { display: flex; justify-content: space-between; }
     .adv-year-tick { font-size: 10px; color: var(--color-text-secondary); }
 
+    /* 정렬 기준 드롭다운 트리거 바 */
     .sort-panel {
+      position: relative;
       display: flex; flex-direction: column;
       background: #f8fafc; flex-shrink: 0;
       border-bottom: 1px solid var(--color-border-strong);
       padding: 11px 13px 9px;
-      gap: 8px;
     }
     .sort-panel-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -469,46 +470,81 @@
       background: none; border: none; cursor: pointer; padding: 2px 6px;
     }
     .sort-panel-reset:hover { color: var(--color-brand-primary); }
+    /* 플로팅 드롭다운 패널 */
+    .sort-panel-body {
+      position: absolute; bottom: 100%; left: 0; right: 0; z-index: 200;
+      background: #fff;
+      border: 1px solid var(--color-border-strong);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 -8px 24px rgba(0,0,0,.12);
+      padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      transform-origin: bottom center;
+      transition: opacity .18s, transform .18s;
+      opacity: 1; transform: scaleY(1);
+    }
+    .sort-panel-body.collapsed {
+      opacity: 0; transform: scaleY(0);
+      pointer-events: none;
+    }
+    /* 엑셀 드롭다운 스타일 */
     .sort-chips-wrap {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px;
+      display: flex; flex-direction: column;
+      border: 1px solid #c8cdd4;
+      border-radius: 3px;
+      overflow: hidden;
     }
     .sort-check-item {
-      display: flex; flex-direction: row; align-items: center;
-      gap: 10px;
-      cursor: pointer; padding: 10px 12px;
-      border-radius: 10px; border: 1.5px solid #e2e8f0;
-      background: #fff; user-select: none; transition: all .15s;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
-      position: relative;
+      display: flex; align-items: center; gap: 7px;
+      cursor: pointer; padding: 4px 10px;
+      background: #fff; user-select: none;
+      border-bottom: 1px solid #e8eaed;
+      position: relative; transition: background .1s;
     }
+    .sort-check-item:last-child { border-bottom: none; }
     .sort-check-item .icon-bubble {
-      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      width: 20px; height: 20px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      transition: transform .15s; background: #f8fafc;
     }
-    .sort-check-item i { font-size: 18px; line-height: 1; color: #e57373; }
-    .sort-check-item:hover { border-color: #e57373; box-shadow: 0 2px 8px rgba(229,115,115,.2); }
-    .sort-check-item:hover .icon-bubble { background: #fff1f2; }
-    .sort-check-item.checked { border-color: #e57373; background: #fff1f2; }
-    .sort-check-item.checked .icon-bubble { background: #fee2e2; }
+    .sort-check-item i { font-size: 13px; line-height: 1; color: #5f6368; }
+    .sort-check-item:hover { background: #e8f0fe; }
+    .sort-check-item.checked { background: #fce8e6; }
+    .sort-check-item.checked i { color: var(--color-brand-primary); }
     .sort-chip-label {
-      font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.3;
-      word-break: keep-all; text-align: left; letter-spacing: -.01em;
+      font-size: 12px; font-weight: 500; color: #202124;
+      flex: 1; line-height: 1.4;
     }
-    .sort-check-item.checked .sort-chip-label { color: #c0392b; }
+    .sort-check-item.checked .sort-chip-label { color: var(--color-brand-primary); font-weight: 700; }
     .sort-check-item .rank-badge {
-      display: none; position: absolute; top: -8px; right: -8px;
-      width: 22px; height: 22px; border-radius: 50%;
-      background: #e57373; color: #fff; border: 2px solid #fff;
-      font-size: 12px; font-weight: 800;
+      display: none;
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 800;
       align-items: center; justify-content: center; line-height: 1;
     }
     .sort-check-item.checked .rank-badge { display: inline-flex; }
+    .sort-panel-arrow {
+      font-size: 11px; color: var(--color-text-secondary);
+      transition: transform .2s;
+    }
+    .sort-panel-arrow.collapsed { transform: rotate(180deg); }
     .sort-hint {
       font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
-      padding: 0 2px;
+      padding: 4px 2px 0;
     }
     .sort-hint .hint-order { color: var(--color-brand-primary); font-weight: 600; }
+    /* 상세조건 크기 강화 */
+    .adv-filter-panel { padding: 12px 14px 10px; }
+    .adv-filter-title { font-size: 13px; }
+    .adv-filter-label { font-size: 12px; min-width: 44px; }
+    .adv-filter-multi-hint { font-size: 11px; padding-top: 5px; }
+    .adv-chip { padding: 5px 11px; font-size: 12px; }
+    .adv-year-range-label { font-size: 12px; font-weight: 700; }
+    .adv-year-histogram { height: 44px; }
+    .adv-year-bar { border-radius: 3px 3px 0 0; }
+    .adv-year-thumb { width: 16px; height: 16px; }
+    .adv-year-tick { font-size: 11px; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -2285,12 +2321,17 @@
       </div>
 
       <div class="sort-panel" id="sort-panel">
-        <div class="sort-panel-header">
+        <div class="sort-panel-header" onclick="toggleSortPanel()" style="cursor:pointer">
           <span class="sort-panel-title">정렬 기준</span>
-          <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
+            <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
+          </div>
         </div>
-        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-        <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+        <div class="sort-panel-body collapsed" id="sort-panel-body">
+          <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+          <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+        </div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -4974,6 +5015,9 @@ function _refreshSortUI() {
     badge.textContent = _sortChecked.length || '';
     badge.style.display = _sortChecked.length ? 'inline-flex' : 'none';
   }
+  // 초기화 버튼 표시
+  const resetBtn = document.getElementById('sort-panel-reset-btn');
+  if (resetBtn) resetBtn.style.display = _sortChecked.length ? '' : 'none';
 
   // 힌트 텍스트: "1순위 통근 짧은순 → 2순위 가격 낮은순"
   const hint = document.getElementById('sort-hint');
@@ -5042,6 +5086,22 @@ function resetSort() {
   _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
 }
+
+// 정렬 기준 드롭다운 토글
+let _sortPanelOpen = false;
+function toggleSortPanel() {
+  _sortPanelOpen = !_sortPanelOpen;
+  document.getElementById('sort-panel-body').classList.toggle('collapsed', !_sortPanelOpen);
+  document.getElementById('sort-panel-arrow').classList.toggle('collapsed', !_sortPanelOpen);
+}
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', e => {
+  if (_sortPanelOpen && !document.getElementById('sort-panel').contains(e.target)) {
+    _sortPanelOpen = false;
+    document.getElementById('sort-panel-body').classList.add('collapsed');
+    document.getElementById('sort-panel-arrow').classList.add('collapsed');
+  }
+});
 
 // ── 상세조건 필터 ──────────────────────────────────────────────
 const _advFilter = { pyeong: [], yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
