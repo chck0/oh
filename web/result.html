@@ -326,15 +326,7 @@
       display: flex; flex-direction: column;
       overflow: hidden;
       min-height: 0;
-      width: 240px; min-width: 200px; flex-shrink: 0;
-      border-right: 1px solid var(--color-border-strong);
-    }
-    .cards-panel-wrapper {
-      display: flex; flex-direction: column;
-      width: 340px; min-width: 260px; flex-shrink: 0;
-      overflow: hidden; min-height: 0;
-      border-right: 1px solid var(--color-border-strong);
-      background: #fff;
+      width: 440px; min-width: 280px; flex-shrink: 0;
     }
     .cards-panel {
       overflow-y: auto;
@@ -478,16 +470,32 @@
       background: none; border: none; cursor: pointer; padding: 2px 6px;
     }
     .sort-panel-reset:hover { color: var(--color-brand-primary); }
-    /* 정렬 리스트 — 항상 인라인 표시 */
+    /* 플로팅 드롭다운 패널 */
     .sort-panel-body {
-      display: flex; flex-direction: column;
-      overflow-y: auto;
-      flex: 1; min-height: 0;
-      padding: 4px 0;
+      position: fixed; z-index: 1000;
+      left: 448px; top: 390px;
+      background: #fff;
+      border: 1px solid var(--color-border-strong);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      padding: 8px 0;
+      display: flex; flex-direction: column; gap: 0;
+      transform-origin: top left;
+      transition: opacity .18s, transform .18s;
+      opacity: 1; transform: scale(1);
+      max-height: 70vh; overflow-y: auto;
+      min-width: 200px;
     }
-    .sort-panel-body.collapsed { display: none; }
+    .sort-panel-body.collapsed {
+      opacity: 0; transform: scaleY(0);
+      pointer-events: none;
+    }
+    /* 엑셀 드롭다운 스타일 */
     .sort-chips-wrap {
       display: flex; flex-direction: column;
+      border: 1px solid #c8cdd4;
+      border-radius: 3px;
+      overflow: hidden;
     }
     .sort-check-item {
       display: flex; align-items: center; gap: 7px;
@@ -2254,8 +2262,12 @@
   </div>
 
   <div class="result-layout">
-    <!-- 좌측: 상세조건 + 정렬기준 -->
+    <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
+      <div id="fav-tabs" class="fav-tabs" style="display:none">
+        <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
+        <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      </div>
       <!-- 상세조건 필터 패널 -->
       <div class="adv-filter-panel" id="adv-filter-panel">
         <div class="adv-filter-header">
@@ -2310,22 +2322,14 @@
         </div>
       </div>
 
-      <div class="sort-panel" id="sort-panel" style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
-        <div class="sort-panel-header" style="flex-shrink:0">
+      <div class="sort-panel" id="sort-panel">
+        <div class="sort-panel-header" onclick="toggleSortPanel()" style="cursor:pointer">
           <span class="sort-panel-title">정렬 기준</span>
-          <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="resetSort()" style="display:none">✕ 초기화</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
+            <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
+          </div>
         </div>
-        <div class="sort-panel-body" id="sort-panel-body">
-          <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-          <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
-        </div>
-      </div>
-    </div>
-    <!-- 매물 카드 패널 -->
-    <div class="cards-panel-wrapper">
-      <div id="fav-tabs" class="fav-tabs" style="display:none">
-        <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
-        <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -5077,8 +5081,26 @@ function resetSort() {
 }
 
 // 정렬 기준 드롭다운 토글
-// 정렬 리스트는 항상 표시 (드롭다운 없음)
-function toggleSortPanel() {}
+let _sortPanelOpen = false;
+function toggleSortPanel() {
+  _sortPanelOpen = !_sortPanelOpen;
+  const body = document.getElementById('sort-panel-body');
+  const header = document.getElementById('sort-panel');
+  body.classList.toggle('collapsed', !_sortPanelOpen);
+  document.getElementById('sort-panel-arrow').classList.toggle('collapsed', !_sortPanelOpen);
+  if (_sortPanelOpen) {
+    const rect = header.getBoundingClientRect();
+    body.style.top = rect.top + 'px';
+  }
+}
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', e => {
+  if (_sortPanelOpen && !document.getElementById('sort-panel').contains(e.target) && !document.getElementById('sort-panel-body').contains(e.target)) {
+    _sortPanelOpen = false;
+    document.getElementById('sort-panel-body').classList.add('collapsed');
+    document.getElementById('sort-panel-arrow').classList.add('collapsed');
+  }
+});
 
 // ── 상세조건 필터 ──────────────────────────────────────────────
 const _advFilter = { pyeong: [], yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
@@ -5374,5 +5396,9 @@ function _filterCardsByAdv(cards) {
 // ── 실행 ─────────────────────────────────────────────────────
 runSearch();
 </script>
+<div class="sort-panel-body collapsed" id="sort-panel-body">
+  <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+  <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+</div>
 </body>
 </html>
