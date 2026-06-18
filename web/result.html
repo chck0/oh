@@ -1303,14 +1303,24 @@
       box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 14px 16px 0;
+      padding: 13px 14px;
       display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      background: var(--color-brand-gradient);
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.22);
     }
-    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 14px; font-weight: 700; flex: 1; line-height: 1.4; color: #fff; }
+    .detail-fav-btn {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      font-size: 20px; color: rgba(255,255,255,0.7);
+      padding: 2px 4px; line-height: 1;
+      transition: color 150ms, transform 150ms;
+    }
+    .detail-fav-btn:hover { color: #fff; transform: scale(1.2); }
+    .detail-fav-btn.active { color: #fff; }
     .detail-panel__close {
       flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid var(--color-border-default); background: var(--color-bg-subtle);
-      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.18);
+      cursor: pointer; font-size: 14px; color: #fff;
       display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
@@ -2313,6 +2323,7 @@
     <div class="detail-panel" id="detail-panel">
       <div class="detail-panel__header">
         <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-fav-btn" id="detail-fav-btn" title="찜하기" onclick="_toggleDetailFav(this)">♡</button>
         <button class="detail-panel__close" onclick="closeDetail()">✕</button>
       </div>
       <div class="detail-panel__tabs">
@@ -2875,7 +2886,19 @@ function switchDetailTab(name, btn) {
 
 function _renderDetail(d) {
   document.getElementById('detail-loading').style.display = 'none';
-  document.getElementById('detail-title').textContent = d.apt_nm || '-';
+  const _titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = _titleParts.join(' ') || '-';
+
+  // fav 버튼 상태 동기화
+  const _favBtn = document.getElementById('detail-fav-btn');
+  if(_favBtn){
+    const seq = d.apt_seq; const pt = '';
+    _favBtn.dataset.aptSeq = seq; _favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    _favBtn.textContent = active ? '♥' : '♡';
+    _favBtn.classList.toggle('active', active);
+    _favBtn.title = active ? '찜 해제' : '찜하기';
+  }
 
   // ── 단지정보 탭 ────────────────────────────────────────────
   const b = d.building || {};
@@ -3915,6 +3938,20 @@ function toggleFav(seq, pt, btn, ev) {
   _updateFavTab();
 }
 
+function _toggleDetailFav(btn) {
+  const seq = btn.dataset.aptSeq; const pt = btn.dataset.pyeongType || '';
+  if(!seq) return;
+  const favs = loadFavs();
+  const id = favId(seq, pt);
+  const nowActive = favs.has(id);
+  if(nowActive) { favs.delete(id); } else { favs.add(id); }
+  saveFavs(favs);
+  btn.textContent = nowActive ? '♡' : '♥';
+  btn.classList.toggle('active', !nowActive);
+  btn.title = nowActive ? '찜하기' : '찜 해제';
+  _updateFavTab();
+}
+
 function _updateFavTab() {
   const favCnt = window._lastCards.filter(c => isFav(c.apt_seq, c.pyeong_type)).length;
   const allCnt = window._lastCards.length;
@@ -4640,10 +4677,22 @@ function backToList(){
 }
 
 function renderDetailPanel(d, routes, wpId){
-  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = titleParts.join(' ');
   const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
+
+  // fav 버튼 상태 동기화
+  const favBtn = document.getElementById('detail-fav-btn');
+  if(favBtn){
+    const seq = d.apt_seq; const pt = cardRef.pyeong_type || '';
+    favBtn.dataset.aptSeq = seq; favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    favBtn.textContent = active ? '♥' : '♡';
+    favBtn.classList.toggle('active', active);
+    favBtn.title = active ? '찜 해제' : '찜하기';
+  }
   const bld = d.building || {};
   const thisYear = THIS_YEAR;
 
@@ -4741,7 +4790,6 @@ function renderDetailPanel(d, routes, wpId){
 
     <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
-      <div class="dp__meta">${metaParts.join(' · ')}</div>
       ${statHtml}
       ${friendHtml}
     </div>
