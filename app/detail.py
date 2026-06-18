@@ -329,52 +329,47 @@ async def apt_detail(apt_seq: str, wp_id: int):
         finally:
             c.close()
 
-    # 입지·구조 (spec-31): apt_slope(1행) + building_register(동별 다행).
-    # 각 테이블을 독립 try/except 로 보호 — 미존재/실패해도 상세 나머지는 정상.
-    # 전용 커넥션이라 실패 시 rollback 으로 상태 복구 (pgBouncer InFailedSqlTransaction 방지).
-    def _q_infra():
+    # spec-43: _q_infra 분리 — slope·building_register를 독립 커넥션으로 진짜 병렬화
+    def _q_slope():
         c = db_connect()
-        slope_row = None
-        br_rows = []
         try:
-            try:
-                slope_row = c.execute(
-                    'SELECT apt_slope_avg FROM apt_slope WHERE kaptCode = '
-                    '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
-                    [apt_seq]
-                ).fetchone()
-            except Exception:
-                try:
-                    c.rollback()
-                except Exception:
-                    pass
-            try:
-                br_rows = c.execute(
-                    'SELECT vlRat, bcRat, strctCdNm, useAprDay FROM building_register '
-                    'WHERE kaptCode = '
-                    '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
-                    [apt_seq]
-                ).fetchall()
-            except Exception:
-                try:
-                    c.rollback()
-                except Exception:
-                    pass
+            return c.execute(
+                'SELECT apt_slope_avg FROM apt_slope WHERE kaptCode = '
+                '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
+                [apt_seq]
+            ).fetchone()
+        except Exception:
+            return None
         finally:
             c.close()
-        return slope_row, br_rows
+
+    def _q_br():
+        c = db_connect()
+        try:
+            return c.execute(
+                'SELECT vlRat, bcRat, strctCdNm, useAprDay FROM building_register '
+                'WHERE kaptCode = '
+                '(SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1)',
+                [apt_seq]
+            ).fetchall()
+        except Exception:
+            return []
+        finally:
+            c.close()
 
     (fc_rows, pyeong_tabs, chart_rows, dong_avg_rows, trade_rows, poi_rows,
-     infra) = await asyncio.gather(
+     slope_row, br_rows) = await asyncio.gather(
         asyncio.to_thread(_q_fc),
         asyncio.to_thread(_q_tabs),
         asyncio.to_thread(_q_chart),
         asyncio.to_thread(_q_dong),
         asyncio.to_thread(_q_trades),
         asyncio.to_thread(_q_poi),
-        asyncio.to_thread(_q_infra),
+        asyncio.to_thread(_q_slope),
+        asyncio.to_thread(_q_br),
     )
-    timings['parallel_7q'] = round((time.time()-t0)*1000)
+    infra = (slope_row, br_rows)
+    timings['parallel_8q'] = round((time.time()-t0)*1000)
 
     # 주차대수: kaptdPcnt(지하) + kaptdPcntu(지상)
     def _to_int(v):
