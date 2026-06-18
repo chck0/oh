@@ -349,7 +349,7 @@
       background: var(--color-brand-primary);
       color: var(--color-text-on-brand);
       border-color: var(--color-brand-primary);
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+      box-shadow: 0 2px 6px rgba(124, 63, 230, 0.25);
     }
     .chip.active:hover { background: var(--color-brand-hover); }
 
@@ -531,7 +531,7 @@
     .submit-btn {
       width: 100%;
       padding: 16px;
-      background: var(--color-brand-primary);
+      background: var(--color-brand-gradient);
       color: var(--color-text-on-brand);
       border: none;
       border-radius: 12px;
@@ -539,19 +539,19 @@
       font-size: 16px; font-weight: 700;
       letter-spacing: -0.005em;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(168, 46, 27, 0.25);
+      box-shadow: var(--shadow-brand);
       transition: all 200ms;
       display: inline-flex; align-items: center; justify-content: center;
       gap: 8px;
     }
     .submit-btn:hover {
-      background: var(--color-brand-hover);
-      box-shadow: 0 6px 18px rgba(168, 46, 27, 0.32);
+      background: var(--color-brand-gradient-hover);
+      box-shadow: var(--shadow-brand-strong);
       transform: translateY(-1px);
     }
     .submit-btn:active {
-      background: var(--color-brand-active);
       transform: translateY(0);
+      filter: brightness(0.95);
     }
     .submit-btn:disabled {
       background: var(--color-brand-disabled);

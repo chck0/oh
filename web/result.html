@@ -247,20 +247,20 @@
     .done-btn {
       margin-top: 24px;
       padding: 14px 36px;
-      background: var(--color-brand-primary); color: var(--color-text-on-brand);
+      background: var(--color-brand-gradient); color: var(--color-text-on-brand);
       border: none; border-radius: 12px;
       font-family: inherit;
       font-size: 15px; font-weight: 700;
       letter-spacing: -0.005em;
       cursor: pointer; display: none;
       align-items: center; gap: 8px;
-      box-shadow: 0 4px 16px rgba(168, 46, 27, 0.30);
+      box-shadow: var(--shadow-brand);
       transition: all 200ms;
     }
     .done-btn:hover {
-      background: var(--color-brand-hover);
+      background: var(--color-brand-gradient-hover);
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(168, 46, 27, 0.38);
+      box-shadow: var(--shadow-brand-strong);
     }
     .done-btn .arrow { font-size: 16px; transition: transform 200ms; }
     .done-btn:hover .arrow { transform: translateX(3px); }
@@ -1471,10 +1471,12 @@
     }
     .chat-panel__input-row input:focus { border-color: var(--color-brand-primary); }
     .chat-panel__send {
-      background: var(--color-brand-primary); color: var(--color-text-on-brand);
+      background: var(--color-brand-gradient); color: var(--color-text-on-brand);
       border: none; border-radius: 22px; padding: 8px 16px;
       font-size: 13px; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow-brand);
     }
+    .chat-panel__send:hover { background: var(--color-brand-gradient-hover); }
     .chat-price-links {
       display: flex; align-items: center; gap: 7px;
       padding: 7px 14px; background: var(--color-bg-subtle);
@@ -1671,7 +1673,7 @@
       background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
       padding: 11px 14px;
       display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.20);
     }
     .dp__back {
       background: rgba(255, 255, 255, 0.18);
@@ -1812,11 +1814,11 @@
     .dp__friend-cta {
       font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
-      background: rgba(168, 46, 27, 0.08);
+      background: rgba(124, 63, 230, 0.08);
       padding: 4px 10px; border-radius: 9999px;
       white-space: nowrap; transition: background 120ms;
     }
-    .dp__friend:hover .dp__friend-cta { background: rgba(168, 46, 27, 0.16); }
+    .dp__friend:hover .dp__friend-cta { background: rgba(124, 63, 230, 0.16); }
     .dp__friend-avatar {
       flex-shrink: 0;
       width: 26px; height: 26px;
@@ -1825,7 +1827,7 @@
       color: var(--color-text-on-brand);
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
+      box-shadow: 0 2px 6px rgba(124, 63, 230, 0.25);
     }
     .dp__friend.empty .dp__friend-avatar {
       background: var(--color-text-tertiary);

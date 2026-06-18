@@ -84,6 +84,10 @@
   --color-brand-active:    var(--pink-700);
   --color-brand-disabled:  var(--ink-3);
   --color-brand-bg-subtle: rgba(180,79,203,0.14);
+  --color-brand-gradient:  var(--grad-accent);            /* 핑크→퍼플 CTA 면 */
+  --color-brand-gradient-hover: linear-gradient(120deg, #FF7FC0 0%, #CB6BDD 50%, #8A53F0 100%);
+  --shadow-brand:        0 4px 16px rgba(124, 63, 230, 0.32);
+  --shadow-brand-strong: 0 6px 22px rgba(124, 63, 230, 0.45);
 
   /* Background */
   --color-bg-panel:  var(--ink-1);   /* 모든 패널 기본 */
