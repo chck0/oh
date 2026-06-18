@@ -1437,12 +1437,12 @@
       padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 7px;
     }
     .chat-chip {
-      background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
-      border: 1px solid var(--color-border-default); border-radius: 20px;
-      font-size: 12px; padding: 5px 12px; cursor: pointer;
-      white-space: nowrap; transition: background 0.15s;
+      background: var(--color-brand-gradient); color: #ffffff;
+      border: none; border-radius: 20px;
+      font-size: 12px; font-weight: 700; padding: 6px 14px; cursor: pointer;
+      white-space: nowrap; transition: opacity 0.15s;
     }
-    .chat-chip:hover { background: var(--color-bg-muted); }
+    .chat-chip:hover { opacity: 0.85; }
     .chat-attachment-bar { padding: 0 12px 4px; }
     .chat-attach-preview {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -1740,19 +1740,21 @@
     }
     .dp-stat-num {
       font-size: 20px; font-weight: 800; letter-spacing: -0.03em;
-      font-feature-settings: 'tnum'; color: var(--color-text-primary);
+      font-feature-settings: 'tnum';
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
       line-height: 1.15; white-space: nowrap;
     }
-    .dp-stat-num.clr-up { color: #FF7E8A; }
-    .dp-stat-num.clr-dn { color: var(--blue-700); }
+    .dp-stat-num.clr-up { background: none; -webkit-text-fill-color: #FF7E8A; }
+    .dp-stat-num.clr-dn { background: none; -webkit-text-fill-color: var(--blue-700); }
     .dp-stat-unit {
       font-size: 12px; font-weight: 700;
-      color: var(--color-text-tertiary); margin-left: 1.5px;
-      letter-spacing: 0;
+      margin-left: 1.5px; letter-spacing: 0;
     }
     .dp-stat-label {
-      font-size: 11px; color: var(--color-text-tertiary);
-      margin-top: 6px; font-weight: 600; letter-spacing: 0.01em;
+      font-size: 12px; color: var(--color-text-primary);
+      margin-top: 6px; font-weight: 700; letter-spacing: 0.01em;
       line-height: 1.35; white-space: nowrap;
     }
     .dp-stat-py { display: inline; white-space: nowrap; font-size: 9px; font-weight: 600; opacity: 0.85; }
@@ -2806,16 +2808,17 @@ function openDetail(aptSeq) {
   _currentAptSeq = aptSeq;
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
-  // 지도 pan
-  if (kakaoMap && resultData) {
-    const card = resultData.cards.find(c => c.apt_seq === aptSeq);
-    if (card && card.lat && card.lng)
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
-  }
-  // 사이드 패널 열기
+  // 사이드 패널 먼저 열기 → relayout → setCenter (패널 열린 후 실제 지도 영역 기준으로 정중앙)
   document.getElementById('detail-panel').classList.add('open');
   document.getElementById('detail-resize-handle').style.display = '';
   document.body.style.overflow = '';
+  if (kakaoMap && resultData) {
+    const card = resultData.cards.find(c => c.apt_seq === aptSeq);
+    if (card && card.lat && card.lng) {
+      kakaoMap.relayout();
+      kakaoMap.setCenter(new kakao.maps.LatLng(card.lat, card.lng));
+    }
+  }
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -4717,7 +4720,6 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 헤더 -->
     <div class="dp__header">
       <button class="dp__back" onclick="backToList()">← 목록</button>
-      <span class="dp__name">${escHtml(d.apt_nm)}</span>
       ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
     </div>
 

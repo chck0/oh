@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
 
-  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script defer src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -486,6 +486,11 @@
       font-size: 13px; white-space: nowrap;
     }
     .adv-section .check-chip__box { display: none; }
+    .adv-section .check-chip:has(input:checked) {
+      background: var(--color-brand-gradient);
+      border-color: transparent;
+      color: #ffffff;
+    }
 
     /* ─── spec-15: 최근 검색 히스토리 칩 ─────────────────── */
     .recent-searches {
