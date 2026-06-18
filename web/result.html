@@ -2275,17 +2275,19 @@
           <button class="adv-filter-reset" id="adv-filter-reset-btn" onclick="resetAdvFilter()" style="display:none">✕ 초기화</button>
         </div>
 
-        <div class="adv-filter-row">
-          <span class="adv-filter-label">평형</span>
-          <span class="adv-filter-multi-hint">복수 선택</span>
-          <div class="adv-filter-chips" id="adv-pyeong-chips">
-            <button class="adv-chip adv-chip--active" data-val="" onclick="toggleAdvChip(this,'pyeong')">전체</button>
-            <button class="adv-chip" data-val="10평미만" onclick="toggleAdvChip(this,'pyeong')">10평 미만</button>
-            <button class="adv-chip" data-val="10평대" onclick="toggleAdvChip(this,'pyeong')">10평대</button>
-            <button class="adv-chip" data-val="20평대" onclick="toggleAdvChip(this,'pyeong')">20평대</button>
-            <button class="adv-chip" data-val="30평대" onclick="toggleAdvChip(this,'pyeong')">30평대</button>
-            <button class="adv-chip" data-val="40평대" onclick="toggleAdvChip(this,'pyeong')">40평대</button>
-            <button class="adv-chip" data-val="50평대+" onclick="toggleAdvChip(this,'pyeong')">50평대+</button>
+        <div class="adv-filter-row adv-filter-row--column">
+          <div class="adv-year-header">
+            <span class="adv-filter-label">평형</span>
+            <span class="adv-year-range-label" id="adv-pyeong-range-label">제한없음</span>
+          </div>
+          <div class="adv-year-slider-wrap">
+            <div class="adv-year-histogram" id="adv-pyeong-histogram"></div>
+            <div class="adv-year-track" id="adv-pyeong-track">
+              <div class="adv-year-fill" id="adv-pyeong-fill"></div>
+              <div class="adv-year-thumb" id="adv-pyeong-thumb-min" style="left:0%"></div>
+              <div class="adv-year-thumb" id="adv-pyeong-thumb-max" style="left:100%"></div>
+            </div>
+            <div class="adv-year-tick-row" id="adv-pyeong-tick-row"></div>
           </div>
         </div>
 
@@ -4133,6 +4135,7 @@ function renderCards(data){
   }
 
   // 첫 로드 시 슬라이더 초기화 (이미 초기화된 경우 스킵)
+  if (!_pyeongSlider.buckets.length) _initPyeongSlider(data.cards);
   if (!_yearSlider.years.length) _initYearSlider(data.cards);
   if (!_unitsSlider.buckets.length) _initUnitsSlider(data.cards);
 
@@ -5103,12 +5106,107 @@ document.addEventListener('click', e => {
 });
 
 // ── 상세조건 필터 ──────────────────────────────────────────────
-const _advFilter = { pyeong: [], yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
+const _advFilter = { pyeongMin: null, pyeongMax: null, yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
 
 // 준공연도 슬라이더 상태
 const _yearSlider = { years: [], counts: {}, minIdx: 0, maxIdx: 0 };
-// 세대수 슬라이더 상태
 const _unitsSlider = { buckets: [], counts: {}, minIdx: 0, maxIdx: 0 };
+// 평형 슬라이더 — 고정 버킷 [0,10,20,30,40,50]
+const _pyeongSlider = { buckets: [], counts: {}, minIdx: 0, maxIdx: 0 };
+const _PYEONG_BUCKETS = [0, 10, 20, 30, 40, 50];
+const _PYEONG_MAP = { '10평미만': 0, '10평대': 10, '20평대': 20, '30평대': 30, '40평대': 40, '50평대+': 50 };
+
+function _initPyeongSlider(cards) {
+  const countMap = {};
+  _PYEONG_BUCKETS.forEach(b => { countMap[b] = 0; });
+  cards.forEach(c => {
+    const b = _PYEONG_MAP[c.pyeong_type];
+    if (b !== undefined) countMap[b]++;
+  });
+  _pyeongSlider.buckets = _PYEONG_BUCKETS;
+  _pyeongSlider.counts = countMap;
+  _pyeongSlider.minIdx = 0;
+  _pyeongSlider.maxIdx = _PYEONG_BUCKETS.length - 1;
+  _renderPyeongSlider();
+  _initPyeongSliderDrag();
+}
+
+function _renderPyeongSlider() {
+  const { buckets, counts, minIdx, maxIdx } = _pyeongSlider;
+  if (!buckets.length) return;
+  const maxCount = Math.max(...buckets.map(b => counts[b] || 0), 1);
+
+  const hist = document.getElementById('adv-pyeong-histogram');
+  if (hist) {
+    hist.innerHTML = buckets.map((b, i) => {
+      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 36));
+      const inRange = i >= minIdx && i <= maxIdx;
+      const lbl = b === 0 ? '10평미만' : b === 50 ? '50평대+' : b + '평대';
+      return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${lbl} ${counts[b]||0}개"></div>`;
+    }).join('');
+  }
+
+  const pct = i => (i / (buckets.length - 1)) * 100;
+  const minP = pct(minIdx), maxP = pct(maxIdx);
+  const fill = document.getElementById('adv-pyeong-fill');
+  const tMin = document.getElementById('adv-pyeong-thumb-min');
+  const tMax = document.getElementById('adv-pyeong-thumb-max');
+  if (fill) { fill.style.left = minP + '%'; fill.style.width = (maxP - minP) + '%'; }
+  if (tMin) tMin.style.left = minP + '%';
+  if (tMax) tMax.style.left = maxP + '%';
+
+  const tickRow = document.getElementById('adv-pyeong-tick-row');
+  if (tickRow) {
+    tickRow.innerHTML = buckets.map(b => {
+      const lbl = b === 0 ? '0' : b === 50 ? '50+' : b + '평';
+      return `<span class="adv-year-tick">${lbl}</span>`;
+    }).join('');
+  }
+
+  const label = document.getElementById('adv-pyeong-range-label');
+  const isAll = minIdx === 0 && maxIdx === buckets.length - 1;
+  if (label) label.textContent = isAll ? '제한없음' : `${buckets[minIdx]===0?'10평미만':buckets[minIdx]+'평대'} ~ ${buckets[maxIdx]===50?'50평대+':buckets[maxIdx]+'평대'}`;
+  _advFilter.pyeongMin = isAll ? null : buckets[minIdx];
+  _advFilter.pyeongMax = isAll ? null : buckets[maxIdx];
+  document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
+}
+
+function _initPyeongSliderDrag() {
+  ['min','max'].forEach(which => {
+    const thumb = document.getElementById(`adv-pyeong-thumb-${which}`);
+    if (!thumb) return;
+    thumb.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-pyeong-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_pyeongSlider.buckets.length - 1));
+        if (which === 'min') _pyeongSlider.minIdx = Math.min(idx, _pyeongSlider.maxIdx);
+        else _pyeongSlider.maxIdx = Math.max(idx, _pyeongSlider.minIdx);
+        _renderPyeongSlider(); _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+    thumb.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const track = document.getElementById('adv-pyeong-track');
+      const move = ev => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.touches[0].clientX - rect.left) / rect.width));
+        const idx = Math.round(pct * (_pyeongSlider.buckets.length - 1));
+        if (which === 'min') _pyeongSlider.minIdx = Math.min(idx, _pyeongSlider.maxIdx);
+        else _pyeongSlider.maxIdx = Math.max(idx, _pyeongSlider.minIdx);
+        _renderPyeongSlider(); _applyAdvFilter();
+      };
+      const up = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: false });
+  });
+}
 
 function _initYearSlider(cards) {
   const countMap = {};
@@ -5344,12 +5442,13 @@ function _initUnitsSliderDrag() {
 }
 
 function resetAdvFilter() {
-  _advFilter.pyeong = []; _advFilter.yearMin = null; _advFilter.yearMax = null; _advFilter.unitsMin = null; _advFilter.unitsMax = null;
-  document.querySelectorAll('.adv-filter-chips').forEach(wrap => {
-    wrap.querySelectorAll('.adv-chip').forEach(b => b.classList.remove('adv-chip--active'));
-    const allBtn = wrap.querySelector('[data-val=""]');
-    if (allBtn) allBtn.classList.add('adv-chip--active');
-  });
+  _advFilter.pyeongMin = null; _advFilter.pyeongMax = null;
+  _advFilter.yearMin = null; _advFilter.yearMax = null;
+  _advFilter.unitsMin = null; _advFilter.unitsMax = null;
+  if (_pyeongSlider.buckets.length) {
+    _pyeongSlider.minIdx = 0; _pyeongSlider.maxIdx = _pyeongSlider.buckets.length - 1;
+    _renderPyeongSlider();
+  }
   if (_yearSlider.years.length) {
     _yearSlider.minIdx = 0; _yearSlider.maxIdx = _yearSlider.years.length - 1;
     _renderYearSlider();
@@ -5363,7 +5462,7 @@ function resetAdvFilter() {
 }
 
 function _isAdvFilterActive() {
-  return _advFilter.pyeong.length > 0 || _advFilter.yearMin !== null || _advFilter.unitsMin !== null;
+  return _advFilter.pyeongMin !== null || _advFilter.yearMin !== null || _advFilter.unitsMin !== null;
 }
 
 function _applyAdvFilter() {
@@ -5377,7 +5476,12 @@ function _applyAdvFilter() {
 
 function _filterCardsByAdv(cards) {
   return cards.filter(c => {
-    if (_advFilter.pyeong.length > 0 && !_advFilter.pyeong.includes(c.pyeong_type)) return false;
+    if (_advFilter.pyeongMin !== null || _advFilter.pyeongMax !== null) {
+      const b = _PYEONG_MAP[c.pyeong_type];
+      if (b === undefined) return false;
+      if (_advFilter.pyeongMin !== null && b < _advFilter.pyeongMin) return false;
+      if (_advFilter.pyeongMax !== null && b > _advFilter.pyeongMax) return false;
+    }
     if (_advFilter.yearMin !== null || _advFilter.yearMax !== null) {
       const yr = parseInt(c.build_year);
       if (!yr) return false;
