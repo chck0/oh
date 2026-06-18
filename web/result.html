@@ -7,12 +7,16 @@
 
   <link rel="stylesheet" as="style" crossorigin
     href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/design-system/tokens.css">
   <link rel="stylesheet" href="/static/design-system/typography.css">
   <link rel="stylesheet" href="/static/design-system/motion.css">
 
   <!-- Chart.js — 상세 패널 차트 전용, 비동기 로드 (초기 렌더 불필요) -->
   <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
   <!-- 카카오맵 SDK — 키는 백엔드(/api/kakao-sdk)가 .env의 KAKAO_JS_KEY로 주입 -->
   <script src="/api/kakao-sdk?libraries=services"></script>
 
@@ -20,8 +24,8 @@
     /* ── 기본 레이아웃 ──────────────────────────────────────── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      font-family: 'Pretendard', system-ui, sans-serif;
-      background: white;
+      font-family: 'Noto Sans KR', 'Pretendard', system-ui, sans-serif;
+      background: var(--color-bg-base);
       color: var(--color-text-primary);
       height: 100vh; line-height: 1.5;
       display: flex; flex-direction: column;
@@ -29,7 +33,7 @@
       -webkit-font-smoothing: antialiased;
     }
     header {
-      flex-shrink: 0; background: white;
+      flex-shrink: 0; background: var(--color-bg-panel);
       padding: 16px 22px;
       border-bottom: 1px solid var(--color-border-strong);
       display: flex; align-items: center; gap: 20px;
@@ -49,10 +53,10 @@
 
     .partial-banner {
       margin: 12px 0; padding: 10px 14px;
-      background: var(--color-warning-bg, #fff8e1);
+      background: var(--color-status-warning-bg, #2A2410);
       border-left: 3px solid var(--color-warning, #f59e0b);
       border-radius: 4px;
-      font-size: 13px; color: var(--color-warning-text, #78350f);
+      font-size: 13px; color: var(--color-status-warning-text, #F4C552);
       line-height: 1.5;
     }
 
@@ -60,7 +64,7 @@
        [5] 로딩 오버레이 — 3단계 진행 표시
        ════════════════════════════════════════════════════════ */
     .loading-overlay {
-      position: fixed; inset: 0; background: white; z-index: 1000;
+      position: fixed; inset: 0; background: var(--color-bg-base); z-index: 1000;
       display: flex; flex-direction: column; align-items: center;
       padding: 40px 24px 32px; overflow-y: auto;
     }
@@ -177,7 +181,7 @@
       flex: 1; min-width: 0;
     }
     .mute-btn {
-      padding: 10px 14px; background: white;
+      padding: 10px 14px; background: var(--color-bg-panel);
       color: var(--color-text-primary);
       border: 1px solid var(--color-border-default);
       border-radius: 10px;
@@ -196,7 +200,7 @@
       color: var(--color-brand-primary);
     }
     .playlist {
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-default);
       border-radius: 10px; overflow: hidden;
       flex: 1; display: flex; flex-direction: column;
@@ -253,13 +257,13 @@
       letter-spacing: -0.005em;
       cursor: pointer; display: none;
       align-items: center; gap: 8px;
-      box-shadow: 0 4px 16px rgba(168, 46, 27, 0.30);
+      box-shadow: 0 4px 16px rgba(255, 107, 158, 0.30);
       transition: all 200ms;
     }
     .done-btn:hover {
       background: var(--color-brand-hover);
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(168, 46, 27, 0.38);
+      box-shadow: 0 6px 20px rgba(255, 107, 158, 0.38);
     }
     .done-btn .arrow { font-size: 16px; transition: transform 200ms; }
     .done-btn:hover .arrow { transform: translateX(3px); }
@@ -276,10 +280,14 @@
        메인 결과 레이아웃
        ════════════════════════════════════════════════════════ */
     #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .summary-bar {
-      flex-shrink: 0; background: white;
-      padding: 14px 22px;
+    .combined-bar {
+      display: flex; align-items: center; flex-shrink: 0;
+      background: var(--color-bg-panel);
       border-bottom: 1px solid var(--color-border-strong);
+    }
+    .summary-bar {
+      flex: 1; min-width: 0; background: var(--color-bg-panel);
+      padding: 14px 22px;
       font-size: 14px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
       font-feature-settings: 'tnum';
@@ -325,43 +333,100 @@
     }
     .cards-panel {
       overflow-y: auto;
-      background: white;
+      background: var(--color-bg-panel);
       padding: 14px;
       flex: 1; min-height: 0;
     }
-    /* sort-bar */
+    /* sort toggle button (combined-bar 우측) */
     .sort-bar {
       display: none;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      background: #fff;
-      border-bottom: 1px solid var(--color-border-light);
+      border-left: 1px solid var(--color-border-strong);
       flex-shrink: 0;
-      flex-wrap: wrap;
     }
     .sort-bar.visible { display: flex; }
-    .sort-bar__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; margin-right: 2px; }
-    .sort-select-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sort-select-wrap label { font-size: 10px; color: var(--color-text-tertiary); font-weight: 600; }
-    .sort-select {
-      font-size: 12px; font-family: inherit;
-      padding: 4px 22px 4px 8px;
-      border: 1px solid var(--color-border-strong);
-      border-radius: 6px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 7px center;
-      appearance: none; cursor: pointer;
+    .sort-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 18px; height: 100%;
+      font-size: 13px; font-weight: 600; font-family: inherit;
       color: var(--color-text-primary);
-      width: 108px;
-    }
-    .sort-select:focus { outline: none; border-color: var(--color-brand-primary); }
-    .sort-bar__reset {
-      margin-left: auto; font-size: 12px;
       background: none; border: none; cursor: pointer;
-      color: var(--color-text-secondary); padding: 4px 6px;
       white-space: nowrap;
     }
-    .sort-bar__reset:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn:hover { color: var(--color-brand-primary); }
+    .sort-toggle-btn .sort-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; border-radius: 9px;
+      background: var(--color-brand-primary); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 0 4px;
+    }
+    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
+    /* 접힘 시 정렬 칩·힌트 숨김 → 매물 공간 확보 */
+    .sort-panel:not(.open) .sort-chips-wrap,
+    .sort-panel:not(.open) .sort-hint { display: none; }
+    .sort-panel:not(.open) { padding-bottom: 9px; }
+
+    /* sort-panel: 항상 표시, 네이버맵 스타일 칩 */
+    .sort-panel {
+      display: flex; flex-direction: column;
+      background: var(--color-bg-subtle); flex-shrink: 0;
+      border-bottom: 1px solid var(--color-border-strong);
+      padding: 11px 13px 9px;
+      gap: 8px;
+    }
+    .sort-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sort-panel-title {
+      font-size: 13px; font-weight: 700; color: var(--color-text-primary);
+      letter-spacing: .02em;
+    }
+    .sort-panel-reset {
+      font-size: 12px; color: var(--color-text-tertiary);
+      background: none; border: none; cursor: pointer; padding: 2px 6px;
+    }
+    .sort-panel-reset:hover { color: var(--color-brand-primary); }
+    .sort-chips-wrap {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px;
+    }
+    .sort-check-item {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 10px;
+      cursor: pointer; padding: 10px 12px;
+      border-radius: 10px; border: 1.5px solid var(--color-border-default);
+      background: var(--color-bg-panel); user-select: none; transition: all .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25);
+      position: relative;
+    }
+    .sort-check-item .icon-bubble {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s; background: var(--color-bg-muted);
+    }
+    .sort-check-item i { font-size: 18px; line-height: 1; color: var(--color-brand-primary); }
+    .sort-check-item:hover { border-color: var(--color-brand-primary); box-shadow: 0 2px 8px rgba(255,107,158,.25); }
+    .sort-check-item:hover .icon-bubble { background: var(--color-brand-bg-subtle); }
+    .sort-check-item.checked { border-color: var(--color-brand-primary); background: var(--color-brand-bg-subtle); }
+    .sort-check-item.checked .icon-bubble { background: var(--color-bg-muted); }
+    .sort-chip-label {
+      font-size: 13px; font-weight: 800; color: var(--color-text-primary); line-height: 1.3;
+      word-break: keep-all; text-align: left; letter-spacing: -.01em;
+    }
+    .sort-check-item.checked .sort-chip-label { color: var(--color-brand-primary); }
+    .sort-check-item .rank-badge {
+      display: none; position: absolute; top: -8px; right: -8px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--color-brand-primary); color: #fff; border: 2px solid var(--color-bg-panel);
+      font-size: 12px; font-weight: 800;
+      align-items: center; justify-content: center; line-height: 1;
+    }
+    .sort-check-item.checked .rank-badge { display: inline-flex; }
+    .sort-hint {
+      font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6;
+      padding: 0 2px;
+    }
+    .sort-hint .hint-order { color: var(--pink-300); font-weight: 600; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: #f0f0f0; }
     /* spec-19: 리사이즈 핸들 */
@@ -371,15 +436,15 @@
       cursor: col-resize; z-index: 10;
       transition: background 0.15s;
     }
-    .resize-handle:hover, .resize-handle.dragging { background: #5B9BD5; }
+    .resize-handle:hover, .resize-handle.dragging { background: var(--color-brand-primary); }
     @media (max-width: 767px) { .resize-handle { display: none; } }
 
     /* ════════════════════════════════════════════════════════
        [2] 통계 패널 — 미니 막대그래프
        ════════════════════════════════════════════════════════ */
     .stats-panel {
-      background: white;
-      border: 1px solid var(--color-border-strong);
+      background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--color-border-default);
       border-radius: var(--radius-lg);
       padding: 16px 16px 14px;
       margin-bottom: 12px;
@@ -431,10 +496,13 @@
 
     .minibar-row {
       display: grid;
-      grid-template-columns: 76px 1fr 56px;
-      align-items: center; gap: 12px;
+      grid-template-columns: 12px 80px 1fr 56px;
+      align-items: center; gap: 8px;
       padding: 5px 0; font-size: 13.5px;
       font-feature-settings: 'tnum';
+    }
+    .minibar-row__dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
     .minibar-row__label {
       color: var(--color-text-primary);
@@ -448,11 +516,7 @@
     }
     .minibar-row__fill {
       position: absolute; left: 0; top: 0; bottom: 0;
-      background: var(--color-text-secondary);
       border-radius: 3px;
-    }
-    .minibar-row.cheap .minibar-row__fill {
-      background: var(--color-brand-primary);
     }
     .minibar-row__value {
       text-align: right; font-weight: 700;
@@ -522,34 +586,35 @@
        spec-26: 아파트 직접 검색
        ════════════════════════════════════════════════════════ */
     .apt-search-bar {
-      padding: 10px 14px 4px; background: #f8f8fb; border-radius: 12px; margin-bottom: 10px;
+      padding: 10px 14px 4px; background: var(--color-bg-subtle); border-radius: 12px; margin-bottom: 10px;
     }
     .apt-search-input-wrap { position: relative; }
     .apt-search-bar input {
       width: 100%; box-sizing: border-box;
-      border: 1px solid #dde; border-radius: 20px;
+      border: 1px solid var(--color-border-default); border-radius: 20px;
       padding: 8px 16px; font-size: 13px; outline: none; font-family: inherit;
+      background: var(--color-bg-panel); color: var(--color-text-primary);
     }
     .apt-search-bar input:focus { border-color: var(--color-brand-primary); }
     .apt-search-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: #fff; border: 1px solid #dde4ff; border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 200; overflow: hidden;
+      background: var(--color-bg-panel); border: 1px solid var(--color-border-default); border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 200; overflow: hidden;
     }
     .apt-dropdown-item {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 16px; cursor: pointer; gap: 8px;
     }
-    .apt-dropdown-item:hover { background: #f0f3ff; }
+    .apt-dropdown-item:hover { background: var(--color-bg-subtle); }
     .apt-dropdown-nm { font-size: 13px; font-weight: 600; }
-    .apt-dropdown-meta { font-size: 11px; color: #999; flex-shrink: 0; }
+    .apt-dropdown-meta { font-size: 11px; color: var(--color-text-tertiary); flex-shrink: 0; }
     .apt-dropdown-tag {
-      font-size: 10px; background: #e8f0ff; color: var(--color-brand-primary);
+      font-size: 10px; background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
       border-radius: 6px; padding: 1px 6px; margin-left: 4px;
     }
-    .apt-dropdown-empty, .apt-dropdown-loading { padding: 10px 16px; font-size: 13px; color: #999; }
+    .apt-dropdown-empty, .apt-dropdown-loading { padding: 10px 16px; font-size: 13px; color: var(--color-text-tertiary); }
     .apt-lookup-card {
-      background: #fff; border: 2px solid var(--color-brand-primary);
+      background: var(--color-bg-panel); border: 2px solid var(--color-brand-primary);
       border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px;
       position: relative;
     }
@@ -559,23 +624,23 @@
       padding: 2px 8px; margin-bottom: 6px;
     }
     .apt-lookup-card__title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-    .apt-lookup-card__meta { font-size: 12px; color: #888; margin-bottom: 6px; }
-    .apt-lookup-card__price { font-size: 14px; font-weight: 600; color: var(--red-600); }
-    .apt-lookup-card__transit { font-size: 12px; color: #555; margin-top: 3px; }
+    .apt-lookup-card__meta { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 6px; }
+    .apt-lookup-card__price { font-size: 14px; font-weight: 600; color: var(--color-brand-primary); }
+    .apt-lookup-card__transit { font-size: 12px; color: var(--color-text-secondary); margin-top: 3px; }
     .apt-lookup-card__footer {
       display: flex; justify-content: flex-end; margin-top: 10px;
     }
     .apt-lookup-card__chat {
-      background: #f0f3ff; color: var(--color-brand-primary);
-      border: 1px solid #dde4ff; border-radius: 16px;
+      background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
+      border: 1px solid var(--color-border-default); border-radius: 16px;
       font-size: 12px; padding: 5px 14px; cursor: pointer;
     }
-    .apt-search-empty { color: #999; font-size: 13px; padding: 8px 14px; }
+    .apt-search-empty { color: var(--color-text-tertiary); font-size: 13px; padding: 8px 14px; }
 
        /* 추천 섹션 헤더
        ════════════════════════════════════════════════════════ */
     .rec-section-head {
-      background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
+      background: var(--grad-accent);
       color: white; border-radius: var(--radius-lg);
       padding: 14px 16px;
       margin: 4px 0 10px;
@@ -593,130 +658,137 @@
     /* ════════════════════════════════════════════════════════
        [1] 추천 카드 — AI 친구 코멘트 HERO
        ════════════════════════════════════════════════════════ */
+    /* ── 추천 카드 (compact 3-row) ── */
     .rec-card {
       position: relative;
-      background: white;
+      background: var(--color-bg-panel);
       border-radius: var(--radius-lg);
       border: 1px solid var(--color-border-strong);
       border-left: 4px solid var(--color-brand-primary);
-      padding: 18px 44px 16px 18px;  /* right 44px: ♥ 버튼 공간 확보 */
-      margin-bottom: 10px;
+      padding: 14px 44px 14px 16px;
+      margin-bottom: 8px;
       cursor: pointer;
       transition: box-shadow 200ms ease;
     }
     .rec-card:hover { box-shadow: var(--shadow-lg); }
+    /* row1: 슬롯 칩 (통근버킷 × 평형) */
     .rec-card__slot {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
       background: var(--color-brand-bg-subtle);
-      padding: 5px 11px;
-      border-radius: var(--radius-sm);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
       letter-spacing: 0.01em;
+      margin-bottom: 8px;
     }
     .rec-card__slot-divider {
       width: 1px; height: 9px;
       background: currentColor; opacity: 0.4;
     }
+    /* row2: 단지명 + 가격 */
     .rec-card__title-row {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; margin: 12px 0 4px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 10px; margin-bottom: 6px;
     }
     .rec-card__title {
-      font-size: 18px; font-weight: 700;
+      font-size: 16px; font-weight: 700;
       letter-spacing: -0.005em;
       color: var(--color-text-primary);
       line-height: 1.3; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .rec-card__price {
-      font-size: 22px; font-weight: 700;
+      font-size: 18px; font-weight: 700;
       letter-spacing: -0.01em;
       color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      white-space: nowrap; line-height: 1.2;
+      white-space: nowrap; flex-shrink: 0;
     }
     .rec-card__price .unit {
-      font-size: 14px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       color: var(--color-text-secondary);
       margin-left: 1px;
     }
+    /* row3: 메타 (동 · 세대수 · 최고층) */
     .rec-card__meta {
-      font-size: 13.5px; color: var(--color-text-secondary);
+      font-size: 12px; color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px; line-height: 1.55;
+      margin-bottom: 8px; line-height: 1.4;
       font-weight: 500;
     }
     .rec-card__meta .dot {
       display: inline-block; width: 2px; height: 2px; border-radius: 50%;
       background: currentColor; opacity: 0.5;
-      margin: 0 6px; vertical-align: middle;
+      margin: 0 5px; vertical-align: middle;
     }
-
-    /* spec-11: 추천 이유 칩 3개 (Info / Brand / Neutral) — 친구 코멘트 위 단독 행 */
+    /* 이유 칩 */
     .rec-card__reasons {
-      display: flex; gap: 6px; flex-wrap: wrap;
-      margin: 10px 0 12px;
+      display: flex; gap: 5px; flex-wrap: wrap;
+      margin-bottom: 8px;
     }
     .reason-chip {
       display: inline-flex; align-items: center;
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: var(--radius-pill);
-      font-size: 12.5px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
       white-space: nowrap;
     }
     .reason-chip--info    { background: var(--blue-100);              color: var(--blue-700); }
-    /* Brand 칩 — 카드 1장당 1개만 (디자인 시스템 §2.2 빨강 5% 이하 원칙) */
     .reason-chip--brand   { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); }
     .reason-chip--neutral { background: var(--color-bg-subtle);       color: var(--color-text-secondary); border: 1px solid var(--color-border-default); }
 
-    /* AI 친구 한마디 — HERO */
+    /* AI 친구 한마디 — 기본 접힘, 클릭 시 펼침 */
+    .rec-card__friend-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      color: var(--color-brand-primary);
+      cursor: pointer; padding: 4px 0; user-select: none;
+      border: none; background: none; font-family: inherit;
+    }
+    .rec-card__friend-toggle .toggle-arrow {
+      font-size: 10px; transition: transform 180ms ease;
+    }
+    .rec-card__friend-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    .rec-card__friend-body-wrap {
+      overflow: hidden;
+      max-height: 0; transition: max-height 250ms ease;
+    }
+    .rec-card__friend-body-wrap.open { max-height: 200px; }
     .rec-card__friend {
-      display: flex; gap: 11px; align-items: flex-start;
-      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
-      border-radius: 10px;
-      padding: 12px 13px 13px;
-      margin-bottom: 12px;
+      display: flex; gap: 10px; align-items: flex-start;
+      background: linear-gradient(180deg, rgba(196,94,214,0.12) 0%, rgba(124,63,230,0.05) 100%);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 6px;
     }
-    .rec-card__friend.empty {
-      background: var(--color-bg-subtle);
-    }
+    .rec-card__friend.empty { background: var(--color-bg-subtle); }
     .rec-card__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 24px; height: 24px;
       border-radius: 50%;
-      background: var(--color-brand-primary);
+      background: var(--grad-accent);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
-      margin-top: 1px;
+      font-size: 10px; font-weight: 700;
     }
     .rec-card__friend.empty .rec-card__friend-avatar {
       background: var(--color-text-tertiary);
-      box-shadow: none;
     }
-    .rec-card__friend-body { flex: 1; min-width: 0; }
     .rec-card__friend-label {
       font-size: 11px; font-weight: 700;
       color: var(--color-brand-primary);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
-    .rec-card__friend.empty .rec-card__friend-label {
-      color: var(--color-text-tertiary);
-    }
+    .rec-card__friend.empty .rec-card__friend-label { color: var(--color-text-tertiary); }
     .rec-card__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 13px; line-height: 1.55;
       color: var(--color-text-primary);
-      white-space: pre-line;
-      letter-spacing: -0.005em;
-      font-weight: 500;
+      white-space: pre-line; font-weight: 500;
     }
     .rec-card__friend.empty .rec-card__friend-text {
-      font-style: italic; color: var(--color-text-tertiary);
-      font-weight: 400;
+      font-style: italic; color: var(--color-text-tertiary); font-weight: 400;
     }
     .spinner-mini {
       display: inline-block; width: 10px; height: 10px;
@@ -737,12 +809,12 @@
       vertical-align: middle;
       letter-spacing: -0.3px;
     }
-    .price-chg-badge--up   { background: #fff0f0; color: #e53e3e; }
-    .price-chg-badge--down { background: #ebf8ff; color: #2b6cb0; }
+    .price-chg-badge--up   { background: rgba(192,57,43,0.18); color: #E8857A; }
+    .price-chg-badge--down { background: rgba(36,113,163,0.18); color: #7FB4DA; }
 
     .why-tags {
       font-size: 11px;
-      color: #888;
+      color: var(--color-text-tertiary);
       margin-top: 3px;
       margin-bottom: 2px;
       white-space: nowrap;
@@ -750,9 +822,9 @@
       text-overflow: ellipsis;
     }
     .commute-econ-row {
-      font-size: 11.5px; color: #777;
+      font-size: 11.5px; color: var(--color-text-tertiary);
       margin-top: 7px; padding-top: 6px;
-      border-top: 1px dashed #eee;
+      border-top: 1px dashed var(--color-border-default);
       display: flex; align-items: center; gap: 4px;
     }
 
@@ -760,7 +832,7 @@
     .fav-btn {
       position: absolute; top: 10px; right: 12px;
       background: none; border: none; cursor: pointer;
-      font-size: 20px; line-height: 1; color: #ddd;
+      font-size: 20px; line-height: 1; color: var(--color-bg-muted);
       padding: 4px; border-radius: 50%;
       transition: color 0.15s, transform 0.12s;
       z-index: 2;
@@ -772,7 +844,7 @@
     .fav-tabs {
       display: flex; gap: 0;
       border-bottom: 1px solid var(--color-border-strong);
-      background: white;
+      background: var(--color-bg-panel);
       position: sticky; top: 0; z-index: 10;
       margin-bottom: 12px;
     }
@@ -834,7 +906,7 @@
       padding: 18px 4px 10px;
     }
     .bucket-section {
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: var(--radius-lg);
       margin-bottom: 10px;
@@ -932,70 +1004,57 @@
     .bucket-pt-label:first-child { margin-top: 4px; }
     .bucket-pt-label:first-child { margin-top: 4px; }
 
-    /* 일반 list-card (버킷 안) */
+    /* 일반 list-card — 한 줄 row */
     .list-card {
       position: relative;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
-      border-radius: 10px;
-      padding: 13px 40px 13px 14px;  /* right 40px: ♥ 버튼 공간 확보 */
-      margin-bottom: 8px;
+      border-radius: 8px;
+      padding: 11px 40px 11px 14px;
+      margin-bottom: 5px;
       cursor: pointer;
-      transition: box-shadow 200ms, border-color 200ms;
+      transition: box-shadow 150ms, border-color 150ms;
+      display: flex; align-items: center; gap: 10px;
     }
-    .list-card:hover { border-color: var(--color-text-tertiary); }
-    .list-card:hover { box-shadow: var(--shadow-md); }
+    .list-card:hover { border-color: var(--color-text-tertiary); box-shadow: var(--shadow-md); }
     .list-card:last-child { margin-bottom: 0; }
+    /* 왼쪽: 단지명 + 평형 (flex-grow) */
     .list-card__top {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 10px; margin-bottom: 4px;
+      flex: 1; min-width: 0;
     }
     .list-card__name {
-      font-size: 15px; font-weight: 700;
+      font-size: 14px; font-weight: 700;
       color: var(--color-text-primary);
       letter-spacing: -0.005em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .list-card__name .pt {
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       color: var(--color-text-secondary);
-      margin-left: 6px;
-    }
-    .list-card__price {
-      font-size: 16px; font-weight: 700;
-      color: var(--color-text-primary);
-      font-feature-settings: 'tnum';
-      letter-spacing: -0.005em;
+      margin-left: 5px;
     }
     .list-card__meta {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 11.5px; color: var(--color-text-tertiary);
+      font-weight: 500; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* 오른쪽: 통근시간 + 가격 (flex-shrink: 0) */
+    .list-card__right {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 3px; flex-shrink: 0;
+    }
+    .list-card__price {
+      font-size: 14px; font-weight: 700;
+      color: var(--color-text-primary);
       font-feature-settings: 'tnum';
-      margin-bottom: 8px;
-      line-height: 1.5;
-      font-weight: 500;
     }
     .list-card__row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 4px;
     }
-    .list-card__comment {
-      font-size: 13px; line-height: 1.6;
-      color: var(--color-text-primary);
-      background: var(--color-brand-bg-subtle);
-      border-left: 3px solid var(--color-brand-primary);
-      padding: 8px 11px; border-radius: 5px;
-      margin-top: 8px;
-      white-space: pre-line;
-      font-weight: 500;
-    }
-    .list-card__comment.empty {
-      background: var(--color-bg-subtle);
-      border-color: var(--color-border-default);
-      color: var(--color-text-tertiary);
-      font-style: italic;
-    }
+    .list-card__comment { display: none; } /* 일반 카드는 코멘트 숨김 */
 
     .error-box {
-      background: white; padding: 24px;
+      background: var(--color-bg-panel); padding: 24px;
       border: 1px solid var(--color-brand-primary);
       border-radius: var(--radius-lg);
       text-align: center;
@@ -1008,49 +1067,132 @@
     /* ════════════════════════════════════════════════════════
        지도 핀 (디자인 시스템 §4 핀 체계)
        ════════════════════════════════════════════════════════ */
+    /* ── 집 모양 핀 (호갱노노 스타일) ─────────────────────── */
     .pin {
-      padding: 4px 10px;
-      background: var(--color-pin-default-bg);
-      border: 1px solid var(--color-pin-default-border);
-      border-radius: var(--radius-pill);
-      font-size: 12px; font-weight: 600;
-      color: var(--color-pin-default-text);
-      white-space: nowrap; cursor: pointer;
-      box-shadow: var(--shadow-md);
-      font-family: 'Pretendard', system-ui, sans-serif;
+      display: inline-flex; flex-direction: column; align-items: center;
+      cursor: pointer; font-family: 'Noto Sans KR', 'Pretendard', system-ui, sans-serif;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.28));
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+    .pin:hover { transform: translateY(-3px); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.36)); }
+    /* 선택된 단지 핀 강조 — 흰 외곽 링 + 글로우 + 확대 + 펄스 (지도에서 식별) */
+    .pin.pin-selected {
+      z-index: 10;
+      filter:
+        drop-shadow(1.6px 0 0 #fff) drop-shadow(-1.6px 0 0 #fff)
+        drop-shadow(0 1.6px 0 #fff) drop-shadow(0 -1.6px 0 #fff)
+        drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+      animation: pinSelPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pinSelPulse {
+      0%, 100% { transform: translateY(-5px) scale(1.18); }
+      50%      { transform: translateY(-7px) scale(1.26); }
+    }
+    /* 지붕 (삼각형) */
+    .pin-roof {
+      width: 0; height: 0;
+      border-left: 24px solid transparent;
+      border-right: 24px solid transparent;
+      border-bottom: 16px solid #3b82f6;
+    }
+    /* 몸체 (직사각형 + 아래 화살표) */
+    .pin-body {
+      width: 48px; min-height: 36px;
+      background: #3b82f6;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4px 4px 10px;
+      position: relative;
+      border-radius: 0 0 3px 3px;
+    }
+    .pin-body::after {
+      content: '';
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 9px solid #3b82f6;
+    }
+    .pin-time {
+      font-size: 13px; font-weight: 800; color: #fff;
+      line-height: 1.2; font-feature-settings: 'tnum';
+      white-space: nowrap;
+    }
+    .pin-sub {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.82);
+      line-height: 1.1; white-space: nowrap;
+    }
+    .pin-crown {
+      font-size: 14px; line-height: 1; margin-bottom: 1px;
+    }
+    /* 통근시간 색상 */
+    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
+    .pin-t1 .pin-body { background:#16a34a; }
+    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
+    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
+    .pin-t2 .pin-body { background:#3b82f6; }
+    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
+    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
+    .pin-t3 .pin-body { background:#f97316; }
+    .pin-t3 .pin-body::after { border-top-color:#f97316; }
+    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
+    .pin-t4 .pin-body { background:#ef4444; }
+    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
+    /* 추천 핀 — 핑크 */
+    .pin-best .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-best .pin-body { background:#C45ED6; }
+    .pin-best .pin-body::after { border-top-color:#C45ED6; }
+    /* 복수 평형 뱃지 */
+    .pin-multi {
+      position: absolute; top: -6px; right: -6px;
+      background: white; color: #374151;
+      border: 1.5px solid #d1d5db; border-radius: 99px;
+      font-size: 9px; font-weight: 700;
+      padding: 0 4px; line-height: 16px;
       font-feature-settings: 'tnum';
-      transition: transform 120ms ease, box-shadow 120ms ease;
     }
-    .pin:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-    .pin-best {
-      background: var(--color-pin-recommended-bg);
-      color: var(--color-pin-recommended-text);
-      border-color: var(--color-pin-recommended-bg);
-      box-shadow: var(--shadow-pin-recommended);
-    }
+    /* 직장 핀 */
     .pin-lookup {
-      background: #f59e0b; color: #fff;
-      border-color: #d97706; font-weight: 700;
-      box-shadow: 0 2px 8px rgba(245,158,11,0.45);
+      display: inline-block; padding: 5px 12px;
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+      white-space: nowrap; cursor: pointer; line-height: 1.4;
+      background:#f59e0b; color:#fff; border:1px solid #d97706;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    .pin-workplace {
-      background: var(--color-pin-selected-bg);
-      color: var(--color-pin-selected-text);
-      border: 2px solid var(--color-brand-primary);
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
+    /* 오피스 마커 — 원형 위치핀 SVG 픽토그램, 집핀과 완전히 다른 형태 */
+    .pin-workplace-wrap, .pin-workplace-2-wrap {
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+      cursor: pointer;
     }
-    .pin-workplace-2 {
-      background: #1a56db;
-      color: #fff;
-      border: 2px solid #1e429f;
-      padding: 6px 14px;
-      font-size: 12.5px; font-weight: 700;
-      letter-spacing: 0.02em;
+    /* 지도 좌상단 범례 */
+    #map-legend {
+      position: absolute; top: 10px; left: 10px; z-index: 200;
+      background: rgba(21,18,26,0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--color-border-default);
+      border-radius: 12px;
+      padding: 14px 20px; min-width: 160px;
+      font-size: 13px; font-family: 'Noto Sans KR', 'Pretendard', sans-serif;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4); pointer-events: none;
+    }
+    #map-legend .lg-title {
+      font-weight: 700; font-size: 11px;
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #map-legend .lg-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px; line-height: 1.4;
+      color: var(--color-text-secondary); font-size: 13px; font-weight: 500;
+    }
+    #map-legend .lg-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.12);
+    }
+    #map-legend .lg-row:last-child { margin-bottom: 0; }
+    #map-legend .lg-divider {
+      border: none; border-top: 1px solid var(--color-border-default);
+      margin: 8px 0;
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1061,7 +1203,7 @@
       display: flex; align-items: center; gap: 4px;
       font-size: 11px; font-weight: 600;
       color: var(--color-text-secondary);
-      background: rgba(255,255,255,0.92);
+      background: rgba(21,18,26,0.92);
       border: 1px solid var(--color-border-default);
       border-radius: 5px; padding: 2px 7px;
       cursor: pointer; user-select: none;
@@ -1085,16 +1227,10 @@
     .compare-bar__btn:disabled { background: var(--color-bg-muted); color: var(--color-text-tertiary); cursor: not-allowed; }
     .compare-bar__clear {
       padding: 5px 10px; border-radius: 6px; border: 1px solid var(--color-border-default);
-      background: white; color: var(--color-text-secondary);
+      background: var(--color-bg-panel); color: var(--color-text-secondary);
       font-size: 12px; cursor: pointer;
     }
-    /* ── 단지 상세 모달 (spec-17) ────────────────────────────── */
-    .detail-overlay {
-      position: fixed; inset: 0; z-index: 600;
-      background: rgba(0,0,0,0.48);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .detail-overlay.hidden { display: none; }
+    /* ── 단지 상세 사이드 패널 (spec-17) ─────────────────────── */
 
     /* spec-18: 경로 상세 팝업 */
     .route-overlay {
@@ -1104,13 +1240,13 @@
     }
     .route-overlay.hidden { display: none; }
     .route-panel {
-      background: white; border-radius: 20px 20px 0 0;
+      background: var(--color-bg-panel); border-radius: 20px 20px 0 0;
       width: 100%; max-width: 640px;
       max-height: 70vh; display: flex; flex-direction: column;
       overflow: hidden;
     }
     .route-panel__drag {
-      width: 40px; height: 4px; background: #ddd; border-radius: 2px;
+      width: 40px; height: 4px; background: var(--color-bg-muted); border-radius: 2px;
       margin: 10px auto 6px; flex-shrink: 0;
     }
     .route-panel__header {
@@ -1137,7 +1273,7 @@
       padding: 5px 14px; border-radius: 16px;
       font-size: 13px; font-weight: 600;
       border: 1.5px solid var(--color-border-default);
-      cursor: pointer; background: white;
+      cursor: pointer; background: var(--color-bg-panel);
       color: var(--color-text-secondary);
       transition: background 150ms, color 150ms;
     }
@@ -1147,50 +1283,53 @@
     }
 
     .detail-panel {
-      background: white; border-radius: 20px 20px 0 0;
-      width: 100%; max-width: 640px;
-      max-height: 85vh; display: flex; flex-direction: column;
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.22);
+      background: var(--color-bg-panel);
+      width: 0; min-width: 0; overflow: hidden;
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-left: none;
+      transition: width .25s ease, border .25s ease;
     }
-    .detail-panel__drag {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #ddd; margin: 12px auto 0; flex-shrink: 0;
+    .detail-panel.open {
+      width: 480px; min-width: 280px;
+      border-left: 1px solid var(--color-border-strong);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 10px 20px 0;
-      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+      padding: 14px 16px 0;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
-    .detail-panel__title { font-size: 18px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
     .detail-panel__close {
-      flex-shrink: 0; padding: 4px 10px; border-radius: 6px;
-      border: 1px solid var(--color-border-default); background: white;
-      cursor: pointer; font-size: 13px; color: var(--color-text-secondary);
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid var(--color-border-default); background: var(--color-bg-panel);
+      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
       display: flex; padding: 10px 20px 0; flex-shrink: 0;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--color-border-default);
     }
     .detail-tab-btn {
       flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 600;
-      border: none; background: none; cursor: pointer; color: #aaa;
+      border: none; background: none; cursor: pointer; color: var(--color-text-tertiary);
       border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
     }
     .detail-tab-btn.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
-    .detail-panel__body { flex: 1; overflow-y: auto; padding: 16px 20px 32px; }
+    .detail-panel__body { flex: 1; overflow-y: auto; padding: 0 0 24px; background: var(--color-bg-subtle); }
     .detail-tab-pane { display: none; }
     .detail-tab-pane.active { display: block; }
     .detail-section { margin-bottom: 20px; }
     .detail-section__title {
-      font-size: 11px; font-weight: 700; color: #aaa;
+      font-size: 11px; font-weight: 700; color: var(--color-text-tertiary);
       letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px;
     }
     .detail-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
-    .detail-kv__label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
-    .detail-kv__value { font-size: 14px; font-weight: 600; color: #1a1a1a; }
-    .detail-kv__sub { font-size: 12px; font-weight: 500; color: #8A857E; }
+    .detail-kv__label { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 2px; }
+    .detail-kv__value { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+    .detail-kv__sub { font-size: 12px; font-weight: 500; color: var(--color-text-tertiary); }
     /* spec-31: 경사 인디케이터 — 이모지 금지, CSS 막대 4단계 */
     .slope-ind { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 6px; }
-    .slope-ind > i { width: 4px; background: #E8E6E3; border-radius: 1px; display: inline-block; }
+    .slope-ind > i { width: 4px; background: var(--color-bg-muted); border-radius: 1px; display: inline-block; }
     .slope-ind > i:nth-child(1) { height: 4px; }
     .slope-ind > i:nth-child(2) { height: 7px; }
     .slope-ind > i:nth-child(3) { height: 10px; }
@@ -1198,32 +1337,32 @@
     .slope-ind[data-lv="1"] > i:nth-child(-n+1),
     .slope-ind[data-lv="2"] > i:nth-child(-n+2),
     .slope-ind[data-lv="3"] > i:nth-child(-n+3),
-    .slope-ind[data-lv="4"] > i:nth-child(-n+4) { background: #A82E1B; }
+    .slope-ind[data-lv="4"] > i:nth-child(-n+4) { background: #C45ED6; }
     .detail-trade-row {
       display: grid; grid-template-columns: 90px 1fr 1fr 40px;
-      gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid var(--color-border-default); font-size: 13px;
     }
     .detail-trade-row:last-child { border-bottom: none; }
-    .detail-trade-date { color: #aaa; font-size: 12px; }
+    .detail-trade-date { color: var(--color-text-tertiary); font-size: 12px; }
     .detail-trade-amount { font-weight: 700; }
-    .detail-trade-floor { color: #aaa; font-size: 12px; text-align: right; }
+    .detail-trade-floor { color: var(--color-text-tertiary); font-size: 12px; text-align: right; }
     .detail-poi-row {
       display: flex; gap: 8px; align-items: center;
-      padding: 7px 4px; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+      padding: 7px 4px; border-bottom: 1px solid var(--color-border-default); font-size: 13px;
       cursor: pointer; border-radius: 4px; transition: background 0.1s;
     }
     .detail-poi-row:last-child { border-bottom: none; }
-    .detail-poi-row:hover { background: #f5f7ff; }
-    .detail-poi-row.poi-active { background: #EEF3FF; }
-    .detail-poi-dist { color: #aaa; font-size: 12px; margin-left: auto; white-space: nowrap; }
+    .detail-poi-row:hover { background: var(--color-bg-subtle); }
+    .detail-poi-row.poi-active { background: var(--color-brand-bg-subtle); }
+    .detail-poi-dist { color: var(--color-text-tertiary); font-size: 12px; margin-left: auto; white-space: nowrap; }
     .detail-price-badge {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
       font-size: 12px; font-weight: 700;
     }
-    .detail-price-badge--up { background: #fff0f0; color: #e53e3e; }
-    .detail-price-badge--down { background: #ebf8ff; color: #2b6cb0; }
-    .detail-price-badge--flat { background: #f5f5f5; color: #666; }
-    .detail-loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+    .detail-price-badge--up { background: rgba(192,57,43,0.18); color: #E8857A; }
+    .detail-price-badge--down { background: rgba(36,113,163,0.18); color: #7FB4DA; }
+    .detail-price-badge--flat { background: var(--color-bg-muted); color: var(--color-text-secondary); }
+    .detail-loading { text-align: center; padding: 40px; color: var(--color-text-tertiary); font-size: 14px; }
     /* POI 커스텀 핀 */
     .poi-custom-pin { display: flex; flex-direction: column; align-items: center; }
     .poi-pin__bubble {
@@ -1235,10 +1374,18 @@
     .poi-pin__dist { color: #aab; font-size: 11px; margin-top: 1px; }
     .poi-pin__stem { width: 2px; height: 7px; background: #1c1c2e; }
     .poi-pin__dot {
-      width: 12px; height: 12px; background: #e53e3e;
+      width: 12px; height: 12px; background: #C45ED6;
       border: 2.5px solid #fff; border-radius: 50%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }
+    /* spec-39: POI 위치 확인 실패 안내 토스트 */
+    .poi-notice {
+      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(12px);
+      background: rgba(28,28,46,0.95); color: #fff; font-size: 13px; font-weight: 500;
+      padding: 10px 18px; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      z-index: 600; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    }
+    .poi-notice.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     .compare-overlay {
       position: fixed; inset: 0; z-index: 500;
@@ -1252,8 +1399,8 @@
     .chat-panel {
       position: fixed; top: 54px; right: 0;
       width: 440px; height: calc(100vh - 54px);
-      background: #fff; z-index: 850;
-      box-shadow: -6px 0 24px rgba(0,0,0,0.13);
+      background: var(--color-bg-panel); z-index: 850;
+      box-shadow: -6px 0 24px rgba(0,0,0,0.5);
       border-radius: 16px 0 0 16px;
       display: flex; flex-direction: column;
       transition: transform 0.25s ease;
@@ -1266,11 +1413,11 @@
       background: transparent; transition: background 0.15s;
     }
     .chat-panel__resize:hover,
-    .chat-panel__resize.dragging { background: rgba(91,155,213,0.35); }
+    .chat-panel__resize.dragging { background: rgba(255,107,158,0.35); }
     .chat-panel__header {
       display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px 12px; border-bottom: 1px solid #f0f0f0;
-      background: #1c1c2e; border-radius: 16px 0 0 0; color: #fff;
+      padding: 14px 16px 12px; border-bottom: 1px solid var(--color-border-default);
+      background: var(--color-bg-subtle); border-radius: 16px 0 0 0; color: var(--color-text-primary);
     }
     .chat-panel__avatar {
       width: 32px; height: 32px; border-radius: 50%;
@@ -1280,7 +1427,7 @@
     }
     .chat-panel__apt-name { flex: 1; font-size: 14px; font-weight: 600; }
     .chat-panel__close {
-      background: none; border: none; color: rgba(255,255,255,0.6);
+      background: none; border: none; color: var(--color-text-tertiary);
       font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
     }
     .chat-panel__messages {
@@ -1288,42 +1435,43 @@
     }
     .chat-msg { max-width: 88%; font-size: 13px; line-height: 1.5; padding: 9px 13px; border-radius: 14px; }
     .chat-msg--user { align-self: flex-end; background: var(--color-brand-primary); color: #fff; border-radius: 14px 14px 4px 14px; }
-    .chat-msg--assistant { align-self: flex-start; background: #f4f4f8; color: #222; border-radius: 14px 14px 14px 4px; }
+    .chat-msg--assistant { align-self: flex-start; background: var(--color-bg-subtle); color: var(--color-text-primary); border-radius: 14px 14px 14px 4px; }
     .chat-panel__suggestions {
       padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 7px;
     }
     .chat-chip {
-      background: #f0f3ff; color: var(--color-brand-primary);
-      border: 1px solid #dde4ff; border-radius: 20px;
+      background: var(--color-brand-bg-subtle); color: var(--color-brand-primary);
+      border: 1px solid var(--color-border-default); border-radius: 20px;
       font-size: 12px; padding: 5px 12px; cursor: pointer;
       white-space: nowrap; transition: background 0.15s;
     }
-    .chat-chip:hover { background: #dde4ff; }
+    .chat-chip:hover { background: var(--color-bg-subtle); }
     .chat-attachment-bar { padding: 0 12px 4px; }
     .chat-attach-preview {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      background: #f0f3ff; border-radius: 10px; padding: 6px 10px; font-size: 12px;
+      background: var(--color-brand-bg-subtle); border-radius: 10px; padding: 6px 10px; font-size: 12px;
     }
     .chat-attach-preview img { max-height: 56px; border-radius: 6px; object-fit: cover; }
     .chat-attach-preview span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chat-attach-preview button {
-      background: none; border: none; cursor: pointer; color: #aaa;
+      background: none; border: none; cursor: pointer; color: var(--color-text-tertiary);
       font-size: 15px; line-height: 1; padding: 0 2px; flex-shrink: 0;
     }
     .chat-attach-btn {
-      background: none; border: 1px solid #dde; border-radius: 50%;
+      background: none; border: 1px solid var(--color-border-default); border-radius: 50%;
       width: 36px; height: 36px; font-size: 17px; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; color: #666;
+      display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary);
     }
-    .chat-attach-btn:hover { background: #f0f3ff; }
+    .chat-attach-btn:hover { background: var(--color-bg-subtle); }
     .chat-panel__input-row {
       display: flex; gap: 8px; padding: 10px 12px 14px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid var(--color-border-default);
     }
     .chat-panel__input-row input {
-      flex: 1; border: 1px solid #e0e0e0; border-radius: 22px;
+      flex: 1; border: 1px solid var(--color-border-default); border-radius: 22px;
       padding: 8px 14px; font-size: 13px; outline: none;
       font-family: inherit;
+      background: var(--color-bg-subtle); color: var(--color-text-primary);
     }
     .chat-panel__input-row input:focus { border-color: var(--color-brand-primary); }
     .chat-panel__send {
@@ -1333,24 +1481,24 @@
     }
     .chat-price-links {
       display: flex; align-items: center; gap: 7px;
-      padding: 7px 14px; background: #f8f8fb;
-      border-bottom: 1px solid #eee; font-size: 11.5px; flex-shrink: 0;
+      padding: 7px 14px; background: var(--color-bg-subtle);
+      border-bottom: 1px solid var(--color-border-default); font-size: 11.5px; flex-shrink: 0;
     }
-    .chat-price-links__label { color: #999; margin-right: 2px; }
+    .chat-price-links__label { color: var(--color-text-tertiary); margin-right: 2px; }
     .chat-price-links a {
-      color: #555; text-decoration: none;
-      padding: 3px 10px; border: 1px solid #ddd;
-      border-radius: 12px; background: #fff;
+      color: var(--color-text-secondary); text-decoration: none;
+      padding: 3px 10px; border: 1px solid var(--color-border-default);
+      border-radius: 12px; background: var(--color-bg-panel);
       transition: background 0.15s;
     }
-    .chat-price-links a:hover { background: #f0f3ff; color: var(--color-brand-primary); border-color: #c5d0ff; }
+    .chat-price-links a:hover { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); border-color: var(--color-brand-primary); }
     .dp__friend { cursor: pointer; }
     .dp__friend:hover { opacity: 0.85; }
     .compare-panel {
-      background: white; border-radius: 16px;
+      background: var(--color-bg-panel); border-radius: 16px;
       max-width: 860px; width: 100%;
       max-height: 88vh; overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       padding: 20px 22px 24px;
     }
     .compare-panel__head {
@@ -1361,7 +1509,7 @@
     .compare-panel__close {
       padding: 4px 12px; border-radius: 6px;
       border: 1px solid var(--color-border-default);
-      background: white; cursor: pointer; font-size: 13px;
+      background: var(--color-bg-panel); cursor: pointer; font-size: 13px;
       color: var(--color-text-secondary);
     }
     .compare-table {
@@ -1413,7 +1561,7 @@
     .pin-tooltip {
       position: fixed; z-index: 900;
       width: 310px;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-strong);
       border-radius: 12px;
       box-shadow: var(--shadow-xl);
@@ -1524,10 +1672,10 @@
        ════════════════════════════════════════════════════════ */
     .dp__header {
       position: sticky; top: 0; z-index: 10;
-      background: linear-gradient(135deg, var(--red-600) 0%, var(--red-800) 100%);
-      padding: 14px 16px;
-      display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 2px 8px rgba(168, 46, 27, 0.20);
+      background: var(--grad-accent);
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 2px 8px rgba(255, 107, 158, 0.25);
     }
     .dp__back {
       background: rgba(255, 255, 255, 0.18);
@@ -1545,7 +1693,7 @@
       border-color: rgba(255, 255, 255, 0.5);
     }
     .dp__name {
-      font-size: 17px; font-weight: 700;
+      font-size: 15px; font-weight: 700;
       letter-spacing: -0.01em;
       color: white;
       flex: 1; min-width: 0;
@@ -1559,64 +1707,136 @@
       letter-spacing: 0.05em;
     }
 
+    /* spec-42: 인스타 클린카드 — HERO/섹션을 흰 소프트카드로 */
     .dp__hero {
-      padding: 18px 16px 16px;
-      background: white;
-      border-bottom: 1.5px solid var(--color-border-strong);
+      padding: 16px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--color-border-default);
+      border-radius: 16px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+      margin: 12px 12px 0;
     }
     .dp__meta {
-      font-size: 13.5px;
-      color: var(--color-text-primary);
+      font-size: 13px;
+      color: var(--color-text-tertiary);
       font-feature-settings: 'tnum';
-      margin-bottom: 12px;
+      margin-bottom: 13px;
       font-weight: 500;
     }
+    .dp__meta strong { color: var(--color-text-primary); font-weight: 700; }
+    /* 스탯 줄 (통근·최저가·세대) — 하나의 스트립 + 얇은 구분선 */
+    .dp-statrow {
+      display: flex; margin-bottom: 14px;
+      background: var(--color-bg-subtle);
+      border-radius: 14px; padding: 15px 4px;
+    }
+    .dp-stat {
+      flex: 1; min-width: 0; text-align: center;
+      position: relative; padding: 0 8px;
+    }
+    .dp-stat + .dp-stat::before {
+      content: ''; position: absolute; left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 1px; height: 28px;
+      background: var(--color-border-default);
+    }
+    .dp-stat-num {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.03em;
+      font-feature-settings: 'tnum'; color: var(--color-text-primary);
+      line-height: 1.15; white-space: nowrap;
+    }
+    .dp-stat-num.clr-up { color: #C0392B; }
+    .dp-stat-num.clr-dn { color: #2471A3; }
+    .dp-stat-unit {
+      font-size: 12px; font-weight: 700;
+      color: var(--color-text-tertiary); margin-left: 1.5px;
+      letter-spacing: 0;
+    }
+    .dp-stat-label {
+      font-size: 11px; color: var(--color-text-tertiary);
+      margin-top: 6px; font-weight: 600; letter-spacing: 0.01em;
+      line-height: 1.35; white-space: nowrap;
+    }
+    .dp-stat-py { display: inline; white-space: nowrap; font-size: 9px; font-weight: 600; opacity: 0.85; }
+    /* 알약 칩 */
+    .dp-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+    .dp-chip {
+      font-size: 12px; font-weight: 700; padding: 6px 13px;
+      border-radius: 9999px; background: var(--color-bg-muted);
+      color: var(--color-text-secondary); white-space: nowrap;
+      letter-spacing: -0.01em;
+    }
+    .dp-chip.brand { background: var(--color-brand-bg-subtle); color: var(--color-brand-primary); }
+    .dp-chip.cool  { background: var(--blue-100); color: var(--blue-700); }
+    /* 시세 한 줄 결론 (KPI 3중복 대체) */
+    .dp-verdict {
+      background: var(--color-bg-subtle); border-radius: 12px;
+      padding: 13px 14px; font-size: 14px; font-weight: 600;
+      line-height: 1.5; color: var(--color-text-primary);
+    }
+    .dp-verdict b { font-weight: 800; }
+    .dp-verdict .clr-up { color: #C0392B; }
+    .dp-verdict .clr-dn { color: #2471A3; }
+    .dp-verdict-sub {
+      display: block; font-size: 12px; color: var(--color-text-tertiary);
+      margin-top: 5px; font-weight: 500; font-feature-settings: 'tnum';
+    }
     .dp__commute {
-      font-size: 14px; font-weight: 700;
+      font-size: 13px; font-weight: 700;
       color: var(--blue-700);
       font-feature-settings: 'tnum';
-      margin-bottom: 14px;
-      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
       background: var(--blue-100);
-      padding: 7px 13px;
+      padding: 5px 11px;
       border-radius: var(--radius-pill);
     }
+    /* spec-42: 친구 한마디 — 채팅형(헤더줄 + 본문 풀폭) */
     .dp__friend {
-      display: flex; gap: 12px; align-items: flex-start;
-      background: linear-gradient(180deg, #FDF4F2 0%, #FBEDE9 100%);
-      border-radius: 10px;
-      padding: 13px 14px 14px;
+      display: block;
+      background: linear-gradient(180deg, rgba(196,94,214,0.12) 0%, rgba(124,63,230,0.05) 100%);
+      border-radius: 14px;
+      padding: 14px 16px 15px;
     }
     .dp__friend.empty {
       background: var(--color-bg-subtle);
     }
-    .dp__friend-body { flex: 1; min-width: 0; }
+    .dp__friend-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
     .dp__friend-label {
-      font-size: 11px; font-weight: 700;
+      font-size: 12.5px; font-weight: 800;
       color: var(--color-brand-primary);
-      letter-spacing: 0.08em; text-transform: uppercase;
-      margin-bottom: 5px;
+      letter-spacing: -0.01em; flex: 1;
     }
     .dp__friend.empty .dp__friend-label {
       color: var(--color-text-tertiary);
     }
+    .dp__friend-cta {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-brand-primary);
+      background: rgba(255, 107, 158, 0.14);
+      padding: 4px 10px; border-radius: 9999px;
+      white-space: nowrap; transition: background 120ms;
+    }
+    .dp__friend:hover .dp__friend-cta { background: rgba(255, 107, 158, 0.24); }
     .dp__friend-avatar {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 26px; height: 26px;
       border-radius: 50%;
-      background: var(--color-brand-primary);
+      background: var(--grad-accent);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(168, 46, 27, 0.25);
-      margin-top: 1px;
+      font-size: 13px; font-weight: 700;
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.30);
     }
     .dp__friend.empty .dp__friend-avatar {
       background: var(--color-text-tertiary);
       box-shadow: none;
     }
     .dp__friend-text {
-      font-size: 15px; line-height: 1.6;
+      font-size: 14px; line-height: 1.75;
       color: var(--color-text-primary);
       font-weight: 500;
       white-space: pre-line;
@@ -1629,11 +1849,17 @@
     }
 
     .dp__section {
-      border-bottom: 1px solid var(--color-border-strong);
+      background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--color-border-default);
+      border-radius: 16px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+      margin: 12px 12px 0;
+      overflow: hidden;
+      transition: box-shadow 160ms ease;
     }
-    .dp__section:last-child { border-bottom: none; }
+    .dp__section:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.35); }
     .dp__section-head {
-      padding: 16px;
+      padding: 15px 16px;
       display: flex; align-items: center; gap: 12px;
       cursor: pointer; user-select: none;
       transition: background 120ms;
@@ -1641,30 +1867,39 @@
     .dp__section-head:hover { background: var(--color-bg-subtle); }
     .dp__section-icon {
       flex-shrink: 0;
-      width: 32px; height: 32px;
-      border-radius: 8px;
+      width: 34px; height: 34px;
+      border-radius: 10px;
       background: var(--color-bg-subtle);
-      border: 1px solid var(--color-border-default);
+      border: none;
       display: flex; align-items: center; justify-content: center;
-      color: var(--color-text-secondary);
+      color: var(--color-text-tertiary);
       transition: all 200ms;
     }
     .dp__section-icon svg { width: 17px; height: 17px; }
+    /* spec-42: 섹션별 컬러 아이콘 (식별성↑·예쁨↑) */
+    .dp__section-icon.ic-commute { background: var(--blue-100);  color: var(--blue-700); }
+    .dp__section-icon.ic-price   { background: var(--red-50);    color: var(--color-brand-primary); }
+    .dp__section-icon.ic-trade   { background: var(--amber-100); color: var(--amber-700); }
+    .dp__section-icon.ic-poi     { background: var(--green-100); color: var(--green-700); }
+    .dp__section-icon.ic-bld     { background: var(--color-bg-muted); color: var(--color-text-secondary); }
     .dp__section-titlebox {
       flex: 1; min-width: 0;
-      display: flex; flex-direction: column; gap: 1px;
+      display: flex; flex-direction: column; gap: 2px;
     }
     .dp__section-title {
       font-size: 14.5px; font-weight: 700;
       color: var(--color-text-primary);
-      letter-spacing: -0.005em;
+      letter-spacing: -0.01em;
     }
     .dp__section-preview {
-      font-size: 13px; color: var(--color-text-secondary);
+      font-size: 12.5px; color: var(--color-text-tertiary);
       font-feature-settings: 'tnum';
       margin-top: 3px;
       font-weight: 500;
     }
+    /* 프리뷰 속 핵심 숫자 강조 (스캔성↑) */
+    .dp__section-preview .num { color: var(--color-text-secondary); font-weight: 700; }
+    .dp__section-preview strong { font-weight: 700; }
     .dp__section-chev {
       width: 20px; height: 20px;
       display: flex; align-items: center; justify-content: center;
@@ -1673,12 +1908,14 @@
       flex-shrink: 0;
     }
     .dp__section.open .dp__section-chev { transform: rotate(180deg); }
-    .dp__section.open .dp__section-icon {
-      background: var(--color-brand-bg-subtle);
-      color: var(--color-brand-primary);
+    .dp__section.open .dp__section-icon { transform: scale(1.04); }
+    .dp__section-body { display: none; padding: 14px 16px 16px; }
+    .dp__section.open .dp__section-body {
+      display: block;
+      border-top: 1px solid var(--color-bg-muted);
+      margin: 0 16px;
+      padding: 14px 0 16px;
     }
-    .dp__section-body { display: none; padding: 0 16px 16px; }
-    .dp__section.open .dp__section-body { display: block; }
 
     /* 통근 경로 */
     .dp-route {
@@ -1689,7 +1926,7 @@
       margin-bottom: 6px;
     }
     .dp-route.best {
-      background: white;
+      background: var(--color-bg-panel);
       border-color: var(--color-brand-primary);
       border-width: 1.5px;
     }
@@ -1753,7 +1990,7 @@
     .dp-route-more-btn {
       width: 100%;
       padding: 9px;
-      background: white;
+      background: var(--color-bg-panel);
       border: 1px solid var(--color-border-default);
       border-radius: 8px;
       font-size: 12px; font-weight: 600;
@@ -1826,7 +2063,7 @@
       border: 1px solid var(--color-border-strong);
       font-size: 12.5px; font-weight: 600;
       cursor: pointer; font-family: inherit;
-      background: white;
+      background: var(--color-bg-panel);
       color: var(--color-text-secondary);
       font-feature-settings: 'tnum';
       transition: all 100ms;
@@ -1929,14 +2166,13 @@
     }
 
     /* ── 입체감을 위한 패널 분리 ─────────────────────────── */
-    .stats-panel,
     .bucket-section,
     .rec-card,
     .list-card {
-      background: white;
+      background: var(--color-bg-panel);
     }
     .bucket-body {
-      background: #FAF9F7;  /* 매우 살짝 톤 다운 */
+      background: var(--color-bg-subtle);  /* 매우 살짝 톤 다운 */
     }
   </style>
 </head>
@@ -2007,29 +2243,32 @@
 </header>
 
 <main id="main" style="display:none;">
-  <div class="summary-bar" id="summary"></div>
+  <div class="combined-bar">
+    <div class="summary-bar" id="summary"></div>
+    <div class="sort-bar" id="sort-bar">
+      <span style="font-size:13px;color:var(--color-text-secondary);padding:0 16px;font-weight:500">
+        정렬 기준 <span id="sort-badge" style="display:none;color:var(--pink-300);font-weight:700"></span>
+      </span>
+    </div>
+  </div>
+
   <div class="result-layout">
-    <!-- 좌측: fav-tabs(상단 고정) + cards-panel(스크롤) -->
+    <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
         <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
         <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
       </div>
-      <div class="sort-bar" id="sort-bar">
-        <span class="sort-bar__label">정렬순서</span>
-        <div class="sort-select-wrap">
-          <label>1순위</label>
-          <select class="sort-select" id="sort-1" onchange="onSortChange()"></select>
+      <div class="sort-panel" id="sort-panel">
+        <div class="sort-panel-header">
+          <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:0;height:auto;gap:6px">
+            <span class="sort-panel-title">정렬 기준</span>
+            <span class="sort-arrow">▾</span>
+          </button>
+          <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
         </div>
-        <div class="sort-select-wrap">
-          <label>2순위</label>
-          <select class="sort-select" id="sort-2" onchange="onSortChange()"></select>
-        </div>
-        <div class="sort-select-wrap">
-          <label>3순위</label>
-          <select class="sort-select" id="sort-3" onchange="onSortChange()"></select>
-        </div>
-        <button class="sort-bar__reset" onclick="resetSort()">초기화</button>
+        <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+        <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
       </div>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -2053,25 +2292,23 @@
       </div>
     </div>
 
-    <!-- spec-17: 단지 상세 모달 -->
-    <div class="detail-overlay hidden" id="detail-overlay" onclick="closeDetailOnBg(event)">
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-panel__drag"></div>
-        <div class="detail-panel__header">
-          <h2 class="detail-panel__title" id="detail-title">-</h2>
-          <button class="detail-panel__close" onclick="closeDetail()">✕ 닫기</button>
-        </div>
-        <div class="detail-panel__tabs">
-          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-        </div>
-        <div class="detail-panel__body" id="detail-body">
-          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-          <div class="detail-tab-pane active" id="detail-tab-info"></div>
-          <div class="detail-tab-pane" id="detail-tab-price"></div>
-          <div class="detail-tab-pane" id="detail-tab-poi"></div>
-        </div>
+    <!-- spec-17: 단지 상세 사이드 패널 -->
+    <div class="resize-handle detail-resize-handle" id="detail-resize-handle" style="display:none"></div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-panel__header">
+        <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-panel__close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-panel__tabs">
+        <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+        <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+      </div>
+      <div class="detail-panel__body" id="detail-body">
+        <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+        <div class="detail-tab-pane active" id="detail-tab-info"></div>
+        <div class="detail-tab-pane" id="detail-tab-price"></div>
+        <div class="detail-tab-pane" id="detail-tab-poi"></div>
       </div>
     </div>
 
@@ -2111,8 +2348,16 @@
     <!-- spec-19: 드래그 리사이즈 핸들 -->
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
-    <div class="map-panel">
+    <div class="map-panel" style="position:relative">
       <div id="map"></div>
+      <div id="map-legend">
+        <div class="lg-title">통근시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <hr class="lg-divider">
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>추천 단지</span></div>
+      </div>
     </div>
   </div>
 </main>
@@ -2223,9 +2468,8 @@ let aptOverlayMap = {};   // apt_seq → CustomOverlay (핀 show/hide용)
 let panelMode = 'list';   // 'list' | 'detail'
 let detailChart = null;
 let detailChartData = null;
-let _poiMarker = null;
+let _poiMarkers = new Map();  // spec-40: row(el) → { overlay, pos } (다중 POI 핀 유지)
 let _poiInfoWindow = null;
-let _activePoiRow = null;
 let _currentAptSeq = null;
 let currentTabKey = null;
 let currentDetailCard = null;
@@ -2243,6 +2487,15 @@ function fmtPrice(manwon){
   if(e&&m) return `${e}억 ${m.toLocaleString()}만`;
   if(e)    return `${e}억`;
   return `${m.toLocaleString()}만`;
+}
+// spec-42: 단위(억/만)를 작게 — 스탯 숫자 가독성·정렬용
+function fmtPriceRich(manwon){
+  if(!manwon) return '-';
+  const e=Math.floor(manwon/10000), m=manwon%10000;
+  const u=(s)=>`<span class="dp-stat-unit">${s}</span>`;
+  if(e&&m) return `${e}${u('억')} ${m.toLocaleString()}${u('만')}`;
+  if(e)    return `${e}${u('억')}`;
+  return `${m.toLocaleString()}${u('만')}`;
 }
 function shortPrice(manwon){
   if(!manwon) return '-';
@@ -2398,22 +2651,32 @@ function renderStatsPanel(data){
   const s = data.stats || {};
   if(!s.total) return '';
 
-  // 통근 × 평균가 — 미니 가로 막대 (최저 버킷만 빨강 강조)
+  // 통근 × 평균가 — 범례와 동일한 색상 적용
+  // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
+  const bucketColor = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
+    if (start <= 45) return '#f97316'; // 46~60분 → 주황
+    return '#f97316';
+  };
+  // 라벨을 범례 텍스트로 정규화
+  const bucketLabel = lbl => {
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '30분 이하';
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
+    if (start <= 31) return '31~45분';
+    return '46~60분';
+  };
   let curveHtml = '';
   if(s.commute_curve && s.commute_curve.length){
     const maxPrice = Math.max(...s.commute_curve.map(b=>b.avg_price||0));
-    const minPrice = Math.min(...s.commute_curve.filter(b=>b.avg_price).map(b=>b.avg_price));
     const rows = s.commute_curve.map(b=>{
       const pct = maxPrice ? Math.max(8, Math.round((b.avg_price||0)/maxPrice*100)) : 0;
-      const isCheap = b.avg_price === minPrice;
-      // 라벨 정리: "30분 이내"→"≤30분", "50분 초과"→">50분"
-      const lbl = (b.label||'')
-        .replace(/^(\d+)분 이내$/, '≤$1분')
-        .replace(/^(\d+)분 초과$/, '>$1분')
-        .replace(/^(\d+)~(\d+)분$/, '$1~$2분');
-      return `<div class="minibar-row ${isCheap?'cheap':''}">
-        <span class="minibar-row__label num">${escHtml(lbl)}</span>
-        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%"></div></div>
+      const color = bucketColor(b.label||'');
+      return `<div class="minibar-row">
+        <span class="minibar-row__dot" style="background:${color}"></span>
+        <span class="minibar-row__label num">${escHtml(bucketLabel(b.label||''))}</span>
+        <div class="minibar-row__track"><div class="minibar-row__fill" style="width:${pct}%;background:${color}"></div></div>
         <span class="minibar-row__value num">${shortPrice(b.avg_price).replace('억','')}</span>
       </div>`;
     }).join('');
@@ -2510,6 +2773,31 @@ window.filterMapPins = function(seqs) {
   });
 };
 
+// spec-38: 선택 단지 핀 강조 (지도에서 식별)
+let _activeAptOverlay = null;
+let _activeAptPrevZ = null;
+function setActiveAptPin(aptSeq){
+  // 이전 강조 해제 + zIndex 원복
+  document.querySelectorAll('.pin.pin-selected').forEach(p => p.classList.remove('pin-selected'));
+  if(_activeAptOverlay && _activeAptPrevZ != null && _activeAptOverlay.setZIndex){
+    _activeAptOverlay.setZIndex(_activeAptPrevZ);
+  }
+  _activeAptOverlay = null; _activeAptPrevZ = null;
+  if(!aptSeq) return;
+  // 핀 DOM 강조 (선택자 이스케이프 회피 위해 data-attr 순회)
+  document.querySelectorAll('.pin[data-apt-seq]').forEach(p => {
+    if(p.dataset.aptSeq === String(aptSeq)) p.classList.add('pin-selected');
+  });
+  // 오버레이 최상단으로
+  const overlay = aptOverlayMap[aptSeq];
+  if(overlay && overlay.setZIndex){
+    _activeAptPrevZ = overlay.getZIndex ? overlay.getZIndex() : 5;
+    overlay.setZIndex(200);
+    _activeAptOverlay = overlay;
+  }
+}
+function clearActiveAptPin(){ setActiveAptPin(null); }
+
 // 카드 클릭: 지도 pan + 단지 상세 모달 열기 (spec-17)
 function panToCard(aptSeq){ openDetail(aptSeq); }
 
@@ -2519,16 +2807,17 @@ const _detailCache = {};
 function openDetail(aptSeq) {
   _currentAptSeq = aptSeq;
   clearPoiMarker();
+  setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
   // 지도 pan
   if (kakaoMap && resultData) {
     const card = resultData.cards.find(c => c.apt_seq === aptSeq);
     if (card && card.lat && card.lng)
       kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
   }
-  // 모달 초기화
-  const overlay = document.getElementById('detail-overlay');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  // 사이드 패널 열기
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.body.style.overflow = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
   const loading = document.getElementById('detail-loading');
   loading.style.display = '';
@@ -2549,13 +2838,17 @@ function openDetail(aptSeq) {
 }
 
 function closeDetail() {
-  document.getElementById('detail-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
+  if (panelMode === 'detail') {
+    backToList();
+  } else {
+    document.getElementById('detail-panel').classList.remove('open');
+    document.getElementById('detail-resize-handle').style.display = 'none';
+    document.querySelector('.detail-panel__tabs').style.display = '';
+  }
   clearPoiMarker();
+  clearActiveAptPin();  // spec-38: 핀 강조 해제
 }
-function closeDetailOnBg(e) {
-  if (e.target === document.getElementById('detail-overlay')) closeDetail();
-}
+function closeDetailOnBg(e) {}
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -2592,12 +2885,12 @@ function _renderDetail(d) {
       + (b.slope_hint ? ` <span class="detail-kv__sub">· ${escHtml(b.slope_hint)}</span>` : '')
       + `</div></div>`);
   }
-  if (b.far != null) {
+  if (b.far != null && b.far > 0) {
     const lvl = b.far_level ? ` <span class="detail-kv__sub">· ${escHtml(b.far_level)}</span>` : '';
     ihRows.push(`<div title="아파트 대개 200~250%"><div class="detail-kv__label">용적률</div>`
       + `<div class="detail-kv__value">${b.far}%${lvl}</div></div>`);
   }
-  if (b.bcr != null) {
+  if (b.bcr != null && b.bcr > 0) {
     const lvl = b.bcr_level ? ` <span class="detail-kv__sub">· ${escHtml(b.bcr_level)}</span>` : '';
     ihRows.push(`<div title="아파트 대개 15~25%"><div class="detail-kv__label">건폐율</div>`
       + `<div class="detail-kv__value">${b.bcr}%${lvl}</div></div>`);
@@ -2667,7 +2960,7 @@ function _renderDetail(d) {
     tradeOrder.forEach(key => {
       tradeHtml += `<div class="dp-poi-category">${escHtml(key)}</div>`;
       tradeHtml += `<div style="display:grid;grid-template-columns:90px 1fr 40px;gap:4px 8px;
-        font-size:11px;font-weight:700;color:#aaa;padding-bottom:4px;">
+        font-size:11px;font-weight:700;color:var(--color-text-tertiary);padding-bottom:4px;">
         <span>날짜</span><span>금액</span><span style="text-align:right">층</span></div>`;
       tradeGroups[key].slice(0,8).forEach(t => {
         const e = Math.floor((t.amount||0)/10000), m = (t.amount||0)%10000;
@@ -2680,7 +2973,7 @@ function _renderDetail(d) {
       });
     });
   } else {
-    tradeHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">최근 거래 내역이 없습니다.</div>';
+    tradeHtml = '<div style="color:var(--color-text-tertiary);font-size:13px;padding:20px 0;">최근 거래 내역이 없습니다.</div>';
   }
   document.getElementById('detail-tab-price').innerHTML =
     `<div class="detail-section"><div class="detail-section__title">최근 실거래 내역</div>${tradeHtml}</div>`;
@@ -2716,10 +3009,10 @@ function _renderDetail(d) {
         });
       });
     } else {
-      poiHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
+      poiHtml = '<div style="color:var(--color-text-tertiary);font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
     }
   } else {
-    poiHtml = '<div style="color:#aaa;font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
+    poiHtml = '<div style="color:var(--color-text-tertiary);font-size:13px;padding:20px 0;">주변시설 데이터가 없습니다.</div>';
   }
   document.getElementById('detail-tab-poi').innerHTML =
     `<div class="detail-section"><div class="detail-section__title">도보권 시설</div>${poiHtml}</div>`;
@@ -2776,6 +3069,11 @@ const CHAT_SUGGESTIONS = [
   '투자 가치 있어?',
   '학군이랑 주변 환경은?',
 ];
+
+function _toggleFriend(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
 
 function _openChatFromEl(el) {
   openFriendChat(el.dataset.aptSeq, el.dataset.aptNm, el.dataset.pyeongType || '',
@@ -3027,7 +3325,7 @@ function renderAptLookupCard(r) {
 
   // 가격 (범위)
   const priceHtml = (r.price_low && r.price_high && r.price_low !== r.price_high)
-    ? `${_fmt(r.price_low)}<span style="font-size:12px;font-weight:400;color:#aaa"> ~ ${_fmt(r.price_high)}</span>`
+    ? `${_fmt(r.price_low)}<span style="font-size:12px;font-weight:400;color:var(--color-text-tertiary)"> ~ ${_fmt(r.price_high)}</span>`
     : _fmt(r.price_low || r.price_high);
 
   // 통근 버킷
@@ -3076,35 +3374,67 @@ function renderAptLookupCard(r) {
 }
 // ─────────────────────────────────────────────────────────────
 
-function clearPoiMarker() {
+function clearPoiMarker() {  // spec-40: 전체 제거 (단지 전환/패널 닫기 시)
   if (_poiInfoWindow) { _poiInfoWindow.close(); _poiInfoWindow = null; }
-  if (_poiMarker) { _poiMarker.setMap(null); _poiMarker = null; }
-  if (_activePoiRow) { _activePoiRow.classList.remove('poi-active'); _activePoiRow = null; }
+  _poiMarkers.forEach(({ overlay }, row) => {
+    overlay.setMap(null);
+    if (row && row.classList) row.classList.remove('poi-active');
+  });
+  _poiMarkers.clear();
 }
 
+// spec-40: 아파트를 지도 정중앙에 고정 + 활성 POI를 모두 포함하도록 줌 맞춤
+function _recenterApt() {
+  if (!kakaoMap) return;
+  kakaoMap.relayout();  // 패널 개폐로 지도 div 크기가 바뀐 직후 stale dimension 방지
+  const card = resultData && resultData.cards
+    ? resultData.cards.find(c => c.apt_seq === _currentAptSeq) : null;
+  if (!card || !card.lat || !card.lng) return;
+  const aptLat = card.lat, aptLng = card.lng;
+  if (_poiMarkers.size === 0) {
+    kakaoMap.setCenter(new kakao.maps.LatLng(aptLat, aptLng));
+    return;
+  }
+  // 아파트를 중심으로 좌우·상하 대칭 범위 → 아파트가 항상 정중앙에 유지됨
+  let maxLatD = 0, maxLngD = 0;
+  _poiMarkers.forEach(({ pos }) => {
+    maxLatD = Math.max(maxLatD, Math.abs(pos.getLat() - aptLat));
+    maxLngD = Math.max(maxLngD, Math.abs(pos.getLng() - aptLng));
+  });
+  const pad = 1.3, eps = 0.0006;  // 핀 말풍선 여백
+  const sw = new kakao.maps.LatLng(aptLat - maxLatD*pad - eps, aptLng - maxLngD*pad - eps);
+  const ne = new kakao.maps.LatLng(aptLat + maxLatD*pad + eps, aptLng + maxLngD*pad + eps);
+  kakaoMap.setBounds(new kakao.maps.LatLngBounds(sw, ne));
+}
 
 function togglePoiMarker(row) {
-  if (_activePoiRow === row) { clearPoiMarker(); return; }
-  clearPoiMarker();
-  _activePoiRow = row;
+  // 이미 표시 중인 시설을 다시 클릭 → 해당 핀만 제거 (토글 off)
+  if (_poiMarkers.has(row)) {
+    _poiMarkers.get(row).overlay.setMap(null);
+    _poiMarkers.delete(row);
+    row.classList.remove('poi-active');
+    _recenterApt();
+    return;
+  }
   row.classList.add('poi-active');
   const poiName = row.dataset.poiName;
   const walkMin = parseInt(row.dataset.walkMin, 10) || 0;
   const distM   = parseInt(row.dataset.distM,  10) || 0;
-  showPoiMarker(poiName, walkMin, distM);
+  showPoiMarker(row, poiName, walkMin, distM);
 }
 
-function showPoiMarker(poiName, walkMin, distM) {
-  if (!kakaoMap || !poiName) return;
+function showPoiMarker(row, poiName, walkMin, distM) {
+  if (!kakaoMap || !poiName) { if (row) row.classList.remove('poi-active'); return; }
   const card = resultData && resultData.cards
     ? resultData.cards.find(c => c.apt_seq === _currentAptSeq)
     : null;
-  if (!card || !card.lat || !card.lng) return;
+  if (!card || !card.lat || !card.lng) { row.classList.remove('poi-active'); return; }
 
   const distLabel = distM >= 1000 ? `${(distM/1000).toFixed(1)}km` : `${distM}m`;
   const walkLabel = walkMin ? `도보 ${walkMin}분 · ` : '';
-  // 실제 거리 + 여유분으로 동적 반경 (최소 600m, 최대 2000m)
-  const searchRadius = Math.min(Math.max(distM + 300, 600), 2000);
+  // spec-41: 넓은 시설(캠퍼스·역사)은 등록 좌표가 도보거리보다 멀 수 있어 반경을 넉넉히.
+  //  (이름 검증 + 거리순 정렬로 정확도 확보, 반경은 다른 지역 오매칭만 차단)
+  const searchRadius = Math.min(Math.max(distM * 2 + 1500, 2000), 8000);
 
   const loc = new kakao.maps.LatLng(card.lat, card.lng);
   const ps = new kakao.maps.services.Places();
@@ -3112,7 +3442,7 @@ function showPoiMarker(poiName, walkMin, distM) {
 
   function place(doc) {
     const pos = new kakao.maps.LatLng(parseFloat(doc.y), parseFloat(doc.x));
-    _poiMarker = new kakao.maps.CustomOverlay({
+    const overlay = new kakao.maps.CustomOverlay({
       position: pos,
       map: kakaoMap,
       yAnchor: 1.0,
@@ -3125,61 +3455,70 @@ function showPoiMarker(poiName, walkMin, distM) {
         <div class="poi-pin__dot"></div>
       </div>`,
     });
-    kakaoMap.setLevel(4);
-    kakaoMap.setCenter(pos);
-    kakaoMap.panBy(-160, -100);
+    _poiMarkers.set(row, { overlay, pos });  // spec-40: 핀 유지(다중)
+    _recenterApt();                          // 아파트 정중앙 고정 + 활성 핀 모두 보이게
   }
 
-  // 풀네임 검색 → 실패 시 앞 6글자로 폴백 (validateAndFilterPois와 동일 전략).
-  // "구리여중고교"처럼 축약·결합된 시설명도 마커가 찍히도록 함.
+  // spec-39/41: 이름 검증 후 배치. 풀네임 검색 → 일치 없으면 폴백 질의 재검색 →
+  //  그래도 없으면 틀린 핀 대신 안내(모르면 모른다). 최근접 무검증(data[0]) 폐기.
+  //  폴백 질의: "안암역 3번출구"처럼 다단어면 첫 단어("안암역")로, 아니면 앞 6글자로 재검색.
+  const firstToken = poiName.split(/\s+/)[0];
+  const fbQuery = (firstToken && firstToken.length >= 2 && firstToken !== poiName)
+    ? firstToken : (poiName.length > 4 ? poiName.substring(0, 6) : null);
+
+  function fail() {
+    row.classList.remove('poi-active');  // 핀 없이 활성표시만 남는 것 방지
+    _poiNotice('지도에서 위치를 확인하지 못했습니다');
+  }
+
   ps.keywordSearch(poiName, (data, status) => {
-    if (status === kakao.maps.services.Status.OK && data.length) { place(data[0]); return; }
-    if (poiName.length > 4) {
-      ps.keywordSearch(poiName.substring(0, 6), (d2, s2) => {
-        if (s2 === kakao.maps.services.Status.OK && d2.length) place(d2[0]);
-      }, opts);
-    }
+    const best = (status === kakao.maps.services.Status.OK && data.length)
+      ? _pickBestPoi(data, poiName) : null;
+    if (best) { place(best); return; }
+    if (!fbQuery) { fail(); return; }
+    ps.keywordSearch(fbQuery, (d2, s2) => {
+      const b2 = (s2 === kakao.maps.services.Status.OK && d2.length)
+        ? _pickBestPoi(d2, poiName) : null;
+      if (b2) place(b2); else fail();
+    }, opts);
   }, opts);
 }
 
-// ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
-async function validateAndFilterPois() {
-  const card = resultData?.cards.find(c => c.apt_seq === _currentAptSeq);
-  if (!card || !card.lat || !card.lng) return;
-  const rows = Array.from(document.querySelectorAll('.dp-poi-row.detail-poi-row'));
-  if (!rows.length) return;
-
-  const aptLatLng = new kakao.maps.LatLng(card.lat, card.lng);
-  const ps = new kakao.maps.services.Places();
-
-  function _search(name, radius) {
-    return new Promise(resolve => {
-      ps.keywordSearch(name, (data, status) => {
-        if (status === kakao.maps.services.Status.OK && data.length) { resolve(true); return; }
-        if (name.length > 4) {
-          ps.keywordSearch(name.substring(0, 6), (d2, s2) => {
-            resolve(s2 === kakao.maps.services.Status.OK && d2.length > 0);
-          }, { location: aptLatLng, radius, size: 1 });
-        } else { resolve(false); }
-      }, { location: aptLatLng, radius, size: 1 });
-    });
+// spec-39/41: POI 마커 위치 신뢰성 헬퍼 ──────────────────────
+function _normName(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+// Kakao 검색 결과(거리순 정렬됨) 중 우리 이름과 일치하는 가장 가까운 시설을 고른다.
+//  1순위 정확 일치, 2순위 부분 일치(한쪽이 다른쪽을 포함). 없으면 null.
+//  거리 검증은 하지 않는다 — 넓은 시설(캠퍼스·역사)의 등록 좌표는 도보 기준점과
+//  멀 수 있어 거리로 거르면 정상 시설이 탈락한다(spec-41). 지리 제약은 검색 반경이 담당.
+function _pickBestPoi(data, poiName){
+  const target = _normName(poiName);
+  let exact = null, partial = null;
+  for (const d of data){            // data는 location 기준 거리순 → 앞쪽이 더 가까움
+    const cand = _normName(d.place_name);
+    if (!cand) continue;
+    if (cand === target){ if (!exact) exact = d; continue; }
+    if (!partial && cand.length >= 2 && (cand.includes(target) || target.includes(cand)))
+      partial = d;
   }
-
-  // 순차 처리 (Kakao API 동시 호출 제한 대비)
-  for (const row of rows) {
-    const name = row.dataset.poiName || '';
-    const distM = parseInt(row.dataset.distM, 10) || 300;
-    const radius = Math.min(Math.max(distM + 300, 600), 2000);
-    const found = await _search(name, radius);
-    if (!found) row.remove();
-  }
-
-  // 빈 카테고리 헤더 정리
-  document.querySelectorAll('.dp-poi-category').forEach(header => {
-    let sib = header.nextElementSibling;
-    if (!sib || sib.classList.contains('dp-poi-category')) header.remove();
-  });
+  return exact || partial || null;  // 이름 무관한 최근접(data[0]) 무검증 배치는 금지
 }
+// 틀린 핀 대신 짧은 안내 (모르면 모른다)
+let _poiNoticeTimer = null;
+function _poiNotice(msg){
+  let el = document.getElementById('poi-notice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'poi-notice';
+    el.className = 'poi-notice';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_poiNoticeTimer);
+  _poiNoticeTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// spec-43: validateAndFilterPois 제거 — 클릭 시 showPoiMarker→fail()이 처리
 
 // ── 패널 리사이즈 핸들 (spec-19) ─────────────────────────────
 (function initResizeHandle() {
@@ -3222,7 +3561,45 @@ async function validateAndFilterPois() {
   });
 })();
 
-// ── 채팅 패널 좌측 드래그 리사이즈 ──────────────────────────
+// ── 상세 사이드 패널 리사이즈 ────────────────────────────────
+(function() {
+  const handle = document.getElementById('detail-resize-handle');
+  const panel  = document.getElementById('detail-panel');
+  const layout = document.querySelector('.result-layout');
+  if (!handle || !panel || !layout) return;
+
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const layoutW = layout.getBoundingClientRect().width;
+    const newW = Math.max(240, Math.min(layoutW - 560, startW - (e.clientX - startX)));
+    panel.style.width = newW + 'px';
+    panel.style.minWidth = newW + 'px';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    if (kakaoMap) kakaoMap.relayout();
+  });
+})();
+
+// ── 채팅 패널 좌측 드래그 리사이즈 ────────────────────────────────
 (function() {
   const CHAT_W_KEY = 'chat_panel_w';
   const panel = document.getElementById('chat-panel');
@@ -3267,7 +3644,7 @@ async function validateAndFilterPois() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!document.getElementById('route-overlay').classList.contains('hidden')) { closeRoute(); return; }
-    if (!document.getElementById('detail-overlay').classList.contains('hidden')) closeDetail();
+    if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
     if (!document.getElementById('compare-overlay').classList.contains('hidden')) closeCompare();
   }
 });
@@ -3275,8 +3652,121 @@ document.addEventListener('keydown', e => {
 // ── spec-18: 경로 상세 팝업 ─────────────────────────────────────
 const _routeCache = {};
 
+// ── 경로 폴리라인 렌더링 ──────────────────────────────────────
+let _routePolylines = [];
+
+function clearRoutePolylines() {
+  _routePolylines.forEach(p => p.setMap(null));
+  _routePolylines = [];
+}
+
+// Douglas-Peucker 단순화 — 점 잔떨림·이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
+function simplifyPath(pts, tol) {
+  if (pts.length < 3) return pts;
+  const P = pts.map(p => [p.getLng(), p.getLat()]);
+  const keep = new Array(P.length).fill(false);
+  keep[0] = keep[P.length - 1] = true;
+  const stack = [[0, P.length - 1]];
+  while (stack.length) {
+    const seg = stack.pop(), a = seg[0], b = seg[1];
+    const ax = P[a][0], ay = P[a][1], bx = P[b][0], by = P[b][1];
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1e-12;
+    let maxD = 0, idx = -1;
+    for (let i = a + 1; i < b; i++) {
+      const px = P[i][0], py = P[i][1];
+      const t = ((px - ax) * dx + (py - ay) * dy) / len2;
+      const cx = ax + t * dx, cy = ay + t * dy;
+      const d = Math.hypot(px - cx, py - cy);
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > tol && idx > -1) { keep[idx] = true; stack.push([a, idx], [idx, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
+// Chaikin 코너 컷팅 — 각진 모서리를 둥근 곡선으로 스무딩
+function smoothPath(pts, iterations) {
+  let cur = pts;
+  for (let it = 0; it < iterations && cur.length >= 3; it++) {
+    const out = [cur[0]];
+    for (let i = 0; i < cur.length - 1; i++) {
+      const aLat = cur[i].getLat(),   aLng = cur[i].getLng();
+      const bLat = cur[i + 1].getLat(), bLng = cur[i + 1].getLng();
+      out.push(new kakao.maps.LatLng(aLat * 0.75 + bLat * 0.25, aLng * 0.75 + bLng * 0.25));
+      out.push(new kakao.maps.LatLng(aLat * 0.25 + bLat * 0.75, aLng * 0.25 + bLng * 0.75));
+    }
+    out.push(cur[cur.length - 1]);
+    cur = out;
+  }
+  return cur;
+}
+
+function _addRouteLine(path, weight, col, style) {
+  const line = new kakao.maps.Polyline({
+    path: path, strokeWeight: weight, strokeColor: col,
+    strokeOpacity: 1, strokeStyle: style || 'solid',
+  });
+  line.setMap(kakaoMap);
+  _routePolylines.push(line);
+}
+
+// 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
+//   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
+// 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
+function drawRoutePolylines(options, color) {
+  if (!kakaoMap || !options || !options.length) return;
+  const best = options[0]; // rank 1 경로만 표시
+  const sd = window._lastSearchData || {};
+  const wp = (color === '#059669') ? sd.workplace_2 : sd.workplace;
+  const wpLL = (wp && wp.lat) ? new kakao.maps.LatLng(wp.lat, wp.lng) : null;
+  const apt = window._routeAptLatLng;
+  const aptLL = (apt && apt.lat) ? new kakao.maps.LatLng(apt.lat, apt.lng) : null;
+
+  // 1) step 파싱 (도보 또는 linestring 없음 → walk)
+  const parsed = best.steps.map(step => {
+    const isWalk = step.type === '도보' || step.type === '환승도보';
+    if (isWalk || !step.linestring) return { walk: true, type: step.type };
+    const pts = step.linestring.trim().split(' ').flatMap(pair => {
+      const a = pair.split(',');
+      if (a.length < 2) return [];
+      const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
+      return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
+    });
+    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null };
+  });
+
+  // 2) 교통(버스·지하철) — 수단별 스타일
+  parsed.forEach(s => {
+    if (s.walk || !s.pts) return;
+    const clean = smoothPath(simplifyPath(s.pts, 0.00013), 3);
+    if (s.type === '지하철') {
+      _addRouteLine(clean, 9, '#FFFFFF');          // 흰 케이싱
+      _addRouteLine(clean, 6, color, 'solid');     // 지하철 = 실선
+    } else {
+      _addRouteLine(clean, 6, color, 'longdash');  // 버스 = longdash
+    }
+  });
+
+  // 3) 도보 — 직선 점선(양 끝점 브리지)
+  parsed.forEach((s, i) => {
+    if (!s.walk) return;
+    let A = null;
+    for (let j = i - 1; j >= 0; j--)
+      if (!parsed[j].walk && parsed[j].pts) { A = parsed[j].pts[parsed[j].pts.length - 1]; break; }
+    if (!A) A = aptLL;
+    let B = null;
+    for (let j = i + 1; j < parsed.length; j++)
+      if (!parsed[j].walk && parsed[j].pts) { B = parsed[j].pts[0]; break; }
+    if (!B) B = wpLL;
+    if (A && B) _addRouteLine([A, B], 4.5, color, 'shortdash');  // 도보 점선
+  });
+}
+
 async function openRoute(aptSeq, wpId, aptNm, event) {
   if (event) event.stopPropagation();
+  const _ac = (window._lastCards || (typeof resultData !== 'undefined' && resultData?.cards) || []).find(c => c.apt_seq === aptSeq);
+  window._routeAptLatLng = (_ac && _ac.lat) ? { lat: _ac.lat, lng: _ac.lng } : null;
+  clearRoutePolylines();
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -3310,11 +3800,14 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
     return;
   }
   _renderRoutePanel(routes1, routes2);
+  drawRoutePolylines(routes1, '#9F1239');
+  if (routes2) drawRoutePolylines(routes2, '#059669');
 }
 
 function closeRoute() {
   document.getElementById('route-overlay').classList.add('hidden');
   document.body.style.overflow = '';
+  clearRoutePolylines();
 }
 
 function closeRouteOnBg(event) {
@@ -3436,7 +3929,7 @@ function switchFavTab(tab) {
     // 관심 단지만 필터 렌더
     const cards = window._lastCards.filter(c => favs.has(favId(c.apt_seq, c.pyeong_type)));
     if(!cards.length) {
-      panel.innerHTML = `<div class="fav-empty">❤️‍🔥 아직 관심 단지가 없어요<br><span style="font-size:12px;color:#aaa">카드의 ♥ 버튼을 눌러 저장해보세요</span></div>`;
+      panel.innerHTML = `<div class="fav-empty">❤️‍🔥 아직 관심 단지가 없어요<br><span style="font-size:12px;color:var(--color-text-tertiary)">카드의 ♥ 버튼을 눌러 저장해보세요</span></div>`;
       return;
     }
     let html = '';
@@ -3510,6 +4003,8 @@ function _renderCompareTable(cards) {
   // 각 항목별 최솟값 강조용
   const minTime  = Math.min(...cards.map(c => c.total_time_min));
   const minPrice = Math.min(...cards.map(c => c.price_low || Infinity));
+  const pppOf = c => (c.price_low && c.pyeong) ? Math.round(c.price_low / c.pyeong) : null;
+  const minPpp = Math.min(...cards.map(c => pppOf(c) ?? Infinity));
 
   const rows = [
     { label: '통근시간',
@@ -3526,21 +4021,16 @@ function _renderCompareTable(cards) {
         const str = e && m ? `${e}억 ${m.toLocaleString()}만` : e ? `${e}억` : `${(c.price_low||0).toLocaleString()}만`;
         return `<span class="${c.price_low===minPrice?'compare-best':''}">${str}</span>`;
       }},
+    { label: '평당가',
+      fn: c => {
+        const v = pppOf(c);
+        if (v == null) return '-';
+        return `<span class="${v===minPpp?'compare-best':''}">${v.toLocaleString()}만/평</span>`;
+      }},
     { label: '세대수',    fn: c => `${(c.kaptdaCnt||0).toLocaleString()}세대` },
     { label: '연식',      fn: c => c.build_year ? `${c.build_year}년<br>(${THIS_Y - c.build_year}년차)` : '-' },
     { label: '최고층',    fn: c => c.top_floor  ? `${c.top_floor}층` : '-' },
-    { label: '저가 근거', fn: c => {
-      if (!c.why_tags || !c.why_tags.length) return '-';
-      return c.why_tags.slice(0,2).map(t => escHtml(t.label)).join('<br>');
-    }},
-    { label: '6개월 변동', fn: c => {
-      const pct = c.price_chg_6m_pct;
-      if (pct == null) return '-';
-      const cls  = pct > 0 ? 'up' : 'down';
-      const sign  = pct > 0 ? '+' : '';
-      const arrow = pct > 0 ? '▲' : '▼';
-      return `<span class="price-chg-badge price-chg-badge--${cls}">${arrow}${sign}${pct}%</span>`;
-    }},
+    { label: '거래 건수', fn: c => c.deal_count ? `${c.deal_count}건` : '-' },
     { label: '동네',      fn: c => escHtml(c.umd_nm || '-') },
   ];
 
@@ -3584,24 +4074,29 @@ function renderRecCard(c, wpId, cmpMode=false){
   </div>`;
 
   const comment = c.friend_comment || '';
-  const friendHtml = comment
-    ? `<div class="rec-card__friend" style="cursor:pointer"
+  const friendInner = comment
+    ? `<div class="rec-card__friend"
         data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
         data-lat="${c.lat||''}" data-lng="${c.lng||''}"
-        onclick="event.stopPropagation();_openChatFromEl(this)" title="더 물어보기">
+        onclick="event.stopPropagation();_openChatFromEl(this)" style="cursor:pointer" title="더 물어보기">
         <div class="rec-card__friend-avatar">친구</div>
-        <div class="rec-card__friend-body">
-          <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
+        <div>
+          <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:var(--color-text-tertiary);">· 더 물어보기 →</span></div>
           <div class="rec-card__friend-text">${escHtml(comment)}</div>
         </div>
       </div>`
     : `<div class="rec-card__friend empty">
         <div class="rec-card__friend-avatar">···</div>
-        <div class="rec-card__friend-body">
+        <div>
           <div class="rec-card__friend-label">한마디 (생성 중)</div>
-          <div class="rec-card__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+          <div class="rec-card__friend-text"><span class="spinner-mini"></span>살펴보는 중...</div>
         </div>
       </div>`;
+  const friendHtml = `
+    <button class="rec-card__friend-toggle" onclick="event.stopPropagation();_toggleFriend(this)" type="button">
+      <span>AI 한마디</span><span class="toggle-arrow">▼</span>
+    </button>
+    <div class="rec-card__friend-body-wrap">${friendInner}</div>`;
 
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
@@ -3709,22 +4204,21 @@ function renderListCard(c, wpId, cmpMode=false){
     ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_lcId)?'checked':''} onchange="toggleCompare('${_lcId}',this)"> 비교</label>`
     : '';
 
+  const commuteChip = dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
+    ? `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num">${c.total_time_min_1}분</strong> · W2 <strong class="num">${c.total_time_min_2}분</strong></span>`
+    : `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')} <strong class="num">${c.total_time_min}분</strong></span>`;
+
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
     ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
-      <div class="list-card__name">${escHtml(c.apt_nm)} <span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__name">${escHtml(c.apt_nm)}<span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__meta">${metaParts.join(' · ')}</div>
+    </div>
+    <div class="list-card__right">
       <div class="list-card__price num">${shortPrice(c.price_low)}${_priceChgBadge(c.price_chg_6m_pct)}</div>
+      <div class="list-card__row">${commuteChip}</div>
     </div>
-    <div class="list-card__meta">${metaParts.join(' · ')}</div>
-    ${_whyTagsHtml(c.why_tags)}
-    <div class="list-card__row">
-      ${dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
-        ? `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num" style="margin-left:2px">${c.total_time_min_1}분</strong> · W2 <strong class="num" style="margin-left:2px">${c.total_time_min_2}분</strong></span>`
-        : `<span class="commute-chip" style="cursor:pointer" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')}<strong class="num" style="margin-left:4px">${c.total_time_min}분</strong></span>`}
-    </div>
-    ${_commuteEconRow(c)}
-    ${commentHtml}
   </article>`;
 }
 
@@ -3774,7 +4268,7 @@ function renderCards(data){
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
-  let html = partialBanner + renderStatsPanel(data);
+  let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
   html += `
@@ -3790,17 +4284,15 @@ function renderCards(data){
     </div>
     <div id="apt-search-result"></div>`;
 
-  // 추천 섹션
+  // 추천 요약 헤더만 표시 (개별 카드 없음)
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대(10분 단위) × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
     </div>`;
-    html += recommended.map(c=>renderRecCard(c, wpId)).join('');
   }
 
-  // 버킷별 접힘 섹션
-  if(rest.length){
+  if(false && rest.length){
     const buckets = data.buckets || [];
     html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
     buckets.forEach(b=>{
@@ -3888,15 +4380,15 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin pin-workplace">${dualMode ? 'W1 직장' : '직장'}</div>`,
+    content: `<div class="pin-workplace-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="22" height="18" rx="1" fill="white"/><rect x="21" y="15" width="14" height="8" rx="1" fill="white"/><rect x="25" y="11" width="6" height="6" rx="1" fill="white"/><rect x="19" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="19" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="23" y="34" width="10" height="5" rx="0.5" fill="#0f172a"/>${dualMode ? '<circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">1</text>' : ''}</svg></div>`,
     yAnchor: 1, zIndex: 100,
   }).setMap(kakaoMap);
 
-  // spec-13: W2 직장 핀 (파란색)
+  // spec-13: W2 직장 핀
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin pin-workplace-2">W2 직장</div>',
+      content: '<div class="pin-workplace-2-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="20" y="22" width="16" height="20" rx="1" fill="white"/><rect x="15" y="28" width="26" height="14" rx="1" fill="white"/><rect x="25" y="14" width="6" height="10" rx="1" fill="white"/><rect x="22" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="30" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">2</text></svg></div>',
       yAnchor: 1, zIndex: 100,
     }).setMap(kakaoMap);
   }
@@ -3925,13 +4417,18 @@ async function initMap(data){
     group.cards.sort((a,b)=>a.price_low - b.price_low);
     const main = group.cards[0];
     const ptCount = group.cards.length;
-    const cls = group.any_recommended ? 'pin-best' : '';
+    const t = main.total_time_min || 999;
+    const tCls = t <= 30 ? 'pin-t1' : t <= 45 ? 'pin-t2' : t <= 60 ? 'pin-t3' : 'pin-t4';
+    const cls = group.any_recommended ? 'pin-best' : tCls;
     const z = group.any_recommended ? 50 : 5;
-    const multiMark = ptCount > 1 ? `<span class="pin-multi-mark">${ptCount}</span>` : '';
-    const pinText = `${escHtml(main.pyeong_type||'')} ${shortPrice(main.price_low)} ${main.total_time_min}분`;
+    const crownHtml = group.any_recommended ? '<div class="pin-crown">👑</div>' : '';
+    const multiHtml = ptCount > 1 ? `<span class="pin-multi">${ptCount}</span>` : '';
+    const timeText = t < 999 ? `${t}분` : '?';
+    const subText = main.pyeong_type ? `<div class="pin-sub">${escHtml(main.pyeong_type)}</div>` : '';
+    const pinHtml = `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${crownHtml}<div class="pin-roof"></div><div class="pin-body" style="position:relative">${multiHtml}<div class="pin-time">${timeText}</div>${subText}</div></div>`;
     const overlay = new kakao.maps.CustomOverlay({
       position: pos,
-      content: `<div class="pin ${cls}" data-apt-seq="${group.apt_seq}">${pinText}${multiMark}</div>`,
+      content: pinHtml,
       yAnchor: 1,
       zIndex: z,
     });
@@ -4080,15 +4577,30 @@ async function showDetail(aptSeq, wpId){
   hideTooltip();
   _currentAptSeq = aptSeq;
   clearPoiMarker();
-  const panel = document.getElementById('cards-panel');
+  setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
+
+  // 사이드 패널 열기
+  const sidePanel = document.getElementById('detail-panel');
+  sidePanel.classList.add('open');
+  document.getElementById('detail-resize-handle').style.display = '';
+  document.getElementById('detail-title').textContent = '불러오는 중...';
+  document.querySelector('.detail-panel__tabs').style.display = 'none';
+
+  const panel = document.getElementById('detail-body');
   panel.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;"><span class="spinner-mini"></span>상세 정보 로드 중...</div>';
   panel.scrollTop=0;
 
-  // 지도 해당 아파트 위치로 이동
+  // 지도 해당 아파트 위치로 이동 (패널 열림 트랜지션 .25s 완료 후 relayout → 정중앙)
   if(kakaoMap && resultData){
     const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
     if(card && card.lat && card.lng){
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+      const aptPos = new kakao.maps.LatLng(card.lat, card.lng);
+      kakaoMap.panTo(aptPos);
+      setTimeout(() => {
+        if(!kakaoMap) return;
+        kakaoMap.relayout();                 // 패널이 차지한 480px 반영
+        kakaoMap.setCenter(aptPos);          // 줄어든 지도 기준으로 아파트 정중앙 재고정
+      }, 280);
     }
   }
 
@@ -4101,9 +4613,8 @@ async function showDetail(aptSeq, wpId){
     const routes = (await rRes.json()).options || [];
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
     renderDetailPanel(detail, routes, wpId);
-    if (kakaoMap) validateAndFilterPois();
   } catch(e){
-    panel.innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
+    document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -4111,18 +4622,23 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-resize-handle').style.display = 'none';
+  document.querySelector('.detail-panel__tabs').style.display = '';
+  clearActiveAptPin();  // spec-38: 핀 강조 해제
   if(resultData) renderCards(resultData);
 }
 
 function renderDetailPanel(d, routes, wpId){
-  const panel = document.getElementById('cards-panel');
+  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
   const bld = d.building || {};
   const thisYear = THIS_YEAR;
 
   // ── 메타 한 줄
-  const metaParts = [escHtml(d.umd_nm), `${(d.kaptdaCnt||0).toLocaleString()}세대`];
+  const metaParts = [`<strong>${escHtml(d.umd_nm)}</strong>`, `${(d.kaptdaCnt||0).toLocaleString()}세대`];
   if(bld.build_year) metaParts.push(`${bld.build_year}년 (${thisYear-bld.build_year}년차)`);
   if(bld.top_floor) metaParts.push(`최고 ${bld.top_floor}층`);
 
@@ -4133,18 +4649,19 @@ function renderDetailPanel(d, routes, wpId){
         data-apt-seq="${d.apt_seq}" data-apt-nm="${escHtml(d.apt_nm)}" data-pyeong-type="${escHtml(cardRef.pyeong_type||'')}"
         data-lat="${d.lat||''}" data-lng="${d.lng||''}"
         onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
-        <div class="dp__friend-avatar">친구</div>
-        <div class="dp__friend-body">
-          <div class="dp__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 탭해서 더 물어보기 →</span></div>
-          <div class="dp__friend-text">${escHtml(friend)}</div>
+        <div class="dp__friend-head">
+          <div class="dp__friend-avatar">💬</div>
+          <div class="dp__friend-label">친구 한마디</div>
+          <div class="dp__friend-cta">더 물어보기 →</div>
         </div>
+        <div class="dp__friend-text">${escHtml(friend)}</div>
       </div>`
     : `<div class="dp__friend empty">
-        <div class="dp__friend-avatar">···</div>
-        <div class="dp__friend-body">
-          <div class="dp__friend-label">한마디 (생성 중)</div>
-          <div class="dp__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
+        <div class="dp__friend-head">
+          <div class="dp__friend-avatar">···</div>
+          <div class="dp__friend-label">친구 한마디 (생성 중)</div>
         </div>
+        <div class="dp__friend-text"><span class="spinner-mini"></span>친구가 단지 살펴보는 중...</div>
       </div>`;
 
   // ── 통근 요약
@@ -4181,6 +4698,22 @@ function renderDetailPanel(d, routes, wpId){
   if(bld.heat_type) bldPreviewParts.push(`난방 ${escHtml(bld.heat_type)}`);
   const bldPreview = bldPreviewParts.length ? bldPreviewParts.slice(0,3).join(' · ') : '건물 정보 없음';
 
+  // ── 스탯 줄 (spec-42)
+  const statTime = cardRef.total_time_min!=null
+    ? `${cardRef.total_time_min}<span class="dp-stat-unit">분</span>` : '-';
+  const statPrice = cardRef.price_low!=null ? fmtPriceRich(cardRef.price_low) : '-';
+  // 중간 스탯: 값은 최근 3개월 평균 실거래가 → '평균 실거래가' + 평형(둘째 줄)
+  const pyText = cardRef.pyeong_type ? `<span class="dp-stat-py">(${escHtml(cardRef.pyeong_type)})</span>` : '';
+  // 셋째 스탯: 세대당 주차 (주차총대수 ÷ 세대수) — 위 메타에 없는 실용 지표
+  const statParking = (bld.parking && d.kaptdaCnt)
+    ? `${(bld.parking / d.kaptdaCnt).toFixed(1)}<span class="dp-stat-unit">대</span>`
+    : '-';
+  const statHtml = `<div class="dp-statrow">
+    <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">평균 실거래가${pyText}</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statParking}</div><div class="dp-stat-label">세대당 주차</div></div>
+  </div>`;
+
   // SVG 아이콘들
   const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>';
   const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>';
@@ -4197,17 +4730,17 @@ function renderDetailPanel(d, routes, wpId){
       ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
     </div>
 
-    <!-- HERO -->
+    <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
       <div class="dp__meta">${metaParts.join(' · ')}</div>
-      ${transitChip}
+      ${statHtml}
       ${friendHtml}
     </div>
 
-    <!-- 통근 경로 (펼침) -->
-    <div class="dp__section open">
+    <!-- 통근 경로 -->
+    <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_CLOCK}</div>
+        <div class="dp__section-icon ic-commute">${ICON_CLOCK}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">통근 경로</span>
           <span class="dp__section-preview">${routePreview}</span>
@@ -4217,10 +4750,10 @@ function renderDetailPanel(d, routes, wpId){
       <div class="dp__section-body">${renderRoutesHTML(routes)}</div>
     </div>
 
-    <!-- 시세 분석 (펼침) -->
-    <div class="dp__section open">
+    <!-- 시세 분석 -->
+    <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_CHART}</div>
+        <div class="dp__section-icon ic-price">${ICON_CHART}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">시세 분석</span>
           <span class="dp__section-preview">${pricePreview}</span>
@@ -4228,10 +4761,10 @@ function renderDetailPanel(d, routes, wpId){
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
       <div class="dp__section-body">
-        ${renderKPIHTML(d.price_summary)}
+        ${renderKPIHTML(d.price_summary, d.umd_nm)}
         <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
         <div class="dp-chart-legend" style="margin-top:6px">
-          <span><i class="dp-legend-dot" style="background:#A82E1B"></i>${escHtml(d.apt_nm)}</span>
+          <span><i class="dp-legend-dot" style="background:#C45ED6"></i>${escHtml(d.apt_nm)}</span>
           <span><i class="dp-legend-dot" style="background:#2471A3;opacity:.7"></i>${escHtml(d.umd_nm)} 동평균</span>
         </div>
         <div class="dp-chart-wrap"><canvas id="dp-chart"></canvas></div>
@@ -4241,7 +4774,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 실거래 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_TABLE}</div>
+        <div class="dp__section-icon ic-trade">${ICON_TABLE}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">실거래 내역</span>
           <span class="dp__section-preview">${tradePreview}</span>
@@ -4254,7 +4787,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 도보 시설 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_PIN}</div>
+        <div class="dp__section-icon ic-poi">${ICON_PIN}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">도보 주요 시설</span>
           <span class="dp__section-preview">${poiPreview}</span>
@@ -4267,7 +4800,7 @@ function renderDetailPanel(d, routes, wpId){
     <!-- 건물 정보 (접힘) -->
     <div class="dp__section">
       <div class="dp__section-head" onclick="toggleSection(this)">
-        <div class="dp__section-icon">${ICON_BUILDING}</div>
+        <div class="dp__section-icon ic-bld">${ICON_BUILDING}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">건물 정보</span>
           <span class="dp__section-preview">${bldPreview}</span>
@@ -4339,7 +4872,7 @@ function renderStepHTML(s){
   const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
   const staHtml  = (s.from||s.to)
     ? `<div class="dp-step-sta">${escHtml(s.from||'')} → ${escHtml(s.to||'')}</div>` : '';
-  const distHtml = s.dist_m ? `<span style="font-size:11px;color:#aaa"> ${s.dist_m.toLocaleString()}m</span>` : '';
+  const distHtml = s.dist_m ? `<span style="font-size:11px;color:var(--color-text-tertiary)"> ${s.dist_m.toLocaleString()}m</span>` : '';
   return `<div class="dp-step">
     <span class="dp-step-type ${cls}">${escHtml(typeKo)}</span>
     <span class="dp-step-info">${lineHtml}${staHtml}</span>
@@ -4359,7 +4892,7 @@ function renderSingleRoute(o, isFirst){
   </div>`;
 }
 function renderRoutesHTML(routes){
-  if(!routes.length) return '<p style="font-size:13px;color:#aaa;">경로 정보 없음</p>';
+  if(!routes.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">경로 정보 없음</p>';
   if(routes.length===1) return renderSingleRoute(routes[0], true);
 
   const first = renderSingleRoute(routes[0], true);
@@ -4383,27 +4916,24 @@ function toggleMoreRoutes(btn){
 }
 
 // ── KPI ───────────────────────────────────────────────────────
-function renderKPIHTML(ps){
-  if(!ps) return '<p style="font-size:12px;color:var(--color-text-tertiary);">데이터 없음</p>';
-  const chgCls = ps.change_6m_pct>0?'clr-up':ps.change_6m_pct<0?'clr-dn':'clr-flat';
-  const vsCls  = ps.vs_dong_pct<0?'clr-dn':ps.vs_dong_pct>0?'clr-up':'clr-flat';
-  const diffCls= ps.vs_dong_diff<0?'clr-dn':ps.vs_dong_diff>0?'clr-up':'clr-flat';
-  const diffTxt= ps.vs_dong_diff!=null
-    ? fmtPrice(Math.abs(ps.vs_dong_diff))+(ps.vs_dong_diff<0?' 저렴':' 비쌈') : '-';
-  return `<div class="dp-kpis">
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">단지 6개월</div>
-      <div class="dp-kpi-value num ${chgCls}">${fmtPct(ps.change_6m_pct)}</div>
-    </div>
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">동평균 대비 (${ps.pyeong}평)</div>
-      <div class="dp-kpi-value num ${vsCls}">${fmtPct(ps.vs_dong_pct)}</div>
-    </div>
-    <div class="dp-kpi">
-      <div class="dp-kpi-label">동평균 차액</div>
-      <div class="dp-kpi-value num ${diffCls}" style="font-size:13px">${diffTxt}</div>
-    </div>
-  </div>`;
+// spec-42: KPI 3중복 → 한 줄 결론(verdict). 데이터 없으면 솔직히 '없음'.
+function renderKPIHTML(ps, umdNm){
+  if(!ps) return '<p style="font-size:12px;color:var(--color-text-tertiary);">시세 데이터 없음</p>';
+  const where = `${escHtml(umdNm||'')} ${ps.pyeong?ps.pyeong+'평 ':''}평균`;
+  let main;
+  if(ps.vs_dong_diff!=null && ps.vs_dong_pct!=null){
+    const cls = ps.vs_dong_diff<0?'clr-dn':ps.vs_dong_diff>0?'clr-up':'';
+    const updown = ps.vs_dong_diff<0?'저렴':ps.vs_dong_diff>0?'비쌈':'동일';
+    main = `${where}보다 <b class="${cls}">${fmtPrice(Math.abs(ps.vs_dong_diff))} ${updown}</b> <span class="num ${cls}">(${fmtPct(ps.vs_dong_pct)})</span>`;
+  } else if(ps.vs_dong_pct!=null){
+    const cls = ps.vs_dong_pct<0?'clr-dn':ps.vs_dong_pct>0?'clr-up':'';
+    main = `${where} 대비 <b class="num ${cls}">${fmtPct(ps.vs_dong_pct)}</b>`;
+  } else {
+    main = '동평균 비교 데이터 없음';
+  }
+  const sub = ps.change_6m_pct!=null
+    ? `<span class="dp-verdict-sub">최근 6개월 ${fmtPct(ps.change_6m_pct)}</span>` : '';
+  return `<div class="dp-verdict">${main}${sub}</div>`;
 }
 
 // ── 평수 탭 ───────────────────────────────────────────────────
@@ -4452,9 +4982,9 @@ function initDetailChart(key, aptNm, umdNm){
     data:{
       labels,
       datasets:[
-        { label:aptNm, data:complexData, borderColor:'#A82E1B', backgroundColor:'#A82E1B25',
+        { label:aptNm, data:complexData, borderColor:'#C45ED6', backgroundColor:'#C45ED625',
           borderWidth: sparse?0:2, pointRadius: sparse?5:3,
-          pointBackgroundColor:'#A82E1B', tension:0.3, fill:false,
+          pointBackgroundColor:'#C45ED6', tension:0.3, fill:false,
           showLine:!sparse },
         { label:`${umdNm} 동평균`, data:dongData, borderColor:'#2471A3', backgroundColor:'#2471A315',
           borderWidth: 1.5, pointRadius:2, borderDash:[4,3], tension:0.3, fill:false },
@@ -4468,8 +4998,8 @@ function initDetailChart(key, aptNm, umdNm){
         tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}}
       },
       scales:{
-        x:{ticks:{font:{family:'Pretendard',size:10},maxTicksLimit:12},grid:{color:'#f0f0f0'}},
-        y:{ticks:{font:{family:'Pretendard',size:10},callback:v=>shortPrice(v)},grid:{color:'#f0f0f0'}},
+        x:{ticks:{font:{family:'Noto Sans KR',size:10},maxTicksLimit:12},grid:{color:'rgba(255,255,255,0.09)'}},
+        y:{ticks:{font:{family:'Noto Sans KR',size:10},callback:v=>shortPrice(v)},grid:{color:'rgba(255,255,255,0.09)'}},
       }
     }
   });
@@ -4562,76 +5092,109 @@ function renderPOIHTML(poi){
   }).join('');
 }
 
-// ── 다중 우선순위 정렬 (spec-20) ────────────────────────────
+// ── 체크박스 정렬 패널 ────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: '',                             label: '선택 안 함',        group: '' },
-  { value: 'total_time_min:asc',           label: '통근시간 짧은순',   group: '기본' },
-  { value: 'price_low:asc',                label: '최저가 낮은순',     group: '기본' },
-  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',     group: '기본' },
-  { value: 'build_year:desc',              label: '준공연도 신축순',   group: '기본' },
-  { value: 'deal_count:desc',              label: '거래건수 많은순',   group: '기본' },
-  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',     group: '기본' },
-  { value: 'transfer_count:asc',           label: '환승 적은순',       group: '기본' },
-  { value: 'pyeong:desc',                  label: '평수 넓은순',       group: '기본' },
-  { value: 'walk_to_transit_min:asc',      label: '집→대중교통 도보',  group: '도보' },
-  { value: 'nearest_park_min:asc',         label: '공원 도보',         group: '도보' },
-  { value: 'nearest_subway_min:asc',       label: '지하철 도보',       group: '도보' },
-  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',     group: '도보' },
-  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',   group: '도보' },
-  { value: 'nearest_mart_min:asc',         label: '마트 도보',         group: '도보' },
+  { value: 'total_time_min:asc',           label: '통근시간 짧은순',  icon: 'ti-clock',          group: '기본' },
+  { value: 'price_low:asc',                label: '최저가 낮은순',    icon: 'ti-tag',            group: '기본' },
+  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',    icon: 'ti-coins',          group: '기본' },
+  { value: 'build_year:desc',              label: '신축순',           icon: 'ti-building',       group: '기본' },
+  { value: 'deal_count:desc',              label: '거래건수 많은순',  icon: 'ti-chart-bar',      group: '기본' },
+  { value: 'kaptdaCnt:desc',               label: '세대수 많은순',    icon: 'ti-users',          group: '기본' },
+  { value: 'transfer_count:asc',           label: '환승 적은순',      icon: 'ti-transfer',       group: '기본' },
+  { value: 'pyeong:desc',                  label: '평수 넓은순',      icon: 'ti-maximize',       group: '기본' },
+  { value: 'walk_to_transit_min:asc',      label: '대중교통 도보',    icon: 'ti-walk',           group: '도보' },
+  { value: 'nearest_park_min:asc',         label: '공원 도보',        icon: 'ti-trees',          group: '도보' },
+  { value: 'nearest_subway_min:asc',       label: '지하철 도보',      icon: 'ti-train',          group: '도보' },
+  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',    icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',  icon: 'ti-school',         group: '도보' },
+  { value: 'nearest_mart_min:asc',         label: '마트 도보',        icon: 'ti-shopping-cart',  group: '도보' },
 ];
 
-function _buildSelectHTML(excludeValues) {
-  let html = '';
-  let lastGroup = '';
-  for (const o of SORT_OPTIONS) {
-    if (o.group && o.group !== lastGroup) {
-      if (lastGroup !== '') html += '</optgroup>';
-      html += `<optgroup label="${o.group}">`;
-      lastGroup = o.group;
-    }
-    const disabled = o.value && excludeValues.has(o.value) ? ' disabled' : '';
-    html += `<option value="${o.value}"${disabled}>${o.label}</option>`;
-  }
-  if (lastGroup !== '') html += '</optgroup>';
-  return html;
-}
+// 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
+let _sortChecked = []; // e.g. ['total_time_min:asc', 'price_low:asc']
 
 function initSortBar(cards) {
   if (!cards || !cards.length) return;
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.innerHTML = _buildSelectHTML(new Set());
+
+  const wrap = document.getElementById('sort-chips-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SORT_OPTIONS.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'sort-check-item';
+    el.dataset.value = o.value;
+    el.innerHTML = `<span class="rank-badge"></span><div class="icon-bubble"><i class="ti ${o.icon}"></i></div><span class="sort-chip-label">${o.label}</span>`;
+    el.addEventListener('click', () => onSortCheckClick(o.value));
+    wrap.appendChild(el);
   });
+
   document.getElementById('sort-bar').classList.add('visible');
+
+  // 정렬 패널 접힘 상태 초기화 (localStorage 기억, 기본 펼침)
+  const _sp = document.getElementById('sort-panel');
+  const _stb = document.getElementById('sort-toggle-btn');
+  let _open = true;
+  try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
+  _sp.classList.toggle('open', _open);
+  _stb.classList.toggle('open', _open);
+  _stb.setAttribute('aria-expanded', String(_open));
 }
 
-function updateSortDropdowns() {
-  const v1 = document.getElementById('sort-1').value;
-  const v2 = document.getElementById('sort-2').value;
-  const v3 = document.getElementById('sort-3').value;
-
-  // 2순위: 1순위 선택 항목 disabled, 이전 값 복원
-  const sel2 = document.getElementById('sort-2');
-  sel2.innerHTML = _buildSelectHTML(new Set([v1].filter(Boolean)));
-  sel2.value = (v2 && v2 !== v1) ? v2 : '';
-  const newV2 = sel2.value;
-
-  // 3순위: 1+2순위 disabled, 2순위 비면 초기화
-  const sel3 = document.getElementById('sort-3');
-  sel3.innerHTML = _buildSelectHTML(new Set([v1, newV2].filter(Boolean)));
-  sel3.value = (v3 && v3 !== v1 && v3 !== newV2) ? v3 : '';
-}
-
-function onSortChange() {
-  updateSortDropdowns();
+function onSortCheckClick(value) {
+  const idx = _sortChecked.indexOf(value);
+  if (idx === -1) {
+    _sortChecked.push(value);
+  } else {
+    _sortChecked.splice(idx, 1);
+  }
+  _refreshSortUI();
   applySortOrder();
 }
 
+function _refreshSortUI() {
+  document.querySelectorAll('.sort-check-item').forEach(el => {
+    const rank = _sortChecked.indexOf(el.dataset.value);
+    el.classList.toggle('checked', rank !== -1);
+    const badge = el.querySelector('.rank-badge');
+    if (badge) badge.textContent = rank !== -1 ? rank + 1 : '';
+  });
+
+  // 토글 버튼 배지
+  const badge = document.getElementById('sort-badge');
+  if (badge) {
+    badge.textContent = _sortChecked.length || '';
+    badge.style.display = _sortChecked.length ? 'inline-flex' : 'none';
+  }
+
+  // 힌트 텍스트: "1순위 통근 짧은순 → 2순위 가격 낮은순"
+  const hint = document.getElementById('sort-hint');
+  if (!hint) return;
+  if (!_sortChecked.length) {
+    hint.innerHTML = '클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정';
+    return;
+  }
+  const labelMap = Object.fromEntries(SORT_OPTIONS.map(o => [o.value, o.label]));
+  const parts = _sortChecked.map((v, i) =>
+    `<span class="hint-order">${i+1}순위</span> ${labelMap[v] || v}`
+  );
+  hint.innerHTML = parts.join(' &nbsp;→&nbsp; ');
+}
+
+function toggleSortPanel() {
+  const panel = document.getElementById('sort-panel');
+  const btn = document.getElementById('sort-toggle-btn');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', String(open));
+  try { localStorage.setItem('sortPanelOpen', open ? '1' : '0'); } catch (e) {}
+}
+
+// 드롭다운 호환 스텁 (기존 코드에서 호출되는 함수명 유지)
+function updateSortDropdowns() {}
+function onSortChange() { applySortOrder(); }
+
 function applySortOrder() {
-  const keys = ['sort-1','sort-2','sort-3']
-    .map(id => document.getElementById(id).value)
-    .filter(v => v);
+  const keys = _sortChecked;
 
   if (!keys.length) {
     if (window._lastSearchData) renderCards(window._lastSearchData);
@@ -4661,18 +5224,15 @@ function _renderSortedFlat(cards) {
   if (!data) return;
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  let html = renderStatsPanel(data);
-  html += `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
   _updateFavTab();
 }
 
 function resetSort() {
-  ['sort-1','sort-2','sort-3'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  updateSortDropdowns();
+  _sortChecked = [];
+  _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
 }
 
