@@ -35,6 +35,10 @@ _pg_pool = None
 def _get_pool():
     """psycopg_pool.ConnectionPool 지연 초기화. 실패 시 None 반환(직결 폴백)."""
     global _pg_pool
+    # 서버리스(Vercel)에서는 프로세스가 요청마다 재시작되므로 풀이 의미없음.
+    # 연결 슬롯 고갈(PoolTimeout) 방지를 위해 직결 폴백 사용.
+    if cfg.IS_SERVERLESS:
+        return None
     if _pg_pool is not None:
         return _pg_pool
     try:
