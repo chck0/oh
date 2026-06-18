@@ -3195,10 +3195,55 @@ async function sendChatMessage(text) {
       }),
     });
     _clearChatAttachment();  // 전송 직후 첨부 초기화
-    const data = await res.json();
-    document.getElementById(loadId)?.remove();
-    const reply = data.reply || '잠깐, 다시 시도해봐.';
-    _appendChatMsg('assistant', escHtml(reply).replace(/\n/g, '<br>'));
+
+    const box = document.getElementById('chat-messages');
+    const bubble = document.getElementById(loadId);   // '생각 중...' 말풍선 재사용
+    let acc = '';
+    let suggestions = [];
+    let started = false;
+    const _render = () => { if (bubble) bubble.innerHTML = escHtml(acc).replace(/\n/g, '<br>'); };
+
+    if (!res.body || !res.body.getReader) {
+      // 스트리밍 미지원 환경 폴백 — JSON 한 번에 수신
+      const data = await res.json().catch(() => ({}));
+      acc = data.reply || '잠깐, 다시 시도해봐.';
+      suggestions = data.suggestions || [];
+      _render();
+    } else {
+      // SSE 스트림 파싱 (data: {json}\n\n)
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const parts = buf.split('\n\n');
+        buf = parts.pop();
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data:')) continue;
+          let payload;
+          try { payload = JSON.parse(line.slice(5).trim()); } catch { continue; }
+          if (payload.type === 'delta') {
+            if (!started) { started = true; if (bubble) bubble.innerHTML = ''; }
+            acc += payload.text;
+            _render();
+          } else if (payload.type === 'done') {
+            suggestions = payload.suggestions || [];
+          } else if (payload.type === 'error') {
+            if (!acc) { acc = payload.message || '에러가 났어. 잠깐 기다려봐.'; _render(); }
+          }
+        }
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    if (bubble) bubble.removeAttribute('id');
+    const reply = acc || '잠깐, 다시 시도해봐.';
+    if (bubble && !acc) bubble.innerHTML = escHtml(reply).replace(/\n/g, '<br>');
+    box.scrollTop = box.scrollHeight;
+
     _chatHistory.push({role:'user', content: message}, {role:'assistant', content: reply});
     if (_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
     try {
@@ -3207,8 +3252,8 @@ async function sendChatMessage(text) {
       }));
     } catch(e) {}
     // F2(spec-24): 동적 Chip 갱신
-    if (data.suggestions && data.suggestions.length) {
-      _renderChips(data.suggestions);
+    if (suggestions && suggestions.length) {
+      _renderChips(suggestions);
     }
   } catch {
     document.getElementById(loadId)?.remove();
