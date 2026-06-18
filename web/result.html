@@ -2221,8 +2221,17 @@
       }
       .map-panel {
         width: 100%; min-width: 0;
-        flex: 0 0 46vh; min-height: 46vh;
+        flex: 0 0 32vh; min-height: 32vh;   /* spec-12 #1: 리스트 모드 지도 미리보기 축소(카드 공간 확보) */
       }
+
+      /* spec-12 #2: 지도 범례 컴팩트화 (작은 모바일 지도에 맞춰 축소) */
+      #map-legend {
+        top: 8px; left: 8px; padding: 9px 12px; min-width: 0; border-radius: 10px;
+      }
+      #map-legend .lg-title { margin-bottom: 6px; font-size: 10px; }
+      #map-legend .lg-row { margin-bottom: 5px; font-size: 12px; gap: 7px; }
+      #map-legend .lg-dot { width: 10px; height: 10px; }
+      #map-legend .lg-divider { margin: 6px 0; }
 
       /* C. 지도 우선 모드 — 토글로 .mobile-map-focus 부여 시 리스트 접고 지도 확대 */
       .result-layout.mobile-map-focus .left-panel {
@@ -2235,7 +2244,8 @@
       /* C. 모바일 전용 플로팅 토글 버튼 (position:fixed → flex 흐름 무영향) */
       .mobile-view-toggle {
         display: inline-flex; align-items: center; gap: 6px;
-        position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+        /* spec-12 #4: Kakao 로고·저작권(코너) 위로 띄워 안 가리게 + 가로 중앙 */
+        position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
         z-index: 880;
         padding: 10px 18px;
         background: var(--color-brand-gradient); color: #fff;
@@ -5400,6 +5410,14 @@ function initSortBar(cards) {
   const _stb = document.getElementById('sort-toggle-btn');
   let _open = true;
   try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
+  // spec-12 #1: 모바일 첫 진입은 정렬패널 접힘(카드 공간 확보). 저장된 선호 있으면 존중.
+  // 가드로 데스크톱 경로는 무변경.
+  try {
+    if (window.matchMedia('(max-width: 767px)').matches &&
+        localStorage.getItem('sortPanelOpen') === null) {
+      _open = false;
+    }
+  } catch (e) {}
   _sp.classList.toggle('open', _open);
   _stb.classList.toggle('open', _open);
   _stb.setAttribute('aria-expanded', String(_open));
