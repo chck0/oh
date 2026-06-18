@@ -218,7 +218,10 @@
 
     /* ─── 직장 주소 row ────────────────────────────────────── */
     .address-row { display: flex; gap: 10px; }
-    .address-row input { flex: 1; }
+    /* min-width:0 — 플렉스 기본 min-width:auto로 입력칸이 안 줄어 '주소 찾기'
+       버튼이 좁은 폰(≤~370px)에서 화면 밖으로 밀리던 가로 오버플로 수정.
+       데스크톱은 여유 폭이라 렌더 변화 없음. */
+    .address-row input { flex: 1; min-width: 0; }
     .wp-label {
       font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
       color: var(--color-brand-primary); margin-bottom: 6px;
