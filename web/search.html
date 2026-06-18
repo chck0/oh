@@ -226,11 +226,12 @@
     .btn-add-wp2 {
       display: inline-flex; align-items: center; gap: 4px;
       margin-top: 12px; padding: 8px 14px;
-      font-size: 13px; font-weight: 600; color: var(--color-brand-primary);
-      background: var(--color-brand-bg-subtle); border: 1.5px dashed var(--color-brand-primary);
-      border-radius: var(--radius-pill); cursor: pointer; transition: opacity .15s;
+      font-size: 13px; font-weight: 600; color: #ffffff;
+      background: var(--color-brand-gradient); border: none;
+      border-radius: var(--radius-pill); cursor: pointer;
+      box-shadow: var(--shadow-brand); transition: box-shadow .15s, filter .15s;
     }
-    .btn-add-wp2:hover { opacity: .75; }
+    .btn-add-wp2:hover { filter: brightness(1.08); box-shadow: var(--shadow-brand-strong); }
     .wp2-row { margin-top: 14px; }
     .btn-remove-wp2 {
       padding: 11px 14px; background: none;
