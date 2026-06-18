@@ -3513,44 +3513,7 @@ function _poiNotice(msg){
   _poiNoticeTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
-// ── POI 유효성 검증 — Kakao 검색 불가 시설 제거 ──────────────
-async function validateAndFilterPois() {
-  const card = resultData?.cards.find(c => c.apt_seq === _currentAptSeq);
-  if (!card || !card.lat || !card.lng) return;
-  const rows = Array.from(document.querySelectorAll('.dp-poi-row.detail-poi-row'));
-  if (!rows.length) return;
-
-  const aptLatLng = new kakao.maps.LatLng(card.lat, card.lng);
-  const ps = new kakao.maps.services.Places();
-
-  function _search(name, radius) {
-    return new Promise(resolve => {
-      ps.keywordSearch(name, (data, status) => {
-        if (status === kakao.maps.services.Status.OK && data.length) { resolve(true); return; }
-        if (name.length > 4) {
-          ps.keywordSearch(name.substring(0, 6), (d2, s2) => {
-            resolve(s2 === kakao.maps.services.Status.OK && d2.length > 0);
-          }, { location: aptLatLng, radius, size: 1 });
-        } else { resolve(false); }
-      }, { location: aptLatLng, radius, size: 1 });
-    });
-  }
-
-  // 순차 처리 (Kakao API 동시 호출 제한 대비)
-  for (const row of rows) {
-    const name = row.dataset.poiName || '';
-    const distM = parseInt(row.dataset.distM, 10) || 300;
-    const radius = Math.min(Math.max(distM + 300, 600), 2000);
-    const found = await _search(name, radius);
-    if (!found) row.remove();
-  }
-
-  // 빈 카테고리 헤더 정리
-  document.querySelectorAll('.dp-poi-category').forEach(header => {
-    let sib = header.nextElementSibling;
-    if (!sib || sib.classList.contains('dp-poi-category')) header.remove();
-  });
-}
+// spec-43: validateAndFilterPois 제거 — 클릭 시 showPoiMarker→fail()이 처리
 
 // ── 패널 리사이즈 핸들 (spec-19) ─────────────────────────────
 (function initResizeHandle() {
@@ -4639,7 +4602,6 @@ async function showDetail(aptSeq, wpId){
     const routes = (await rRes.json()).options || [];
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
     renderDetailPanel(detail, routes, wpId);
-    if (kakaoMap) validateAndFilterPois();
   } catch(e){
     document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
