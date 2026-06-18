@@ -75,7 +75,7 @@
 
 html, body {
   font-family: var(--font-sans);
-  font-weight: var(--fw-regular);
+  font-weight: var(--fw-medium);
   font-size: var(--fs-body);
   line-height: var(--lh-loose);
   letter-spacing: var(--ls-body);
