@@ -402,7 +402,7 @@
     }
     .adv-filter-header {
       display: flex; align-items: center; gap: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
     .adv-filter-title {
       font-size: 12px; font-weight: 700;
@@ -419,7 +419,7 @@
     .adv-filter-reset:hover { color: #c0392b; }
     .adv-filter-row {
       display: flex; align-items: flex-start; gap: 6px;
-      margin-bottom: 6px; flex-wrap: wrap;
+      margin-bottom: 3px; flex-wrap: wrap;
     }
     .adv-filter-row:last-child { margin-bottom: 0; }
     .adv-filter-label {
@@ -450,7 +450,7 @@
       color: #fff !important;
     }
     /* 준공연도 슬라이더 */
-    .adv-filter-row--column { flex-direction: column; gap: 4px; }
+    .adv-filter-row--column { flex-direction: column; gap: 2px; }
     .adv-year-header { display: flex; align-items: center; justify-content: space-between; width: 100%; }
     .adv-year-range-label { font-size: 11px; font-weight: 600; color: var(--color-brand-primary); }
     .adv-year-slider-wrap { width: 100%; padding: 0 4px; box-sizing: border-box; }
@@ -464,7 +464,7 @@
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
-      margin: 2px 0 6px;
+      margin: 1px 0 4px;
     }
     .adv-year-fill {
       position: absolute; height: 100%;
@@ -507,7 +507,7 @@
       background: #fff;
       border-top: 1px solid var(--color-border-strong);
       overflow-y: auto;
-      max-height: 60vh;
+      max-height: none;
       overscroll-behavior: contain;
     }
     .sort-panel-body.collapsed {
@@ -521,8 +521,8 @@
       overflow: hidden;
     }
     .sort-check-item {
-      display: flex; align-items: center; gap: 7px;
-      cursor: pointer; padding: 4px 10px;
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer; padding: 3px 9px;
       background: #fff; user-select: none;
       border-bottom: 1px solid #e8eaed;
       position: relative; transition: background .1s;
@@ -559,17 +559,28 @@
       padding: 4px 2px 0;
     }
     .sort-hint .hint-order { color: var(--color-brand-primary); font-weight: 600; }
-    /* 상세조건 크기 강화 */
-    .adv-filter-panel { padding: 12px 14px 10px; }
-    .adv-filter-title { font-size: 13px; }
-    .adv-filter-label { font-size: 12px; min-width: 44px; }
+    /* 추가 조건 패널 — sort-panel 기본 패딩 제거 후 내부에서 직접 제어 */
+    #walk-panel { padding: 0; background: var(--color-surface); border-bottom: 1px solid var(--color-border-strong); }
+    #walk-panel .sort-panel-header { padding: 11px 13px 9px; background: var(--color-surface); }
+    #walk-panel-body { padding: 6px 12px 3px; background: var(--color-surface); }
+    #walk-panel-body .adv-year-histogram { height: 29px; }
+    #walk-panel-body .adv-year-thumb { width: 10px; height: 10px; }
+    #walk-panel-body .adv-filter-label { font-size: 9px; min-width: 36px; }
+    #walk-panel-body .adv-year-range-label { font-size: 9px; }
+    #walk-panel-body .adv-year-tick { font-size: 8px; }
+    #walk-panel-body .adv-filter-row { margin-bottom: 2px; }
+
+    /* 상세조건 — 6개 슬라이더 한 화면에 */
+    .adv-filter-panel { padding: 7px 12px 4px; }
+    .adv-filter-title { font-size: 12px; }
+    .adv-filter-label { font-size: 11px; min-width: 40px; }
     .adv-filter-multi-hint { font-size: 11px; padding-top: 5px; }
     .adv-chip { padding: 5px 11px; font-size: 12px; }
-    .adv-year-range-label { font-size: 12px; font-weight: 700; }
-    .adv-year-histogram { height: 44px; }
-    .adv-year-bar { border-radius: 3px 3px 0 0; }
-    .adv-year-thumb { width: 16px; height: 16px; }
-    .adv-year-tick { font-size: 11px; }
+    .adv-year-range-label { font-size: 11px; font-weight: 700; }
+    .adv-year-histogram { height: 36px; }
+    .adv-year-bar { border-radius: 2px 2px 0 0; }
+    .adv-year-thumb { width: 12px; height: 12px; }
+    .adv-year-tick { font-size: 10px; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: var(--color-bg-muted); }
     /* spec-19: 리사이즈 핸들 */
@@ -1729,55 +1740,65 @@
        ════════════════════════════════════════════════════════ */
     .pin-tooltip {
       position: fixed; z-index: 900;
-      width: 240px;
-      background: #000;
-      border-radius: 14px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      padding: 18px 20px 16px;
+      width: 192px;
+      background: #fff;
+      border-radius: 11px;
+      box-shadow: 0 6px 26px rgba(0,0,0,0.18);
+      padding: 0 0 13px;
       cursor: pointer;
       transition: opacity 100ms ease;
+      overflow: hidden;
     }
     .pin-tooltip.hidden { display: none; }
     .pin-tooltip__title {
-      font-size: 17px; font-weight: 800;
+      font-size: 14px; font-weight: 800;
       letter-spacing: -0.025em; line-height: 1.3;
       color: #fff;
-      margin-bottom: 18px;
+      background: linear-gradient(120deg, #D918C8 0%, #A030D4 50%, #6B33E6 100%);
+      padding: 11px 16px 10px;
+      margin-bottom: 11px;
+      position: relative;
     }
-    .pin-tooltip__section { margin-bottom: 14px; }
+    .pin-tooltip__title::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.22) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .pin-tooltip__section { margin-bottom: 11px; padding: 0 16px; }
     .pin-tooltip__section-label {
-      font-size: 11px; font-weight: 700;
-      color: rgba(255,255,255,0.45);
-      margin-bottom: 6px;
+      font-size: 9px; font-weight: 700;
+      color: var(--color-text-secondary);
+      margin-bottom: 5px;
     }
     .pin-tooltip__price-row {
-      display: flex; align-items: baseline; gap: 10px;
+      display: flex; align-items: baseline; gap: 8px;
     }
     .pin-tooltip__price-val {
-      font-size: 26px; font-weight: 800;
-      color: #fff; font-feature-settings: 'tnum';
+      font-size: 21px; font-weight: 800;
+      color: var(--color-text-primary); font-feature-settings: 'tnum';
       letter-spacing: -0.03em;
     }
     .pin-tooltip__pyeong {
-      font-size: 26px; font-weight: 800;
-      color: rgba(255,255,255,0.35);
+      font-size: 21px; font-weight: 800;
+      color: var(--color-text-secondary);
       letter-spacing: -0.02em;
     }
     .pin-tooltip__date {
-      font-size: 12px; font-weight: 500;
-      color: rgba(255,255,255,0.4);
-      margin-top: 5px; font-feature-settings: 'tnum';
+      font-size: 10px; font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-top: 4px; font-feature-settings: 'tnum';
     }
     .pin-tooltip__route {
-      font-size: 15px; font-weight: 600;
-      color: #fff;
+      font-size: 12px; font-weight: 600;
+      color: var(--color-text-primary);
     }
     .pin-tooltip__footer {
-      font-size: 12px; font-weight: 600;
-      color: rgba(255,255,255,0.4);
-      border-top: 1px solid rgba(255,255,255,0.1);
-      padding-top: 12px;
-      margin-top: 4px;
+      font-size: 10px; font-weight: 600;
+      color: var(--color-text-secondary);
+      border-top: 1px solid var(--color-border-default);
+      padding: 10px 16px 0;
+      margin-top: 3px;
     }
 
     /* ════════════════════════════════════════════════════════
@@ -2567,7 +2588,7 @@
         <div class="adv-filter-row adv-filter-row--column">
           <div class="adv-year-header">
             <span class="adv-filter-label">평형</span>
-            <span class="adv-year-range-label" id="adv-pyeong-range-label">제한없음</span>
+            <span class="adv-year-range-label" id="adv-pyeong-range-label"></span>
           </div>
           <div class="adv-year-slider-wrap">
             <div class="adv-year-histogram" id="adv-pyeong-histogram"></div>
@@ -2583,7 +2604,7 @@
         <div class="adv-filter-row adv-filter-row--column">
           <div class="adv-year-header">
             <span class="adv-filter-label">준공연도</span>
-            <span class="adv-year-range-label" id="adv-year-range-label">제한없음</span>
+            <span class="adv-year-range-label" id="adv-year-range-label"></span>
           </div>
           <div class="adv-year-slider-wrap" id="adv-year-slider-wrap">
             <div class="adv-year-histogram" id="adv-year-histogram"></div>
@@ -2599,7 +2620,7 @@
         <div class="adv-filter-row adv-filter-row--column">
           <div class="adv-year-header">
             <span class="adv-filter-label">세대수</span>
-            <span class="adv-year-range-label" id="adv-units-range-label">제한없음</span>
+            <span class="adv-year-range-label" id="adv-units-range-label"></span>
           </div>
           <div class="adv-year-slider-wrap" id="adv-units-slider-wrap">
             <div class="adv-year-histogram" id="adv-units-histogram"></div>
@@ -2609,6 +2630,65 @@
               <div class="adv-year-thumb" id="adv-units-thumb-max" data-which="max"></div>
             </div>
             <div class="adv-year-tick-row" id="adv-units-tick-row"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 추가 조건 패널 -->
+      <div class="sort-panel" id="walk-panel">
+        <div class="sort-panel-header" onclick="toggleWalkPanel()" style="cursor:pointer">
+          <span class="sort-panel-title">추가 조건</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="sort-panel-reset" id="walk-filter-reset-btn" onclick="event.stopPropagation();resetWalkFilter()" style="display:none">✕ 초기화</button>
+            <span class="sort-panel-arrow collapsed" id="walk-panel-arrow">▲</span>
+          </div>
+        </div>
+        <div class="sort-panel-body collapsed" id="walk-panel-body">
+          <div class="adv-filter-row adv-filter-row--column">
+            <div class="adv-year-header">
+              <span class="adv-filter-label">초등학교까지 도보</span>
+              <span class="adv-year-range-label" id="adv-elem-range-label"></span>
+            </div>
+            <div class="adv-year-slider-wrap">
+              <div class="adv-year-histogram" id="adv-elem-histogram"></div>
+              <div class="adv-year-track" id="adv-elem-track">
+                <div class="adv-year-fill" id="adv-elem-fill"></div>
+                <div class="adv-year-thumb" id="adv-elem-thumb-min"></div>
+                <div class="adv-year-thumb" id="adv-elem-thumb-max"></div>
+              </div>
+              <div class="adv-year-tick-row" id="adv-elem-tick-row"></div>
+            </div>
+          </div>
+          <div class="adv-filter-row adv-filter-row--column">
+            <div class="adv-year-header">
+              <span class="adv-filter-label">공원까지 도보</span>
+              <span class="adv-year-range-label" id="adv-park-range-label"></span>
+            </div>
+            <div class="adv-year-slider-wrap">
+              <div class="adv-year-histogram" id="adv-park-histogram"></div>
+              <div class="adv-year-track" id="adv-park-track">
+                <div class="adv-year-fill" id="adv-park-fill"></div>
+                <div class="adv-year-thumb" id="adv-park-thumb-min"></div>
+                <div class="adv-year-thumb" id="adv-park-thumb-max"></div>
+              </div>
+              <div class="adv-year-tick-row" id="adv-park-tick-row"></div>
+            </div>
+          </div>
+          <div class="adv-filter-row adv-filter-row--column">
+            <div class="adv-year-header">
+              <span class="adv-filter-label">쇼핑/편의시설까지 도보</span>
+              <span class="adv-year-range-label" id="adv-mart-range-label"></span>
+            </div>
+            <div class="adv-year-slider-wrap">
+              <div class="adv-year-histogram" id="adv-mart-histogram"></div>
+              <div class="adv-year-track" id="adv-mart-track">
+                <div class="adv-year-fill" id="adv-mart-fill"></div>
+                <div class="adv-year-thumb" id="adv-mart-thumb-min"></div>
+                <div class="adv-year-thumb" id="adv-mart-thumb-max"></div>
+              </div>
+              <div class="adv-year-tick-row" id="adv-mart-tick-row"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -2621,7 +2701,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
-            <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
+            <span class="sort-panel-arrow collapsed" id="sort-panel-arrow">▲</span>
           </div>
         </div>
         <div class="sort-panel-body collapsed" id="sort-panel-body">
@@ -5079,6 +5159,9 @@ function renderCards(data){
   if (!_pyeongSlider.buckets.length) _initPyeongSlider(data.cards);
   if (!_yearSlider.years.length) _initYearSlider(data.cards);
   if (!_unitsSlider.buckets.length) _initUnitsSlider(data.cards);
+  if (!_elemSlider.mins.length) _initWalkSlider('elem', 'nearest_elementary_min', _elemSlider, data.cards);
+  if (!_parkSlider.mins.length) _initWalkSlider('park', 'nearest_park_min', _parkSlider, data.cards);
+  if (!_martSlider.mins.length) _initWalkSlider('mart', 'nearest_mart_min', _martSlider, data.cards);
 
   const allCards = _isAdvFilterActive() ? _filterCardsByAdv(data.cards) : data.cards;
 
@@ -5941,19 +6024,11 @@ function renderPOIHTML(poi){
 // ── 체크박스 정렬 패널 ────────────────────────────────────────
 const SORT_OPTIONS = [
   { value: 'total_time_min:asc',           label: '통근시간 짧은순',  icon: 'ti-clock',          group: '기본' },
-  { value: 'price_low:asc',                label: '최저가 낮은순',    icon: 'ti-tag',            group: '기본' },
-  { value: 'pyeong_price_avg:asc',         label: '평당가 낮은순',    icon: 'ti-coins',          group: '기본' },
+  { value: 'price_low:asc',                label: '가격순',           icon: 'ti-tag',            group: '기본' },
   { value: 'build_year:desc',              label: '신축순',           icon: 'ti-building',       group: '기본' },
-  { value: 'deal_count:desc',              label: '거래건수 많은순',  icon: 'ti-chart-bar',      group: '기본' },
   { value: 'kaptdaCnt:desc',               label: '세대수 많은순',    icon: 'ti-users',          group: '기본' },
   { value: 'transfer_count:asc',           label: '환승 적은순',      icon: 'ti-transfer',       group: '기본' },
-  { value: 'pyeong:desc',                  label: '평수 넓은순',      icon: 'ti-maximize',       group: '기본' },
   { value: 'walk_to_transit_min:asc',      label: '대중교통 도보',    icon: 'ti-walk',           group: '도보' },
-  { value: 'nearest_park_min:asc',         label: '공원 도보',        icon: 'ti-trees',          group: '도보' },
-  { value: 'nearest_subway_min:asc',       label: '지하철 도보',      icon: 'ti-train',          group: '도보' },
-  { value: 'nearest_elementary_min:asc',   label: '초등학교 도보',    icon: 'ti-school',         group: '도보' },
-  { value: 'nearest_mid_high_min:asc',     label: '중고등학교 도보',  icon: 'ti-school',         group: '도보' },
-  { value: 'nearest_mart_min:asc',         label: '마트 도보',        icon: 'ti-shopping-cart',  group: '도보' },
 ];
 
 // 체크된 항목을 순서대로 저장 (클릭 순 = 우선순위)
@@ -6030,6 +6105,25 @@ function toggleCardColumn() {
 }
 
 // 정렬 기준 드롭다운 토글
+let _walkPanelOpen = false;
+function toggleWalkPanel() {
+  _walkPanelOpen = !_walkPanelOpen;
+  document.getElementById('walk-panel-body').classList.toggle('collapsed', !_walkPanelOpen);
+  document.getElementById('walk-panel-arrow').classList.toggle('collapsed', !_walkPanelOpen);
+}
+
+function resetWalkFilter() {
+  _advFilter.elemMin = null; _advFilter.elemMax = null;
+  _advFilter.parkMin = null; _advFilter.parkMax = null;
+  _advFilter.martMin = null; _advFilter.martMax = null;
+  if (_elemSlider.mins.length) { _elemSlider.minIdx = 0; _elemSlider.maxIdx = _elemSlider.mins.length - 1; _renderWalkSlider('elem', _elemSlider); }
+  if (_parkSlider.mins.length) { _parkSlider.minIdx = 0; _parkSlider.maxIdx = _parkSlider.mins.length - 1; _renderWalkSlider('park', _parkSlider); }
+  if (_martSlider.mins.length) { _martSlider.minIdx = 0; _martSlider.maxIdx = _martSlider.mins.length - 1; _renderWalkSlider('mart', _martSlider); }
+  const walkResetBtn = document.getElementById('walk-filter-reset-btn');
+  if (walkResetBtn) walkResetBtn.style.display = 'none';
+  if (window._lastSearchData) renderCards(window._lastSearchData);
+}
+
 let _sortPanelOpen = false;
 function toggleSortPanel() {
   _sortPanelOpen = !_sortPanelOpen;
@@ -6094,13 +6188,17 @@ function resetSort() {
 }
 
 // ── 상세조건 필터 ──────────────────────────────────────────────
-const _advFilter = { pyeongMin: null, pyeongMax: null, yearMin: null, yearMax: null, unitsMin: null, unitsMax: null };
+const _advFilter = { pyeongMin: null, pyeongMax: null, yearMin: null, yearMax: null, unitsMin: null, unitsMax: null, elemMin: null, elemMax: null, parkMin: null, parkMax: null, martMin: null, martMax: null };
 
 // 준공연도 슬라이더 상태
 const _yearSlider = { years: [], counts: {}, minIdx: 0, maxIdx: 0 };
 const _unitsSlider = { buckets: [], counts: {}, minIdx: 0, maxIdx: 0 };
 // 평형 슬라이더 — 고정 버킷 [0,10,20,30,40,50]
 const _pyeongSlider = { buckets: [], counts: {}, minIdx: 0, maxIdx: 0 };
+// 도보 슬라이더 (분 단위)
+const _elemSlider = { mins: [], counts: {}, nullCnt: 0, minIdx: 0, maxIdx: 0 };
+const _parkSlider = { mins: [], counts: {}, nullCnt: 0, minIdx: 0, maxIdx: 0 };
+const _martSlider = { mins: [], counts: {}, nullCnt: 0, minIdx: 0, maxIdx: 0 };
 const _PYEONG_BUCKETS = [0, 10, 20, 30, 40, 50];
 const _PYEONG_MAP = { '10평미만': 0, '10평대': 10, '20평대': 20, '30평대': 30, '40평대': 40, '50평대+': 50 };
 
@@ -6127,7 +6225,7 @@ function _renderPyeongSlider() {
   const hist = document.getElementById('adv-pyeong-histogram');
   if (hist) {
     hist.innerHTML = buckets.map((b, i) => {
-      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 36));
+      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 32));
       const inRange = i >= minIdx && i <= maxIdx;
       const lbl = b === 0 ? '10평미만' : b === 50 ? '50평대+' : b + '평대';
       return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${lbl} ${counts[b]||0}개"></div>`;
@@ -6153,7 +6251,7 @@ function _renderPyeongSlider() {
 
   const label = document.getElementById('adv-pyeong-range-label');
   const isAll = minIdx === 0 && maxIdx === buckets.length - 1;
-  if (label) label.textContent = isAll ? '제한없음' : `${buckets[minIdx]===0?'10평미만':buckets[minIdx]+'평대'} ~ ${buckets[maxIdx]===50?'50평대+':buckets[maxIdx]+'평대'}`;
+  if (label) label.textContent = isAll ? '' : `${buckets[minIdx]===0?'10평미만':buckets[minIdx]+'평대'} ~ ${buckets[maxIdx]===50?'50평대+':buckets[maxIdx]+'평대'}`;
   _advFilter.pyeongMin = isAll ? null : buckets[minIdx];
   _advFilter.pyeongMax = isAll ? null : buckets[maxIdx];
   document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
@@ -6220,7 +6318,7 @@ function _renderYearSlider() {
   const hist = document.getElementById('adv-year-histogram');
   if (hist) {
     hist.innerHTML = years.map((y, i) => {
-      const h = Math.max(2, Math.round(((counts[y]||0) / maxCount) * 36));
+      const h = Math.max(2, Math.round(((counts[y]||0) / maxCount) * 32));
       const inRange = i >= minIdx && i <= maxIdx;
       return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${y}년 ${counts[y]||0}개"></div>`;
     }).join('');
@@ -6246,7 +6344,7 @@ function _renderYearSlider() {
 
   const label = document.getElementById('adv-year-range-label');
   const isAll = minIdx === 0 && maxIdx === years.length - 1;
-  if (label) label.textContent = isAll ? '제한없음' : `${years[minIdx]}년 ~ ${years[maxIdx]}년`;
+  if (label) label.textContent = isAll ? '' : `${years[minIdx]}년 ~ ${years[maxIdx]}년`;
   _advFilter.yearMin = isAll ? null : years[minIdx];
   _advFilter.yearMax = isAll ? null : years[maxIdx];
   document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
@@ -6319,7 +6417,7 @@ function _renderUnitsSlider() {
   const hist = document.getElementById('adv-units-histogram');
   if (hist) {
     hist.innerHTML = buckets.map((b, i) => {
-      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 36));
+      const h = Math.max(2, Math.round(((counts[b]||0) / maxCount) * 32));
       const inRange = i >= minIdx && i <= maxIdx;
       return `<div class="adv-year-bar${inRange?' in-range':''}" style="height:${h}px" title="${b.toLocaleString()}세대 ${counts[b]||0}개"></div>`;
     }).join('');
@@ -6348,7 +6446,7 @@ function _renderUnitsSlider() {
 
   const label = document.getElementById('adv-units-range-label');
   const isAll = minIdx === 0 && maxIdx === buckets.length - 1;
-  if (label) label.textContent = isAll ? '제한없음' : `${buckets[minIdx].toLocaleString()} ~ ${buckets[maxIdx].toLocaleString()}세대`;
+  if (label) label.textContent = isAll ? '' : `${buckets[minIdx].toLocaleString()} ~ ${buckets[maxIdx].toLocaleString()}세대`;
   _advFilter.unitsMin = isAll ? null : buckets[minIdx];
   _advFilter.unitsMax = isAll ? null : buckets[maxIdx];
   document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
@@ -6393,10 +6491,104 @@ function _initUnitsSliderDrag() {
   });
 }
 
+// ── 도보 슬라이더 (초등학교·공원·쇼핑/편의시설) ───────────────
+function _initWalkSlider(key, field, slider, cards) {
+  const countMap = {};
+  let nullCnt = 0;
+  cards.forEach(c => {
+    const v = parseFloat(c[field]);
+    if (!isNaN(v) && v > 0) { const m = Math.round(v); countMap[m] = (countMap[m] || 0) + 1; }
+    else nullCnt++;
+  });
+  slider.nullCnt = nullCnt;
+  const mins = Object.keys(countMap).map(Number).sort((a, b) => a - b);
+  if (!mins.length) return;
+  slider.mins = mins; slider.counts = countMap; slider.minIdx = 0; slider.maxIdx = mins.length - 1;
+  _renderWalkSlider(key, slider);
+  _initWalkSliderDrag(key, slider);
+}
+
+function _renderWalkSlider(key, slider) {
+  const { mins, counts, nullCnt, minIdx, maxIdx } = slider;
+  if (!mins.length) return;
+  const maxCount = Math.max(...mins.map(m => counts[m] || 0), 1);
+
+  const hist = document.getElementById(`adv-${key}-histogram`);
+  if (hist) hist.innerHTML = mins.map((m, i) => {
+    const h = Math.max(2, Math.round(((counts[m] || 0) / maxCount) * 26));
+    return `<div class="adv-year-bar${i >= minIdx && i <= maxIdx ? ' in-range' : ''}" style="height:${h}px" title="${m}분 ${counts[m] || 0}개"></div>`;
+  }).join('');
+
+  const pct = i => (i / (mins.length - 1)) * 100;
+  const minP = pct(minIdx), maxP = pct(maxIdx);
+  const fill = document.getElementById(`adv-${key}-fill`);
+  const tMin = document.getElementById(`adv-${key}-thumb-min`);
+  const tMax = document.getElementById(`adv-${key}-thumb-max`);
+  if (fill) { fill.style.left = minP + '%'; fill.style.width = (maxP - minP) + '%'; }
+  if (tMin) tMin.style.left = minP + '%';
+  if (tMax) tMax.style.left = maxP + '%';
+
+  const tickRow = document.getElementById(`adv-${key}-tick-row`);
+  if (tickRow) {
+    const step = Math.ceil(mins.length / 5);
+    const ticks = [];
+    for (let i = 0; i < mins.length; i += step) ticks.push(mins[i]);
+    if (ticks[ticks.length - 1] !== mins[mins.length - 1]) ticks.push(mins[mins.length - 1]);
+    tickRow.innerHTML = ticks.map(m => `<span class="adv-year-tick">${m}분</span>`).join('');
+  }
+
+  const isAll = minIdx === 0 && maxIdx === mins.length - 1;
+  const label = document.getElementById(`adv-${key}-range-label`);
+  if (label) {
+    if (isAll) label.textContent = '';
+    else label.textContent = `${mins[minIdx]}분 ~ ${mins[maxIdx]}분${nullCnt ? ` (+미확인 ${nullCnt}개)` : ''}`;
+  }
+  _advFilter[key + 'Min'] = isAll ? null : mins[minIdx];
+  _advFilter[key + 'Max'] = isAll ? null : mins[maxIdx];
+  const walkActive = _advFilter.elemMin !== null || _advFilter.parkMin !== null || _advFilter.martMin !== null;
+  const walkResetBtn = document.getElementById('walk-filter-reset-btn');
+  if (walkResetBtn) walkResetBtn.style.display = walkActive ? '' : 'none';
+}
+
+function _initWalkSliderDrag(key, slider) {
+  ['min', 'max'].forEach(which => {
+    const thumb = document.getElementById(`adv-${key}-thumb-${which}`);
+    if (!thumb) return;
+    const doMove = clientX => {
+      const track = document.getElementById(`adv-${key}-track`);
+      const rect = track.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const idx = Math.round(pct * (slider.mins.length - 1));
+      if (which === 'min') slider.minIdx = Math.min(idx, slider.maxIdx);
+      else slider.maxIdx = Math.max(idx, slider.minIdx);
+      _renderWalkSlider(key, slider); _applyAdvFilter();
+    };
+    thumb.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const move = ev => doMove(ev.clientX);
+      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    });
+    thumb.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const move = ev => doMove(ev.touches[0].clientX);
+      const up = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: false });
+  });
+}
+
 function resetAdvFilter() {
   _advFilter.pyeongMin = null; _advFilter.pyeongMax = null;
   _advFilter.yearMin = null; _advFilter.yearMax = null;
   _advFilter.unitsMin = null; _advFilter.unitsMax = null;
+  _advFilter.elemMin = null; _advFilter.elemMax = null;
+  _advFilter.parkMin = null; _advFilter.parkMax = null;
+  _advFilter.martMin = null; _advFilter.martMax = null;
+  if (_elemSlider.mins.length) { _elemSlider.minIdx = 0; _elemSlider.maxIdx = _elemSlider.mins.length - 1; _renderWalkSlider('elem', _elemSlider); }
+  if (_parkSlider.mins.length) { _parkSlider.minIdx = 0; _parkSlider.maxIdx = _parkSlider.mins.length - 1; _renderWalkSlider('park', _parkSlider); }
+  if (_martSlider.mins.length) { _martSlider.minIdx = 0; _martSlider.maxIdx = _martSlider.mins.length - 1; _renderWalkSlider('mart', _martSlider); }
   if (_pyeongSlider.buckets.length) {
     _pyeongSlider.minIdx = 0; _pyeongSlider.maxIdx = _pyeongSlider.buckets.length - 1;
     _renderPyeongSlider();
@@ -6414,7 +6606,8 @@ function resetAdvFilter() {
 }
 
 function _isAdvFilterActive() {
-  return _advFilter.pyeongMin !== null || _advFilter.yearMin !== null || _advFilter.unitsMin !== null;
+  return _advFilter.pyeongMin !== null || _advFilter.yearMin !== null || _advFilter.unitsMin !== null ||
+         _advFilter.elemMin !== null || _advFilter.parkMin !== null || _advFilter.martMin !== null;
 }
 
 function _applyAdvFilter() {
@@ -6444,6 +6637,27 @@ function _filterCardsByAdv(cards) {
       const cnt = parseInt(c.kaptdaCnt || 0);
       if (_advFilter.unitsMin && cnt < _advFilter.unitsMin) return false;
       if (_advFilter.unitsMax && cnt > _advFilter.unitsMax + 49) return false;
+    }
+    if (_advFilter.elemMin !== null || _advFilter.elemMax !== null) {
+      const v = parseFloat(c.nearest_elementary_min);
+      if (!isNaN(v)) {
+        if (_advFilter.elemMin !== null && v < _advFilter.elemMin) return false;
+        if (_advFilter.elemMax !== null && v > _advFilter.elemMax) return false;
+      }
+    }
+    if (_advFilter.parkMin !== null || _advFilter.parkMax !== null) {
+      const v = parseFloat(c.nearest_park_min);
+      if (!isNaN(v)) {
+        if (_advFilter.parkMin !== null && v < _advFilter.parkMin) return false;
+        if (_advFilter.parkMax !== null && v > _advFilter.parkMax) return false;
+      }
+    }
+    if (_advFilter.martMin !== null || _advFilter.martMax !== null) {
+      const v = parseFloat(c.nearest_mart_min);
+      if (!isNaN(v)) {
+        if (_advFilter.martMin !== null && v < _advFilter.martMin) return false;
+        if (_advFilter.martMax !== null && v > _advFilter.martMax) return false;
+      }
     }
     return true;
   });
