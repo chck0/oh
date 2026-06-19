@@ -5400,6 +5400,22 @@ function renderListCard(c, wpId, cmpMode=false){
   </article>`;
 }
 
+// spec-26: 아파트 직접 검색 바 — 목록 탭 상단 공통 (기본·정렬·관심 뷰 동일)
+function _aptSearchBarHtml(){
+  return `
+    <div class="apt-search-bar">
+      <div class="apt-search-input-wrap">
+        <input type="text" id="apt-search-input"
+          placeholder="아파트 이름으로 직접 검색… (예: 래미안)"
+          maxlength="30" autocomplete="off"
+          oninput="_onAptSearchInput()"
+          onkeydown="if(event.key==='Escape')_hideAptDropdown()">
+        <div class="apt-search-dropdown" id="apt-search-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div id="apt-search-result"></div>`;
+}
+
 function renderCards(data){
   panelMode='list';
   const panel=document.getElementById('cards-panel');
@@ -5459,18 +5475,7 @@ function renderCards(data){
   let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
-  html += `
-    <div class="apt-search-bar">
-      <div class="apt-search-input-wrap">
-        <input type="text" id="apt-search-input"
-          placeholder="아파트 이름으로 직접 검색… (예: 래미안)"
-          maxlength="30" autocomplete="off"
-          oninput="_onAptSearchInput()"
-          onkeydown="if(event.key==='Escape')_hideAptDropdown()">
-        <div class="apt-search-dropdown" id="apt-search-dropdown" style="display:none"></div>
-      </div>
-    </div>
-    <div id="apt-search-result"></div>`;
+  html += _aptSearchBarHtml();
 
   // 추천 카드 — 요약 헤더 + 개별 카드 렌더
   if(recommended.length){
@@ -6399,7 +6404,8 @@ function _renderSortedFlat(cards) {
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
   const title = _currentFavTab === 'fav' ? '관심' : '전체';
-  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
+  let html = _aptSearchBarHtml();
+  html += `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
   _updateListTabCount(cards.length);
