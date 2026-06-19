@@ -2879,7 +2879,7 @@ function showResults(){
   if(document.getElementById('loading').classList.contains('hidden')) return;
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('main').style.display='flex';
-  vCurr.pause(); vNext.pause();
+  try { vCurr?.pause?.(); vNext?.pause?.(); } catch(e) {}
   renderSummary(resultData);
   renderCards(resultData);
   initMap(resultData);
