@@ -488,7 +488,8 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    .adv-year-bar.in-range { background: var(--color-brand-gradient); border-color: transparent; }
+    /* 슬라이더 바: 연한 파스텔 그라데이션 (CTA용 진한 브랜드 그라데이션과 분리) */
+    .adv-year-bar.in-range { background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -496,7 +497,7 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: var(--color-brand-gradient); border-radius: 2px;
+      background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-radius: 2px;
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
