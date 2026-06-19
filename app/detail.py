@@ -18,6 +18,12 @@ from config import cfg
 
 router = APIRouter()
 
+# dong(동) 평균 시세 인메모리 캐시 — (umd_nm, threshold_year) → (ts, rows).
+# 같은 동의 모든 단지가 동일 결과라 같은 지역 연속 탐색 시 재계산을 제거한다.
+# 거래 데이터는 배치로 드물게 갱신되므로 짧은 TTL로 충분(최대 TTL만큼만 stale).
+_DONG_CACHE: dict = {}
+_DONG_TTL = 600  # 초
+
 
 # ── 입지·구조 지표 라벨 변환 (spec-31) ───────────────────────
 # 경사: 도(°) 원본은 툴팁용으로만 두고, 본문엔 체감 라벨+한 줄 설명으로 번역.
@@ -376,18 +382,39 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
         except Exception:
             return []
 
-    (fc_rows, pyeong_tabs, chart_rows, dong_avg_rows, trade_rows, poi_rows,
-     slope_row, br_rows) = await asyncio.gather(
+    # dong(동) 평균은 umd_nm 단위로 동일 → 같은 동의 모든 단지가 같은 결과.
+    # 캐시 적중 시 무거운 교차 스캔 쿼리와 커넥션 획득을 둘 다 생략한다.
+    _dong_key = (umd_nm, threshold_year)
+    _dh = _DONG_CACHE.get(_dong_key)
+    dong_cached = _dh[1] if (_dh and time.time() - _dh[0] < _DONG_TTL) else None
+
+    tasks = [
         asyncio.to_thread(_run, 'fc', _b_fc),
         asyncio.to_thread(_run, 'tabs', _b_tabs),
         asyncio.to_thread(_run, 'chart', _b_chart),
-        asyncio.to_thread(_run, 'dong', _b_dong),
         asyncio.to_thread(_run, 'trades', _b_trades),
         asyncio.to_thread(_run, 'poi', _b_poi),
         asyncio.to_thread(_run, 'slope', _b_slope),
         asyncio.to_thread(_run, 'br', _b_br),
-    )
+    ]
+    if dong_cached is None:
+        tasks.append(asyncio.to_thread(_run, 'dong', _b_dong))
+
+    results = await asyncio.gather(*tasks)
+    (fc_rows, pyeong_tabs, chart_rows, trade_rows, poi_rows,
+     slope_row, br_rows) = results[:7]
+    if dong_cached is None:
+        dong_avg_rows = results[7]
+        # 캐시 채우기 (쓰기는 메인 코루틴에서만 → 스레드 경쟁 없음). 무한 증가 방지 캡.
+        if len(_DONG_CACHE) > 500:
+            _DONG_CACHE.clear()
+        _DONG_CACHE[_dong_key] = (time.time(), dong_avg_rows)
+    else:
+        dong_avg_rows = dong_cached
+        timings['dong'] = 0  # 캐시 적중(쿼리·커넥션 생략)
+
     infra = (slope_row, br_rows)
+    timings['dong_cache'] = 1 if dong_cached is not None else 0
     timings['parallel_8q'] = round((time.time()-t0)*1000)
 
     # 주차대수: kaptdPcnt(지하) + kaptdPcntu(지상)
