@@ -13,7 +13,7 @@ import asyncio
 from fastapi import APIRouter, Depends, Response
 
 from app.db import get_db, connect as db_connect
-from app.portable import year_minus
+from app.portable import list_columns, year_minus
 from config import cfg
 
 router = APIRouter()
@@ -103,8 +103,11 @@ def _routes_query(conn) -> str:
     global _DEDUP_SCHEMA
     if _DEDUP_SCHEMA is None:
         try:
-            conn.execute("SELECT step1_geom_id FROM transit_routes LIMIT 0").fetchall()
-            _DEDUP_SCHEMA = True
+            # route_geom에 실제 형상이 있으면 dedup 스키마(JOIN 복원), 비어있으면 구 스키마로 폴백.
+            # 주의: step1은 보통 도보(geom_id NULL)라 step{i}_geom_id로는 감지 불가 →
+            # dedup 마커 테이블 route_geom 존재+데이터 유무로 판정한다.
+            row = conn.execute("SELECT 1 FROM route_geom LIMIT 1").fetchone()
+            _DEDUP_SCHEMA = row is not None
         except Exception:
             _DEDUP_SCHEMA = False
     if _DEDUP_SCHEMA:
@@ -268,8 +271,11 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
                 timings[name + '_conn'] = _conn_ms
 
     # ── Phase 1: 기본 단지 정보 (umd_nm 확보 + early return) ──────
-    apt = await asyncio.to_thread(_run, 'apt', lambda c: c.execute("""
-        SELECT a.apt_nm, a.umd_nm, a."kaptAddr", a.kaptdaCnt, a.lat, a.lng,
+    def _b_apt(c):
+        apt_cols = set(list_columns(c, 'apartments'))
+        addr_select = 'a."kaptAddr"' if 'kaptAddr' in apt_cols else "'' AS \"kaptAddr\""
+        return c.execute(f"""
+        SELECT a.apt_nm, a.umd_nm, {addr_select}, a.kaptdaCnt, a.lat, a.lng,
                k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
                k.kaptDongCnt, k.kaptdEcnt,
                k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
@@ -280,7 +286,9 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
         FROM apartments a
         LEFT JOIN kapt_complexes k USING(kaptCode)
         WHERE a.apt_seq = ?
-    """, [apt_seq]).fetchone())
+        """, [apt_seq]).fetchone()
+
+    apt = await asyncio.to_thread(_run, 'apt', _b_apt)
     timings['phase1'] = round((time.time()-t0)*1000)
     if not apt:
         print(f'[detail {apt_seq}] 단지 없음 — timings: {timings}')
@@ -582,7 +590,7 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
     response.headers['Server-Timing'] = ', '.join(
         f'{k};dur={v}' for k, v in timings.items())
 
-    kapt_addr = apt.get('kaptAddr', '') or ''
+    kapt_addr = apt['kaptAddr'] if 'kaptAddr' in apt.keys() else ''
     gu_nm = next((t for t in kapt_addr.split() if t.endswith('구')), '')
 
     return {
