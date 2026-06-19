@@ -2962,7 +2962,7 @@ function setActiveAptPin(aptSeq){
 function clearActiveAptPin(){ setActiveAptPin(null); }
 
 // 카드 클릭: 지도 pan + 단지 상세 모달 열기 (spec-17)
-function panToCard(aptSeq){ openDetail(aptSeq); }
+function panToCard(aptSeq){ showDetail(aptSeq, window._lastWpId || 0); }
 
 // ── 단지 상세 모달 (spec-17) ─────────────────────────────────
 const _detailCache = {};
@@ -5283,11 +5283,7 @@ function renderDetailPanel(d, routes, wpId){
   const ICON_CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   panel.innerHTML = `
-    <!-- 헤더 -->
-    <div class="dp__header">
-      <button class="dp__back" onclick="backToList()">← 목록</button>
-      ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
-    </div>
+    ${tier==='BEST'?`<div class="dp__header"><span class="dp__badge">추천</span></div>`:''}
 
     <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
