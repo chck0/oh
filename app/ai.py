@@ -46,23 +46,22 @@ REGULAR_CONCURRENCY = 8
 # ═══════════════════════════════════════════════════════════════
 def make_buckets(max_minutes: int) -> list[tuple[int, int]]:
     """
-    통근시간 버킷: 범례와 동일한 3구간
-    ≤30분 / 31~45분 / 46~max분
+    통근시간 버킷: 첫 구간 0~30분, 이후 10분 단위로 max_minutes까지
+    예) 60분 → [(0,30),(30,40),(40,50),(50,60)]
     """
     bs = [(0, 30)]
-    if max_minutes > 30:
-        bs.append((30, min(45, max_minutes)))
-    if max_minutes > 45:
-        bs.append((45, max_minutes))
+    start = 30
+    while start < max_minutes:
+        end = min(start + 10, max_minutes)
+        bs.append((start, end))
+        start = end
     return bs
 
 
 def bucket_label(s: int, e: int) -> str:
     if s == 0:
-        return "30분 이하"
-    if s == 30:
-        return "31~45분"
-    return f"46~{e}분"
+        return f"{e}분 이내"
+    return f"{s}~{e}분"
 
 
 def assign_bucket(t: int, buckets: list[tuple[int, int]]) -> int:

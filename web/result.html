@@ -2290,7 +2290,7 @@
     </div>
   </div>
 
-  <div class="result-layout">
+  <div class="result-layout cards-hidden">
     <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
@@ -2371,7 +2371,7 @@
       </div>
     </div>
     <!-- 매물 카드 컬럼 -->
-    <div class="card-column" id="card-column" style="position:relative">
+    <div class="card-column collapsed" id="card-column" style="position:relative">
       <button class="card-column-close" onclick="toggleCardColumn()" title="목록 닫기">✕</button>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
@@ -2455,9 +2455,9 @@
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이내</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>45분 이내</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>60분 이내</span></div>
         <hr class="lg-divider">
         <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
       </div>
@@ -2749,18 +2749,31 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
-    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
-    if (start <= 45) return '#f97316'; // 46~60분 → 주황
+    if (!lbl) return '#16a34a';
+    if (/이내|이하/.test(lbl)) {
+      const n = parseInt((lbl.match(/(\d+)/) || [])[1] || '999');
+      if (n <= 30) return '#16a34a'; // 30분 이내 → 초록
+      if (n <= 45) return '#3b82f6'; // 45분 이내 → 파랑
+      return '#f97316';              // 60분 이내 → 주황
+    }
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '999');
+    if (start < 30) return '#16a34a';
+    if (start < 45) return '#3b82f6';
     return '#f97316';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '30분 이하';
-    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '31~45분';
-    return '46~60분';
+    if (!lbl) return '30분 이내';
+    if (/이내|이하/.test(lbl)) {
+      const n = parseInt((lbl.match(/(\d+)/) || [])[1] || '999');
+      if (n <= 30) return '30분 이내';
+      if (n <= 45) return '45분 이내';
+      return '60분 이내';
+    }
+    const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '999');
+    if (start < 30) return '30분 이내';
+    if (start < 45) return '45분 이내';
+    return '60분 이내';
   };
   let curveHtml = '';
   if(s.commute_curve && s.commute_curve.length){
@@ -4226,6 +4239,7 @@ function renderCards(data){
 
   panel.innerHTML = html;
   initSortBar(data.cards);
+  if (_sortChecked.length) applySortOrder();
 }
 
 function toggleBucket(headEl){
