@@ -103,8 +103,12 @@ def _routes_query(conn) -> str:
     global _DEDUP_SCHEMA
     if _DEDUP_SCHEMA is None:
         try:
-            conn.execute("SELECT step1_geom_id FROM transit_routes LIMIT 0").fetchall()
-            _DEDUP_SCHEMA = True
+            # 컬럼 존재 여부 + 실제로 값이 채워져 있는지 동시 확인.
+            # 컬럼만 있고 전부 NULL이면 dedup 미완성 → 구 스키마(step{i}_linestring)로 폴백.
+            row = conn.execute(
+                "SELECT step1_geom_id FROM transit_routes WHERE step1_geom_id IS NOT NULL LIMIT 1"
+            ).fetchone()
+            _DEDUP_SCHEMA = row is not None
         except Exception:
             _DEDUP_SCHEMA = False
     if _DEDUP_SCHEMA:
