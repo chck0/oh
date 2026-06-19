@@ -5208,12 +5208,15 @@ let aptGroupMap = {};  // apt_seq → {apt_seq, apt_nm, lat, lng, umd_nm, kaptda
 
 async function initMap(data){
   await kakaoReady;
+  // flex 레이아웃이 브라우저에 의해 계산되도록 한 프레임 양보
+  await new Promise(r => requestAnimationFrame(r));
   const container = document.getElementById('map');
   const wp = data.workplace;
   kakaoMap = new kakao.maps.Map(container, {
     center: new kakao.maps.LatLng(wp.lat, wp.lng),
     level: zoomLevelFor(reqBody.max_minutes),
   });
+  kakaoMap.relayout();  // 컨테이너 실제 크기로 지도 재렌더링
   kakaoMap.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
   // 직장 핀 (W1)
