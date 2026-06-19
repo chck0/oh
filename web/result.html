@@ -488,7 +488,8 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    .adv-year-bar.in-range { background: var(--color-brand-gradient); border-color: transparent; }
+    /* 슬라이더 바: 연한 파스텔 그라데이션 (CTA용 진한 브랜드 그라데이션과 분리) */
+    .adv-year-bar.in-range { background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -496,7 +497,7 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: var(--color-brand-gradient); border-radius: 2px;
+      background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-radius: 2px;
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -591,24 +592,26 @@
     #walk-panel { padding: 0; background: var(--color-surface); border-bottom: 1px solid var(--color-border-strong); }
     #walk-panel .sort-panel-header { padding: 11px 13px 9px; background: var(--color-surface); }
     #walk-panel-body { padding: 6px 12px 3px; background: var(--color-surface); }
-    #walk-panel-body .adv-year-histogram { height: 29px; }
-    #walk-panel-body .adv-year-thumb { width: 10px; height: 10px; }
-    #walk-panel-body .adv-filter-label { font-size: 9.9px; min-width: 36px; }
-    #walk-panel-body .adv-year-range-label { font-size: 9.9px; }
-    #walk-panel-body .adv-year-tick { font-size: 8.8px; }
-    #walk-panel-body .adv-filter-row { margin-bottom: 2px; }
+    #walk-panel .sort-panel-title { font-size: 15px; font-weight: 800; }
+    #walk-panel-body .adv-year-histogram { height: 38px; }
+    #walk-panel-body .adv-year-thumb { width: 16px; height: 16px; }
+    #walk-panel-body .adv-filter-label { font-size: 14px; font-weight: 700; color: var(--color-text-primary); min-width: 36px; }
+    #walk-panel-body .adv-year-range-label { font-size: 13.5px; font-weight: 800; }
+    #walk-panel-body .adv-year-tick { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
+    #walk-panel-body .adv-filter-row { margin-bottom: 8px; }
 
-    /* 상세조건 — 6개 슬라이더 한 화면에 */
-    .adv-filter-panel { padding: 7px 12px 4px; }
-    .adv-filter-title { font-size: 12px; }
-    .adv-filter-label { font-size: 11px; min-width: 40px; }
-    .adv-filter-multi-hint { font-size: 11px; padding-top: 5px; }
-    .adv-chip { padding: 5px 11px; font-size: 12px; }
-    .adv-year-range-label { font-size: 11px; font-weight: 700; }
-    .adv-year-histogram { height: 36px; }
-    .adv-year-bar { border-radius: 2px 2px 0 0; }
-    .adv-year-thumb { width: 12px; height: 12px; }
-    .adv-year-tick { font-size: 10px; }
+    /* 상세조건 — 발표 가시성 강화(폰트·대비·여백 ↑) */
+    .adv-filter-panel { padding: 11px 15px 7px; }
+    .adv-filter-title { font-size: 15px; font-weight: 800; }
+    .adv-filter-label { font-size: 14px; font-weight: 700; color: var(--color-text-primary); min-width: 52px; }
+    .adv-filter-multi-hint { font-size: 12px; padding-top: 6px; }
+    .adv-chip { padding: 6px 13px; font-size: 13px; }
+    .adv-year-range-label { font-size: 13.5px; font-weight: 800; }
+    .adv-year-histogram { height: 42px; }
+    .adv-year-bar { border-radius: 3px 3px 0 0; }
+    .adv-year-thumb { width: 16px; height: 16px; border-width: 2.5px; }
+    .adv-year-tick { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
+    .adv-filter-row { margin-bottom: 8px; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: var(--color-bg-muted); }
     /* ── 상세 탭 — 300px 패널 최적화 ───────────────────────── */
@@ -663,21 +666,22 @@
       margin-bottom: 8px;
     }
     #lp-tab-detail .dp-statrow {
-      padding: 8px 2px;
-      margin-bottom: 8px;
-      border-radius: 9px;
+      padding: 14px 2px;
+      margin-bottom: 10px;
+      border-radius: 11px;
     }
-    #lp-tab-detail .dp-stat { padding: 0 3px; }
-    #lp-tab-detail .dp-stat + .dp-stat::before { height: 22px; }
-    #lp-tab-detail .dp-stat-num { font-size: 15px; letter-spacing: 0; }
-    #lp-tab-detail .dp-stat-unit { font-size: 10px; }
+    #lp-tab-detail .dp-stat { padding: 0 4px; }
+    #lp-tab-detail .dp-stat + .dp-stat::before { height: 30px; }
+    #lp-tab-detail .dp-stat-num { font-size: 20px; letter-spacing: -0.01em; }
+    #lp-tab-detail .dp-stat-unit { font-size: 12px; }
     #lp-tab-detail .dp-stat-label {
-      font-size: 9.5px;
-      line-height: 1.25;
-      margin-top: 3px;
+      font-size: 11.5px;
+      line-height: 1.3;
+      margin-top: 5px;
       white-space: normal;
     }
-    #lp-tab-detail .dp-stat-py { font-size: 8.5px; }
+    /* (평형)을 라벨 아랫줄로 — 가독성 */
+    #lp-tab-detail .dp-stat-py { display: block; font-size: 10px; margin-top: 1px; opacity: 0.8; }
     #lp-tab-detail .dp-chips { gap: 4px; margin-bottom: 8px; }
     #lp-tab-detail .dp-chip { font-size: 10.5px; padding: 3px 8px; }
     #lp-tab-detail .dp-verdict {
@@ -801,6 +805,14 @@
     }
     #lp-tab-detail .dp-poi-tag { font-size: 10px; }
     #lp-tab-detail .dp-poi-dist { font-size: 10.5px; flex-shrink: 0; }
+    /* 도보 시설 클릭 안내 힌트 — 제목 옆 작은 멘트 */
+    .dp-poi-hint {
+      font-size: 10px; font-weight: 600; white-space: nowrap;
+      color: var(--color-brand-primary);
+      background: var(--color-brand-bg-subtle);
+      padding: 1px 6px; border-radius: 999px; margin-left: 4px;
+      vertical-align: middle;
+    }
 
     /* ── 목록 탭 카드 — 300px 패널 최적화 ──────────────────── */
     #lp-tab-list .cards-panel { padding: 10px; overflow-y: auto; }
@@ -1610,17 +1622,6 @@
     /* ════════════════════════════════════════════════════════
        [spec-14] 즐겨찾기 비교
        ════════════════════════════════════════════════════════ */
-    .compare-check {
-      position: absolute; top: 8px; left: 8px; z-index: 5;
-      display: flex; align-items: center; gap: 4px;
-      font-size: 11px; font-weight: 600;
-      color: var(--color-text-secondary);
-      background: rgba(21,18,26,0.88);
-      border: 1px solid var(--color-border-default);
-      border-radius: 5px; padding: 2px 7px;
-      cursor: pointer; user-select: none;
-    }
-    .compare-check input { accent-color: var(--color-brand-primary); cursor: pointer; }
     .compare-bar {
       flex-shrink: 0;
       display: flex; align-items: center; gap: 8px;
@@ -1630,7 +1631,20 @@
       font-size: 13px;
     }
     .compare-bar.hidden { display: none; }
+    .compare-bar.cmp-bar-flash { animation: cmpBarFlash 0.4s ease; }
+    @keyframes cmpBarFlash { 0%,100% { background: var(--color-bg-subtle); } 50% { background: var(--color-brand-bg-subtle); } }
     .compare-bar__count { flex: 1; font-weight: 600; color: var(--color-text-primary); }
+    /* 관심 탭 비교 선택 — 클릭으로 토글되는 카드 색상 */
+    .cmp-selectable { cursor: pointer; }
+    .cmp-selected {
+      border-color: var(--color-brand-primary) !important;
+      background: var(--color-brand-bg-subtle) !important;
+      box-shadow: 0 0 0 2px var(--color-brand-primary) inset, 0 2px 10px rgba(196,24,192,0.12);
+    }
+    .cmp-hint {
+      font-size: 11.5px; font-weight: 600; color: var(--color-brand-primary);
+      padding: 2px 12px 8px;
+    }
     .compare-bar__btn {
       padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer;
       background: var(--color-brand-gradient); color: #fff;
@@ -2049,7 +2063,20 @@
       padding: 10px 16px 0;
       margin-top: 3px;
     }
-
+    .tt-pyeong-row {
+      display: flex; justify-content: flex-end;
+      padding: 0 12px 4px; margin-top: -4px;
+    }
+    .tt-pyeong-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: #F0EDFF; color: #6B33E6;
+      border: 1.5px solid #C4B5FD; border-radius: 20px;
+      padding: 3px 9px; font-size: 10.5px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; user-select: none;
+      transition: background 100ms, transform 60ms;
+    }
+    .tt-pyeong-chip:hover { background: #E0D4FF; transform: scale(1.05); }
+    .tt-pyeong-chip.hidden { display: none; }
     /* ════════════════════════════════════════════════════════
        [6] 상세 패널
        ════════════════════════════════════════════════════════ */
@@ -3073,6 +3100,9 @@
 <!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
 <div class="pin-tooltip hidden" id="pin-tooltip">
   <div class="pin-tooltip__title" id="tt-title"></div>
+  <div class="tt-pyeong-row">
+    <span class="tt-pyeong-chip hidden" id="tt-pyeong-chip" onclick="event.stopPropagation();_ttClickPyeong()"></span>
+  </div>
   <div class="pin-tooltip__section">
     <div class="pin-tooltip__section-label">최근 거래 금액</div>
     <div class="pin-tooltip__price-row">
@@ -3430,7 +3460,27 @@ window.filterMapPins = function(seqs) {
   Object.entries(aptOverlayMap).forEach(([seq, overlay]) => {
     overlay.setMap(!seqSet || seqSet.has(seq) ? kakaoMap : null);
   });
+  _updatePinLabelsForFilter();
 };
+
+// 상세필터(평형 등)가 켜지면 핀 라벨을 '필터를 통과하는 평형 중 최저가' 기준으로 갱신.
+// 전체 최저가 평형이 필터에서 빠지면(예: 20평대 필터인데 10평대가 최저가) 핀이 10평대로
+// 잘못 보이던 문제 해소. 필터 해제 시 다시 전체 최저가로 복원.
+function _updatePinLabelsForFilter() {
+  const advActive = (typeof _isAdvFilterActive === 'function') && _isAdvFilterActive();
+  document.querySelectorAll('.pin[data-apt-seq]').forEach(pinEl => {
+    const group = aptGroupMap[pinEl.dataset.aptSeq];
+    if (!group || !group.cards || !group.cards.length) return;
+    let pool = advActive ? _filterCardsByAdv(group.cards) : group.cards;
+    if (!pool.length) return;  // 통과 카드 없으면 핀은 어차피 숨겨짐
+    pool = pool.slice().sort((a, b) => a.price_low - b.price_low);
+    const main = pool[0];
+    const subEl = pinEl.querySelector('.pin-sub');
+    if (subEl) subEl.textContent = main.pyeong_type || '';
+    const multiEl = pinEl.querySelector('.pin-multi');
+    if (multiEl) { multiEl.textContent = pool.length; multiEl.style.display = pool.length > 1 ? '' : 'none'; }
+  });
+}
 
 // spec-38: 선택 단지 핀 강조 (지도에서 식별)
 let _activeAptOverlay = null;
@@ -4048,17 +4098,10 @@ function _openLookupDetail(aptSeq) {
                price_low: r.price_low, total_time_min: r.transit_min }],
   };
 
-  // 기존 직접 검색 핀 제거 → 새 핀 추가
+  // 직접 검색 핀(노란 알약)은 표시하지 않음 — 지도 이동만 (정상 핀/경로/상세로 충분)
   if (_lookupOverlay) { _lookupOverlay.setMap(null); _lookupOverlay = null; }
   if (kakaoMap && r.lat && r.lng) {
     kakaoMap.panTo(new kakao.maps.LatLng(r.lat, r.lng));
-    const pinText = `${escHtml(r.apt_nm.slice(0,6))} ${r.transit_min ? r.transit_min+'분' : '?'}`;
-    _lookupOverlay = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(r.lat, r.lng),
-      content: `<div class="pin pin-lookup" data-apt-seq="${r.apt_seq}">${pinText}</div>`,
-      yAnchor: 1, zIndex: 100,
-    });
-    _lookupOverlay.setMap(kakaoMap);
   }
 
   // 상세 패널 열기
@@ -4349,6 +4392,16 @@ function _resolveByKeyword(ps, opts, poiName, sub, resolve) {
   }, opts);
 }
 
+// 두 좌표(위경도) 직선거리(m) — 카카오 검증 좌표로 POI 거리 보정에 사용
+function _haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+const _POI_WALK_M_PER_MIN = 75;  // 백엔드 WALK_M_PER_MIN와 동일
+
 // 사전 검증 후 "확인된 시설만" 렌더(깜빡임 없음). 검증 중엔 호출부의 스피너 유지.
 //  아파트별 캐시로 재진입 시 재검색 안 함. 동시 4건. 확인된 행엔 좌표 캐시(클릭 즉시 배치).
 const _poiResolveCache = {};   // aptSeq → { poiName: {x,y}|null }
@@ -4394,6 +4447,16 @@ async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
     bodyEl.innerHTML = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">지도에서 위치 확인되는 도보 시설이 없어요.</p>';
     return;
   }
+  // 검증된 실제 좌표로 거리 재계산 — 저장된 distance_m가 부정확한 경우(예: 0분·3m) 보정
+  confirmed.forEach(p => {
+    const doc = cache[p.name];
+    if (!doc) return;
+    const vd = _haversineM(card.lat, card.lng, parseFloat(doc.y), parseFloat(doc.x));
+    if (isFinite(vd) && vd > 0) {
+      p._verDistM = Math.round(vd);
+      p._verWalkMin = Math.max(1, Math.round(vd / _POI_WALK_M_PER_MIN));
+    }
+  });
   bodyEl.innerHTML = renderPOIHTML(confirmed);           // 확인된 것만 한 번에 렌더
   // 확인 좌표를 각 행에 주입 → 클릭 시 재검색 없이 즉시 배치
   bodyEl.querySelectorAll('.detail-poi-row').forEach(row => {
@@ -5151,18 +5214,6 @@ function switchFavTab(tab) {
 const compareSet = new Map();  // id → card
 const COMPARE_MAX = 3;
 
-function toggleCompare(id, cb) {
-  const card = (window._lastCards || []).find(c => favId(c.apt_seq, c.pyeong_type) === id);
-  if (!card) return;
-  if (cb.checked) {
-    if (compareSet.size >= COMPARE_MAX) { cb.checked = false; return; }
-    compareSet.set(id, card);
-  } else {
-    compareSet.delete(id);
-  }
-  _updateCompareBar();
-}
-
 function _updateCompareBar() {
   const bar   = document.getElementById('compare-bar');
   const cntEl = document.getElementById('compare-bar-count');
@@ -5175,9 +5226,28 @@ function _updateCompareBar() {
   btn.disabled = n < 2;
 }
 
+// 관심 탭: 카드 클릭으로 비교 선택 토글 (체크박스 대체). 선택 시 색 변경(cmp-selected)
+function toggleCompareCard(id, el) {
+  const card = (window._lastCards || []).find(c => favId(c.apt_seq, c.pyeong_type) === id);
+  if (!card) return;
+  if (compareSet.has(id)) {
+    compareSet.delete(id);
+    el.classList.remove('cmp-selected');
+  } else {
+    if (compareSet.size >= COMPARE_MAX) {       // 최대 초과 → 바를 깜빡여 안내
+      const bar = document.getElementById('compare-bar');
+      if (bar) { bar.classList.add('cmp-bar-flash'); setTimeout(() => bar.classList.remove('cmp-bar-flash'), 400); }
+      return;
+    }
+    compareSet.set(id, card);
+    el.classList.add('cmp-selected');
+  }
+  _updateCompareBar();
+}
+
 function clearCompare() {
   compareSet.clear();
-  document.querySelectorAll('.compare-check input[type=checkbox]').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.cmp-selected').forEach(el => el.classList.remove('cmp-selected'));
   _updateCompareBar();
 }
 
@@ -5277,13 +5347,13 @@ function renderRecCard(c, wpId, cmpMode=false){
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
   const _rcId = favId(c.apt_seq, c.pyeong_type);
-  const _rcCmpHtml = cmpMode
-    ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_rcId)?'checked':''} onchange="toggleCompare('${_rcId}',this)"> 비교</label>`
-    : '';
+  // cmpMode(관심 탭) = 카드 클릭으로 비교 선택(색 변경). 그 외 = 클릭 시 상세 열기
+  const _rcSel   = cmpMode && compareSet.has(_rcId);
+  const _rcCls   = cmpMode ? ` cmp-selectable${_rcSel ? ' cmp-selected' : ''}` : '';
+  const _rcClick = cmpMode ? `toggleCompareCard('${_rcId}',this)` : `panToCard('${c.apt_seq}')`;
 
   // spec-11: footer 완전 제거 — commute/pick_reason 정보가 칩 1·2로 흡수됨
-  return `<div class="rec-card" onclick="panToCard('${c.apt_seq}')">
-    ${_rcCmpHtml}
+  return `<div class="rec-card${_rcCls}" onclick="${_rcClick}">
     <button class="fav-btn${favActive}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitle}">♥</button>
     <span class="rec-card__slot">${escHtml(c.bucket_label||'')}<span class="rec-card__slot-divider"></span>${escHtml(c.pyeong_type||'')}</span>
     <div class="rec-card__title-row">
@@ -5375,9 +5445,10 @@ function renderListCard(c, wpId, cmpMode=false){
   const favActiveL = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitleL  = favActiveL ? '관심 해제' : '관심 추가';
   const _lcId = favId(c.apt_seq, c.pyeong_type);
-  const _lcCmpHtml = cmpMode
-    ? `<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ${compareSet.has(_lcId)?'checked':''} onchange="toggleCompare('${_lcId}',this)"> 비교</label>`
-    : '';
+  // cmpMode(관심 탭) = 카드 클릭으로 비교 선택(색 변경). 그 외 = 클릭 시 상세 열기
+  const _lcSel   = cmpMode && compareSet.has(_lcId);
+  const _lcCls   = cmpMode ? ` cmp-selectable${_lcSel ? ' cmp-selected' : ''}` : '';
+  const _lcClick = cmpMode ? `toggleCompareCard('${_lcId}',this)` : `panToCard('${c.apt_seq}')`;
 
   const commuteChip = dualMode && c.total_time_min_1 != null && c.total_time_min_2 != null
     ? `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num">${c.total_time_min_1}분</strong> · W2 <strong class="num">${c.total_time_min_2}분</strong></span>`
@@ -5386,8 +5457,7 @@ function renderListCard(c, wpId, cmpMode=false){
   const aptNameLen = [...(c.apt_nm || '')].length;
   const nameClass = aptNameLen >= 12 ? ' name-xlong' : aptNameLen >= 9 ? ' name-long' : '';
 
-  return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
-    ${_lcCmpHtml}
+  return `<article class="list-card${_lcCls}" onclick="${_lcClick}">
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
       <div class="list-card__name${nameClass}">${escHtml(c.apt_nm)}</div>
@@ -5614,11 +5684,22 @@ let tooltipTimer = null;
 
 // 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
 let _ttGroup = null;
+let _ttSeq = null, _ttWpId = null;
 
+function _ttClickPyeong(){
+  const seq = _ttSeq, wpId = _ttWpId;
+  if(!seq) return;
+  hideTooltip();
+  window._pendingDetailAction = 'trade';
+  showDetail(seq, wpId);
+  switchLeftTab('detail');
+}
 function showTooltip(pinEl, group, wpId){
   if(!group || !group.cards.length) return;
   clearTimeout(tooltipTimer);
   _ttGroup = group;
+  _ttSeq = group.apt_seq;
+  _ttWpId = wpId;
 
   const c = group.cards[0];
 
@@ -5645,6 +5726,16 @@ function showTooltip(pinEl, group, wpId){
   const footParts = [`${(group.kaptdaCnt||0).toLocaleString()}세대`];
   if(group.build_year) footParts.push(`${group.build_year}년 준공`);
   document.getElementById('tt-footer').textContent = footParts.join(' · ');
+
+  // 평형 칩: 복수 평형일 때만 표시
+  const chipEl = document.getElementById('tt-pyeong-chip');
+  const n = group.cards.length;
+  if(n > 1){
+    chipEl.textContent = `평형 ${n}가지 실거래 비교 →`;
+    chipEl.classList.remove('hidden');
+  } else {
+    chipEl.classList.add('hidden');
+  }
 
   // 위치
   tooltip.classList.remove('hidden');
@@ -5673,6 +5764,7 @@ async function showDetail(aptSeq, wpId){
   _currentAptSeq = aptSeq;
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
+  switchLeftTab('detail');  // 아파트 클릭(목록·지도 핀) 시 좌측 상세 탭 자동 전환
 
   // 사이드 패널 열기
   const sidePanel = document.getElementById('detail-panel');
@@ -5869,7 +5961,7 @@ function renderDetailPanel(d, routes, wpId){
     : '-';
   const statHtml = `<div class="dp-statrow">
     <div class="dp-stat"><div class="dp-stat-num">${statTime}</div><div class="dp-stat-label">통근</div></div>
-    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">평균 실거래가${pyText}</div></div>
+    <div class="dp-stat"><div class="dp-stat-num">${statPrice}</div><div class="dp-stat-label">평균 실거래가${pyText}</div></div><!-- pyText: dp-stat-py(블록) → 아랫줄 표기 -->
     <div class="dp-stat"><div class="dp-stat-num">${statParking}</div><div class="dp-stat-label">세대당 주차</div></div>
   </div>`;
 
@@ -5884,9 +5976,8 @@ function renderDetailPanel(d, routes, wpId){
   panel.innerHTML = `
     ${tier==='BEST'?`<div class="dp__header"><span class="dp__badge">추천</span></div>`:''}
 
-    <!-- HERO (spec-42: 결론 우선 클린카드) -->
+    <!-- HERO (spec-42: 결론 우선 클린카드) — 단지명은 상단 헤더(detail-title)와 중복이라 제거 -->
     <div class="dp__hero">
-      <div class="dp__name">${escHtml([d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean).join(' '))}</div>
       ${statHtml}
       ${friendHtml}
     </div>
@@ -5945,7 +6036,7 @@ function renderDetailPanel(d, routes, wpId){
       <div class="dp__section-head" onclick="toggleSection(this)">
         <div class="dp__section-icon ic-poi">${ICON_PIN}</div>
         <div class="dp__section-titlebox">
-          <span class="dp__section-title">도보 주요 시설</span>
+          <span class="dp__section-title">도보 주요 시설 <span class="dp-poi-hint">📍 누르면 지도에 위치 표시</span></span>
           <span class="dp__section-preview">${poiPreview}</span>
         </div>
         <div class="dp__section-chev">${ICON_CHEV}</div>
@@ -5969,6 +6060,19 @@ function renderDetailPanel(d, routes, wpId){
 
   // 도보 시설 사전 검증: 확인된 시설만 렌더(깜빡임 없음) + 좌표 캐시(클릭 즉시 배치)
   _renderConfirmedPois(document.getElementById('dp-poi-body'), d.poi, d.apt_seq);
+
+  // 평형 칩 클릭 → 실거래 내역 섹션 펼치고 스크롤
+  if(window._pendingDetailAction === 'trade'){
+    window._pendingDetailAction = null;
+    requestAnimationFrame(() => {
+      const tradeSection = [...panel.querySelectorAll('.dp__section')]
+        .find(s => s.querySelector('.ic-trade'));
+      if(tradeSection){
+        tradeSection.classList.add('open');
+        setTimeout(() => tradeSection.scrollIntoView({behavior:'smooth', block:'start'}), 80);
+      }
+    });
+  }
 
   // 차트 초기화 — 검색한 평형 탭 우선, 없으면 거래 많은 순 첫 번째
   detailChartData = d.chart;
@@ -6219,19 +6323,24 @@ function renderPOIHTML(poi){
     if(!groups[key]) groups[key]=[];
     groups[key].push(p);
   });
+  // 표시 거리/도보: 검증 보정값(_verDistM) 우선, 없으면 저장값. 도보는 거리에서 일관 산출(최소 1분)
+  const effDist = p => Math.round((p._verDistM != null ? p._verDistM : p.distance_m) || 0);
+  const effWalk = p => (p._verWalkMin != null ? p._verWalkMin
+                        : Math.max(1, Math.round(effDist(p) / _POI_WALK_M_PER_MIN)));
   const orderedKeys = [...POI_ORDER.filter(k=>groups[k]), ...(groups['기타']?['기타']:[])];
   return orderedKeys.map(key=>{
     const catName = POI_CAT_NAME[key]||'기타';
-    return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
+    const rows = groups[key].slice().sort((a,b)=>effDist(a)-effDist(b));  // 보정 거리 기준 가까운 순
+    return `<div class="dp-poi-category">${catName}</div>${rows.map(p=>`
       <div class="dp-poi-row detail-poi-row"
         data-poi-name="${escHtml(p.name||'')}"
         data-poi-cat="${escHtml(p.category||'')}"
         data-poi-sub="${escHtml(p.sub_category||'')}"
-        data-walk-min="${p.walking_min||0}"
-        data-dist-m="${Math.round(p.distance_m||0)}"
+        data-walk-min="${effWalk(p)}"
+        data-dist-m="${effDist(p)}"
         onclick="togglePoiMarker(this)">
         <div class="dp-poi-name">${escHtml(p.name)}${POI_SUB_LABEL[p.sub_category] ? ` <span class="dp-poi-tag">(${POI_SUB_LABEL[p.sub_category]})</span>` : ''}</div>
-        <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
+        <div class="dp-poi-dist"><span class="num">도보 ${effWalk(p)}분</span> · <span class="num">${effDist(p) >= 1000 ? (effDist(p)/1000).toFixed(1)+'km' : effDist(p)+'m'}</span></div>
       </div>`).join('')}`;
   }).join('');
 }
@@ -6403,10 +6512,13 @@ function _renderSortedFlat(cards) {
   if (!data) return;
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  const title = _currentFavTab === 'fav' ? '관심' : '전체';
+  const isFavTab = _currentFavTab === 'fav';
+  const title = isFavTab ? '관심' : '전체';
   let html = _aptSearchBarHtml();
   html += `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
-  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
+  // 관심 탭: 카드 클릭으로 비교 선택(색 변경) — 안내 힌트
+  if (isFavTab && cards.length) html += `<div class="cmp-hint">비교할 단지를 클릭하세요 · 최대 ${COMPARE_MAX}개</div>`;
+  html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId, isFavTab) : renderListCard(c, wpId, isFavTab)).join('');
   panel.innerHTML = html;
   _updateListTabCount(cards.length);
   _syncFavTabCounts();
