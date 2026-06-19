@@ -326,16 +326,42 @@
       display: flex; flex-direction: column;
       overflow-x: hidden; overflow-y: auto;
       min-height: 0;
-      width: 280px; min-width: 220px; flex-shrink: 0;
+      width: 300px; min-width: 220px; flex-shrink: 0;
       border-right: 1px solid var(--color-border-strong);
     }
     .card-column {
-      width: 320px; min-width: 240px; flex-shrink: 0;
+      width: 360px; min-width: 260px; flex-shrink: 0;
       display: flex; flex-direction: column;
-      overflow: hidden;
+      overflow-x: hidden; overflow-y: hidden;
+      min-height: 0;
       border-right: 1px solid var(--color-border-strong);
       background: white;
+      transition: width .25s ease, min-width .25s ease, border .25s ease;
     }
+    .card-column.collapsed {
+      width: 0; min-width: 0; border-right: none; overflow: hidden;
+    }
+    .card-column-close {
+      position: absolute; top: 8px; right: 8px;
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 1px solid var(--color-border-default);
+      background: white; cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-secondary); z-index: 2;
+    }
+    .card-column-close:hover { background: #f5f5f5; color: var(--color-text-primary); }
+    .card-column-open-btn {
+      display: none; position: absolute; left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 20px; height: 48px; border-radius: 0 6px 6px 0;
+      border: 1px solid var(--color-border-default); border-left: none;
+      background: white; cursor: pointer; font-size: 11px;
+      align-items: center; justify-content: center;
+      color: var(--color-text-secondary); z-index: 10;
+      writing-mode: vertical-rl;
+    }
+    .card-column-open-btn:hover { background: #f5f5f5; }
+    .result-layout.cards-hidden .card-column-open-btn { display: flex; }
     .cards-panel {
       overflow-y: auto;
       background: white;
@@ -1392,12 +1418,17 @@
       width: 0; min-width: 0; overflow: hidden;
       flex-shrink: 0; display: flex; flex-direction: column;
       border-left: none;
-      transition: width .25s ease, border .25s ease;
+      transition: width .25s ease, flex .25s ease, border .25s ease;
     }
     .detail-panel.open {
-      width: 420px; min-width: 240px;
+      flex: 1; width: auto; min-width: 300px;
       border-left: 1px solid var(--color-border-strong);
       box-shadow: -4px 0 20px rgba(0,0,0,0.08);
+    }
+    /* 상세패널 열리면 지도 숨김 */
+    .result-layout.detail-open .map-panel,
+    .result-layout.detail-open .resize-handle:not(.detail-resize-handle) {
+      display: none;
     }
     .detail-panel__header {
       padding: 14px 16px 0;
@@ -2338,7 +2369,8 @@
       </div>
     </div>
     <!-- 매물 카드 컬럼 -->
-    <div class="card-column">
+    <div class="card-column" id="card-column" style="position:relative">
+      <button class="card-column-close" onclick="toggleCardColumn()" title="목록 닫기">✕</button>
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
       <div class="compare-bar hidden" id="compare-bar">
@@ -2418,6 +2450,7 @@
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
     <div class="map-panel" style="position:relative">
+      <button class="card-column-open-btn" id="card-column-open-btn" onclick="toggleCardColumn()" title="목록 열기">목록</button>
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근시간</div>
@@ -2851,6 +2884,7 @@ function openDetail(aptSeq) {
   }
   // 사이드 패널 열기
   document.getElementById('detail-panel').classList.add('open');
+  document.querySelector('.result-layout').classList.add('detail-open');
   document.getElementById('detail-resize-handle').style.display = '';
   document.body.style.overflow = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
@@ -2877,6 +2911,7 @@ function closeDetail() {
     backToList();
   } else {
     document.getElementById('detail-panel').classList.remove('open');
+    document.querySelector('.result-layout').classList.remove('detail-open');
     document.getElementById('detail-resize-handle').style.display = 'none';
     document.querySelector('.detail-panel__tabs').style.display = '';
   }
@@ -4179,65 +4214,14 @@ function renderCards(data){
     </div>`;
   }
 
-  if(false && rest.length){
-    const buckets = data.buckets || [];
-    html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
-    buckets.forEach(b=>{
-      const inBucket = rest.filter(c=>c.bucket_idx===b.idx);
-      if(!inBucket.length) return;
-
-      // 집계: 가격 최저/최고/평균
-      const prices = inBucket.map(c=>c.price_low).filter(p=>p>0);
-      const minP = prices.length ? Math.min(...prices) : 0;
-      const maxP = prices.length ? Math.max(...prices) : 0;
-      const avgP = prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : 0;
-
-      // 평형별 카운트
-      const byPt = {};
-      inBucket.forEach(c=>{ byPt[c.pyeong_type]=(byPt[c.pyeong_type]||0)+1; });
-      const ptChips = Object.entries(byPt)
-        .sort((a,b)=>a[0].localeCompare(b[0],'ko'))
-        .map(([pt, cnt])=>`<span class="bucket-pt-chip">${escHtml(pt)} <strong class="num">${cnt}</strong></span>`)
-        .join('');
-
-      // 전체 대비 비율
-      const ratioPct = Math.round(inBucket.length/totalRest*100);
-
-      // 본문 (펼친 상태)
-      const byPtList = {};
-      inBucket.forEach(c=>{ (byPtList[c.pyeong_type]=byPtList[c.pyeong_type]||[]).push(c); });
-      let body = '';
-      Object.entries(byPtList).sort((a,b)=>a[0].localeCompare(b[0],'ko')).forEach(([pt, items])=>{
-        items.sort((a,b)=>a.price_low - b.price_low);
-        body += `<div class="bucket-pt-label">${escHtml(pt)} · ${items.length}곳 · 가격순</div>`;
-        body += items.map(c=>renderListCard(c, wpId)).join('');
-      });
-
-      html += `<div class="bucket-section">
-        <div class="bucket-head" onclick="toggleBucket(this)">
-          <div class="bucket-head__top">
-            <div class="bucket-head__title">
-              <span class="bucket-head__time">${escHtml(b.label)}</span>
-              <span class="bucket-head__cnt num">${inBucket.length}곳</span>
-            </div>
-            <div class="bucket-head__chev">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-          </div>
-          ${prices.length ? `<div class="bucket-head__bottom">
-            <span class="bucket-head__price">
-              <strong class="num">${shortPrice(minP)}</strong><span class="price-sep">~</span><strong class="num">${shortPrice(maxP)}</strong>
-              <span style="color:var(--color-text-tertiary);margin-left:6px;">· 평균 <span class="num">${shortPrice(avgP)}</span></span>
-            </span>
-          </div>` : ''}
-          <div class="bucket-head__bottom">
-            <div class="bucket-head__pts">${ptChips}</div>
-          </div>
-          <div class="bucket-head__ratio"><div class="bucket-head__ratio-fill" style="width:${ratioPct}%"></div></div>
-        </div>
-        <div class="bucket-body">${body}</div>
-      </div>`;
-    });
+  // 추천 카드 목록
+  if(recommended.length){
+    html += recommended.map(c => renderListCard(c, wpId)).join('');
+  }
+  // 나머지 카드 목록
+  if(rest.length){
+    if(recommended.length) html += `<div class="bucket-divider">그 외 ${rest.length}곳</div>`;
+    html += rest.map(c => renderListCard(c, wpId)).join('');
   }
 
   panel.innerHTML = html;
@@ -4468,6 +4452,7 @@ async function showDetail(aptSeq, wpId){
   // 사이드 패널 열기
   const sidePanel = document.getElementById('detail-panel');
   sidePanel.classList.add('open');
+  document.querySelector('.result-layout').classList.add('detail-open');
   document.getElementById('detail-resize-handle').style.display = '';
   document.getElementById('detail-title').textContent = '불러오는 중...';
   document.querySelector('.detail-panel__tabs').style.display = 'none';
@@ -4504,6 +4489,7 @@ function backToList(){
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
   document.getElementById('detail-panel').classList.remove('open');
+  document.querySelector('.result-layout').classList.remove('detail-open');
   document.getElementById('detail-resize-handle').style.display = 'none';
   document.querySelector('.detail-panel__tabs').style.display = '';
   if(resultData) renderCards(resultData);
@@ -5087,6 +5073,14 @@ function resetSort() {
   _sortChecked = [];
   _refreshSortUI();
   if (window._lastSearchData) renderCards(window._lastSearchData);
+}
+
+// 매물 카드 컬럼 토글
+function toggleCardColumn() {
+  const col = document.getElementById('card-column');
+  const layout = document.querySelector('.result-layout');
+  const isCollapsed = col.classList.toggle('collapsed');
+  layout.classList.toggle('cards-hidden', isCollapsed);
 }
 
 // 정렬 기준 드롭다운 토글
