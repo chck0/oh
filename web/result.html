@@ -3305,14 +3305,47 @@ function _clearChatAttachment() {
 }
 
 // spec-25: Claude가 실제로 답변 가능한 질문으로 구성
-// 채팅 첫 진입 기본 칩 — 100% 팩트 기반 + 카테고리 균형([교통][학군/교육][단지/시설][주변환경][시세])
-const CHAT_SUGGESTIONS = [
-  '가까운 지하철역까지 도보 몇 분이야?',
-  '근처에 초·중·고 어디 있어?',
-  '몇 년에 지어졌고 몇 세대 단지야?',
-  '도보권에 마트·병원 있어?',
-  '최근 실거래가 얼마였어?',
-];
+// 채팅 첫 진입 기본 칩 풀 — 100% 팩트 기반(공공데이터·관리규약·실거래로 확인 가능),
+//  카테고리별로 구성. 가격예측·주관적 호재/악재·투자권유·소문성 질문은 절대 포함하지 않음.
+//  매 진입마다 _pickDefaultChips()로 카테고리 균형 + 랜덤 노출.
+const CHAT_SUGGESTION_POOL = {
+  '교통': [
+    '가까운 지하철역까지 도보 몇 분이야?',
+    '이용할 수 있는 지하철 노선은 뭐야?',
+    '버스정류장은 얼마나 가까워?',
+  ],
+  '학군/교육': [
+    '근처에 초·중·고 어디 있어?',
+    '초등학교까지 도보 몇 분이야?',
+    '주변에 학원가 있어?',
+  ],
+  '단지/시설': [
+    '몇 년에 지어졌고 몇 세대 단지야?',
+    '세대당 주차 대수는 얼마야?',
+    '난방 방식이랑 층수 알려줘',
+  ],
+  '주변환경': [
+    '도보권에 마트·병원 있어?',
+    '근처에 공원이나 녹지 있어?',
+    '편의시설은 뭐가 가까워?',
+  ],
+  '시세/실거래': [
+    '최근 실거래가 얼마였어?',
+    '최근 6개월 시세 어떻게 변했어?',
+    '동 평균이랑 비교하면 어때?',
+  ],
+};
+// 서로 다른 카테고리에서 1개씩(카테고리 순서·카테고리 내 질문 모두 랜덤) n개 선택.
+function _pickDefaultChips(n = 5) {
+  const cats = Object.keys(CHAT_SUGGESTION_POOL).sort(() => Math.random() - 0.5);
+  const picks = [];
+  for (const c of cats) {
+    const arr = CHAT_SUGGESTION_POOL[c];
+    picks.push(arr[Math.floor(Math.random() * arr.length)]);
+    if (picks.length >= n) break;
+  }
+  return picks;
+}
 
 function _toggleFriend(btn) {
   btn.classList.toggle('open');
@@ -3363,7 +3396,7 @@ function openFriendChat(aptSeq, aptNm, pyeongType, lat, lng) {
     }
   } catch(e) {}
 
-  _renderChips(CHAT_SUGGESTIONS);
+  _renderChips(_pickDefaultChips());
   document.getElementById('chat-suggestions').style.display = '';
   // spec-12 #3: 모바일은 상세 바텀시트(z910)와 채팅(z850)이 둘 다 전체화면이라
   // 채팅이 상세 뒤에 가려짐 → 채팅 열 때 상세를 닫는다. (가드로 데스크톱 무영향:
