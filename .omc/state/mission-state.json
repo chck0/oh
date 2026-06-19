@@ -1,4 +1,45 @@
 {
-  "updatedAt": "2026-05-30T05:09:02.852Z",
-  "missions": []
+  "updatedAt": "2026-06-19T10:41:31.622Z",
+  "missions": [
+    {
+      "id": "session:5848fea7-045f-4360-a447-c0ffacdad695:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-06-19T10:41:31.622Z",
+      "updatedAt": "2026-06-19T10:41:31.622Z",
+      "status": "running",
+      "workerCount": 1,
+      "taskCounts": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 1,
+        "completed": 0,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "architect:a96ad49",
+          "role": "architect",
+          "ownership": "a96ad49c0c2b0d124",
+          "status": "running",
+          "currentStep": null,
+          "latestUpdate": null,
+          "completedSummary": null,
+          "updatedAt": "2026-06-19T10:41:31.622Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:a96ad49c0c2b0d124:2026-06-19T10:41:31.622Z",
+          "at": "2026-06-19T10:41:31.622Z",
+          "kind": "update",
+          "agent": "architect:a96ad49",
+          "detail": "started architect:a96ad49",
+          "sourceKey": "session-start:a96ad49c0c2b0d124"
+        }
+      ]
+    }
+  ]
 }
