@@ -2218,10 +2218,17 @@
       .left-panel {
         width: 100%; min-width: 0; flex: 1 1 auto; min-height: 0;
         border-right: none; border-bottom: 1px solid var(--color-border-strong);
+        /* spec-12 #2: 좌측패널 전체를 스크롤 컨테이너로 → 정렬패널 펼침 시
+           칩이 지도 경계에서 잘리던 문제 해소(좌측 영역 안에서 스크롤). */
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
       }
+      .cards-panel { overflow: visible; flex: 0 0 auto; }
+      /* spec-12 #2: 리스트 모드는 전체 리스트(지도 접음) — 네이버/직방식 토글.
+         32vh 지도를 항상 띄우면 좁은 화면에서 정렬칩이 지도에 잘리므로,
+         지도는 '지도 보기' 토글(.mobile-map-focus)에서만 전체로 노출. */
       .map-panel {
         width: 100%; min-width: 0;
-        flex: 0 0 32vh; min-height: 32vh;   /* spec-12 #1: 리스트 모드 지도 미리보기 축소(카드 공간 확보) */
+        flex: 0 0 0; height: 0; min-height: 0; overflow: hidden;
       }
 
       /* spec-12 #2: 지도 범례 컴팩트화 (작은 모바일 지도에 맞춰 축소) */
@@ -2232,6 +2239,12 @@
       #map-legend .lg-row { margin-bottom: 5px; font-size: 12px; gap: 7px; }
       #map-legend .lg-dot { width: 10px; height: 10px; }
       #map-legend .lg-divider { margin: 6px 0; }
+
+      /* spec-12 #(로딩): 분석 대기 화면 video-row가 가로 flex라 모바일에서
+         사이드패널(소리 켜기·플레이리스트)이 화면 밖으로 잘림 → 세로 스택 */
+      .video-row { flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
+      .video-stage { width: min(72vw, 240px); }
+      .video-side { width: min(82vw, 300px); flex: none; }
 
       /* C. 지도 우선 모드 — 토글로 .mobile-map-focus 부여 시 리스트 접고 지도 확대 */
       .result-layout.mobile-map-focus .left-panel {
@@ -3314,6 +3327,15 @@ function openFriendChat(aptSeq, aptNm, pyeongType, lat, lng) {
 
   _renderChips(CHAT_SUGGESTIONS);
   document.getElementById('chat-suggestions').style.display = '';
+  // spec-12 #3: 모바일은 상세 바텀시트(z910)와 채팅(z850)이 둘 다 전체화면이라
+  // 채팅이 상세 뒤에 가려짐 → 채팅 열 때 상세를 닫는다. (가드로 데스크톱 무영향:
+  // 데스크톱은 사이드 패널이라 둘이 공존)
+  try {
+    if (window.matchMedia('(max-width: 767px)').matches &&
+        document.getElementById('detail-panel').classList.contains('open')) {
+      closeDetail();
+    }
+  } catch (e) {}
   document.getElementById('chat-panel').classList.remove('hidden');
   document.getElementById('chat-input').focus();
 }
