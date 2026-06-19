@@ -4786,31 +4786,7 @@ function renderRecCard(c, wpId, cmpMode=false){
     ${chip3Text ? `<span class="reason-chip reason-chip--neutral">${escHtml(chip3Text)}</span>` : ''}
   </div>`;
 
-  const comment = c.friend_comment || '';
-  const friendInner = comment
-    ? `<div class="rec-card__friend"
-        data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
-        data-lat="${c.lat||''}" data-lng="${c.lng||''}"
-        onclick="event.stopPropagation();_openChatFromEl(this)" style="cursor:pointer" title="더 물어보기">
-        <div class="rec-card__friend-avatar">친구</div>
-        <div>
-          <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
-          <div class="rec-card__friend-text">${escHtml(comment)}</div>
-        </div>
-      </div>`
-    : `<div class="rec-card__friend empty">
-        <div class="rec-card__friend-avatar">···</div>
-        <div>
-          <div class="rec-card__friend-label">한마디 (생성 중)</div>
-          <div class="rec-card__friend-text"><span class="spinner-mini"></span>살펴보는 중...</div>
-        </div>
-      </div>`;
-  const friendHtml = `
-    <button class="rec-card__friend-toggle" onclick="event.stopPropagation();_toggleFriend(this)" type="button">
-      <span>AI 한마디</span><span class="toggle-arrow">▼</span>
-    </button>
-    <div class="rec-card__friend-body-wrap">${friendInner}</div>`;
-
+  // AI 한마디(친구 코멘트)는 단지 클릭 시 상세 패널에 노출되므로 카드에선 제거(중복 제거)
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
   const _rcId = favId(c.apt_seq, c.pyeong_type);
@@ -4831,7 +4807,6 @@ function renderRecCard(c, wpId, cmpMode=false){
     ${_whyTagsHtml(c.why_tags)}
     ${reasonsHtml}
     ${_commuteEconRow(c)}
-    ${friendHtml}
   </div>`;
 }
 
