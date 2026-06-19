@@ -5251,7 +5251,22 @@ async function showDetail(aptSeq, wpId){
   if(kakaoMap && resultData){
     const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
     if(card && card.lat && card.lng){
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+      const _ll = new kakao.maps.LatLng(card.lat, card.lng);
+      kakaoMap.panTo(_ll);   // 즉시 이동 시작 (반응성)
+      // 패널 펼침 트랜지션(width .25s) 동안엔 카카오가 옛 지도폭 기준이라 아파트가
+      // 우측으로 치우친다. 트랜지션 종료 후 relayout→정중앙 보정으로 고정.
+      let _centered = false;
+      const _fixCenter = (e) => {
+        if (e && e.propertyName !== 'width') return;
+        if (_centered) return; _centered = true;
+        sidePanel.removeEventListener('transitionend', _fixCenter);
+        if (_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
+        kakaoMap.relayout();
+        if (_poiMarkers.size === 0) kakaoMap.setCenter(_ll);
+        else _recenterApt();   // POI 핀 있으면 대칭 범위로 정중앙 유지
+      };
+      sidePanel.addEventListener('transitionend', _fixCenter);
+      setTimeout(_fixCenter, 360);   // 이미 열려있어 트랜지션 미발화 시 폴백
     }
   }
 
@@ -5772,6 +5787,8 @@ function renderPOIHTML(poi){
     return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
       <div class="dp-poi-row detail-poi-row"
         data-poi-name="${escHtml(p.name||'')}"
+        data-poi-cat="${escHtml(p.category||'')}"
+        data-poi-sub="${escHtml(p.sub_category||'')}"
         data-walk-min="${p.walking_min||0}"
         data-dist-m="${Math.round(p.distance_m||0)}"
         onclick="togglePoiMarker(this)">
