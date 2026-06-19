@@ -359,7 +359,22 @@
       background: var(--color-brand-primary); color: #fff;
       font-size: 11px; font-weight: 700; padding: 0 4px;
     }
-    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    /* 접기/펼치기 어포던스 — 상태 텍스트+셰브론 알약 */
+    .sort-toggle-btn { border-radius: 8px; transition: background .15s; }
+    .sort-toggle-btn:hover { background: var(--color-brand-bg-subtle); }
+    .sort-toggle-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      background: var(--color-bg-subtle); border: 1px solid var(--color-border-default);
+      font-size: 11px; font-weight: 600; color: var(--color-text-secondary);
+      transition: border-color .15s, color .15s;
+    }
+    .sort-toggle-btn:hover .sort-toggle-pill {
+      border-color: var(--color-brand-primary); color: var(--color-brand-primary);
+    }
+    .sort-toggle-label::after { content: '펼치기'; }
+    .sort-toggle-btn.open .sort-toggle-label::after { content: '접기'; }
+    .sort-toggle-btn .sort-arrow { font-size: 11px; line-height: 1; transition: transform .2s; }
     .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
     /* 접힘 시 정렬 칩·힌트 숨김 → 매물 공간 확보 */
     .sort-panel:not(.open) .sort-chips-wrap,
@@ -2428,9 +2443,9 @@
       </div>
       <div class="sort-panel" id="sort-panel">
         <div class="sort-panel-header">
-          <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:0;height:auto;gap:6px">
+          <button class="sort-toggle-btn open" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:4px 8px;height:auto;gap:8px">
             <span class="sort-panel-title">정렬 기준</span>
-            <span class="sort-arrow">▾</span>
+            <span class="sort-toggle-pill"><span class="sort-toggle-label"></span><span class="sort-arrow">▾</span></span>
           </button>
           <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
         </div>
