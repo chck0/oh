@@ -17,36 +17,36 @@
      PRIMITIVE — 원시 색상 스케일 (직접 사용 X)
      ───────────────────────────────────────── */
 
-  /* Pink→Purple — 핑크에서 보라로 흐르는 액센트 (v0.5 Dark) */
+  /* Magenta→Purple — 비비드 마젠타에서 보라로 흐르는 액센트 */
   --pink-50:  #FBF0FA;
   --pink-100: #F6D9F2;
   --pink-200: #EFB3E4;
-  --pink-300: #E892D6;   /* 흐린 액센트 텍스트 */
-  --pink-400: #E56FB8;
-  --pink-500: #D95BB0;   /* MAIN (핑크-퍼플 중간) */
-  --pink-600: #B94FCB;
-  --pink-700: #9A45D6;
+  --pink-300: #E060D8;   /* 흐린 액센트 텍스트 */
+  --pink-400: #D030CC;
+  --pink-500: #C418C0;   /* MAIN (마젠타-퍼플 중간) */
+  --pink-600: #A620C8;
+  --pink-700: #8830D4;
   --purple-400: #9B5DE5;
-  --purple-500: #7C3FE6;  /* 그라데이션 보라 끝점 */
-  --purple-600: #6A2FD0;
+  --purple-500: #6B33E6;  /* 그라데이션 보라 끝점 */
+  --purple-600: #5A28D0;
 
-  /* 그라데이션 (액센트 면) — 핑크 → 보라 */
-  --grad-accent: linear-gradient(120deg, #FF6FB5 0%, #C45ED6 50%, #7C3FE6 100%);
+  /* 그라데이션 (액센트 면) — 마젠타 → 보라 */
+  --grad-accent: linear-gradient(120deg, #D918C8 0%, #A030D4 50%, #6B33E6 100%);
 
-  /* Dark Neutral — 핑크빛 살짝 도는 다크 중성색 */
+  /* Light Neutral — 핑크빛 살짝 도는 라이트 중성색 */
   --gray-white: #FFFFFF;
-  --ink-0:   #0C0A0E;  /* body 최하단 배경 */
-  --ink-1:   #15121A;  /* 패널 기본 */
-  --ink-2:   #1D1922;  /* 카드/호버 */
-  --ink-3:   #28222F;  /* 비활성/구분 */
-  --ink-line: rgba(255,255,255,0.09);  /* 보더 */
-  --ink-line-strong: rgba(255,255,255,0.16);
-  --text-hi:  #F0EDEF;  /* primary */
-  --text-mid: #C2B6BE;  /* secondary */
-  --text-lo:  #948690;  /* tertiary */
-  --text-dim: #6E636B;  /* disabled */
+  --ink-0:   #F5F3F8;  /* body 최하단 배경 */
+  --ink-1:   #FFFFFF;  /* 패널 기본 */
+  --ink-2:   #F8F6FB;  /* 카드/호버 */
+  --ink-3:   #EEEBF4;  /* 비활성/구분 */
+  --ink-line: rgba(0,0,0,0.08);  /* 보더 */
+  --ink-line-strong: rgba(0,0,0,0.14);
+  --text-hi:  #1A1620;  /* primary */
+  --text-mid: #4B4458;  /* secondary */
+  --text-lo:  #78718A;  /* tertiary */
+  --text-dim: #B0A8BF;  /* disabled */
 
-  /* 하위호환: --gray-* 참조처가 남아있어 다크 매핑으로 유지 */
+  /* 하위호환: --gray-* 참조처 라이트 매핑 */
   --gray-50:    var(--ink-2);
   --gray-100:   var(--ink-3);
   --gray-200:   var(--ink-line);
@@ -55,7 +55,7 @@
   --gray-500:   var(--text-lo);
   --gray-600:   var(--text-lo);
   --gray-700:   var(--text-mid);
-  --gray-800:   #E2DCE0;
+  --gray-800:   #4B4458;
   --gray-900:   var(--text-hi);
 
   /* red-* 하위호환 (가격 상승 지표 등에서 직접 참조) — 밝은 톤 유지 */
@@ -65,13 +65,13 @@
   --red-800: var(--pink-600);
   --red-900: var(--pink-700);
 
-  /* Status — 다크 배경용 */
-  --green-100: rgba(74,222,128,0.14);
-  --green-700: #6EE7A0;
-  --amber-100: rgba(251,191,36,0.14);
-  --amber-700: #FFcF6B;
-  --blue-100:  rgba(96,165,250,0.14);
-  --blue-700:  #93C5FD;
+  /* Status — 라이트 배경용 */
+  --green-100: rgba(34,197,94,0.12);
+  --green-700: #16A34A;
+  --amber-100: rgba(245,158,11,0.12);
+  --amber-700: #D97706;
+  --blue-100:  rgba(59,130,246,0.12);
+  --blue-700:  #2563EB;
 
 
   /* ─────────────────────────────────────────
@@ -83,11 +83,11 @@
   --color-brand-hover:     var(--pink-600);
   --color-brand-active:    var(--pink-700);
   --color-brand-disabled:  var(--ink-3);
-  --color-brand-bg-subtle: rgba(180,79,203,0.14);
-  --color-brand-gradient:  var(--grad-accent);            /* 핑크→퍼플 CTA 면 */
-  --color-brand-gradient-hover: linear-gradient(120deg, #FF7FC0 0%, #CB6BDD 50%, #8A53F0 100%);
-  --shadow-brand:        0 4px 16px rgba(124, 63, 230, 0.32);
-  --shadow-brand-strong: 0 6px 22px rgba(124, 63, 230, 0.45);
+  --color-brand-bg-subtle: rgba(196,24,192,0.10);
+  --color-brand-gradient:  var(--grad-accent);            /* 마젠타→퍼플 CTA 면 */
+  --color-brand-gradient-hover: linear-gradient(120deg, #E428D4 0%, #AC3DDA 50%, #7840EC 100%);
+  --shadow-brand:        0 4px 16px rgba(196, 24, 192, 0.32);
+  --shadow-brand-strong: 0 6px 22px rgba(196, 24, 192, 0.45);
 
   /* Background */
   --color-bg-panel:  var(--ink-1);   /* 모든 패널 기본 */
@@ -133,10 +133,10 @@
   /* ─────────────────────────────────────────
      SHADOW — 그림자
      ───────────────────────────────────────── */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
-  --shadow-xl: 0 8px 28px rgba(0, 0, 0, 0.14);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.09);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.11);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.13);
+  --shadow-xl: 0 8px 28px rgba(0, 0, 0, 0.17);
   --shadow-pin-recommended: 0 3px 12px rgba(255, 107, 158, 0.45);
 
 
