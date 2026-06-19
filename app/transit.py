@@ -37,7 +37,7 @@ KEYS = [{'owner': f'key{i+1}', **k} for i, k in enumerate(cfg.ODSAY_KEYS)]
 # ── transit_routes 컬럼 구조 ─────────────────────────────────
 # step이 추가될 때는 MAX_STEPS 숫자만 바꾸면 INSERT/SELECT 자동 반영.
 MAX_STEPS = 5
-_STEP_FIELDS = ('type', 'time_min', 'dist_m', '노선', '출발', '도착')
+_STEP_FIELDS = ('type', 'time_min', 'dist_m', '노선', '출발', '도착', 'linestring')
 _ROUTE_BASE_COLS = ['origin_cell', 'wp_id', 'rank',
                     'total_time_min', 'bus_cnt', 'subway_cnt']
 _ROUTE_STEP_COLS = [f'step{n}_{f}' for n in range(1, MAX_STEPS + 1)
@@ -110,27 +110,33 @@ def to_steps(subpath_list):
         d = sp.get('distance', 0)
         if tt == 3:
             if d == 0:
-                steps.append({'type':'환승도보','time':t,'dist':0, 'line':'','from':'','to':''})
+                steps.append({'type':'환승도보','time':t,'dist':0, 'line':'','from':'','to':'','linestring':''})
             else:
-                steps.append({'type':'도보','time':t,'dist':d, 'line':'','from':'','to':''})
+                steps.append({'type':'도보','time':t,'dist':d, 'line':'','from':'','to':'','linestring':''})
         elif tt == 1:
             lane = sp.get('lane', [{}])[0]
+            stations = sp.get('passStopList', {}).get('stations', [])
+            ls = ' '.join(f"{s['x']},{s['y']}" for s in stations if 'x' in s and 'y' in s)
             steps.append({'type':'지하철','time':t,'dist':d,
                           'line': lane.get('name',''),
-                          'from': sp.get('startName',''), 'to': sp.get('endName','')})
+                          'from': sp.get('startName',''), 'to': sp.get('endName',''),
+                          'linestring': ls})
         elif tt == 2:
             lane = sp.get('lane', [{}])[0]
+            stations = sp.get('passStopList', {}).get('stations', [])
+            ls = ' '.join(f"{s['x']},{s['y']}" for s in stations if 'x' in s and 'y' in s)
             steps.append({'type':'버스','time':t,'dist':d,
                           'line': lane.get('busNo',''),
-                          'from': sp.get('startName',''), 'to': sp.get('endName','')})
+                          'from': sp.get('startName',''), 'to': sp.get('endName',''),
+                          'linestring': ls})
     return steps[:5]
 
 
 def step_cols(steps, n):
     if n <= len(steps):
         s = steps[n-1]
-        return s['type'], s['time'], s['dist'], s['line'], s['from'], s['to']
-    return '', None, None, '', '', ''
+        return s['type'], s['time'], s['dist'], s['line'], s['from'], s['to'], s.get('linestring') or None
+    return '', None, None, '', '', '', None
 
 
 # ── ODsay 호출 ───────────────────────────────────────────────
