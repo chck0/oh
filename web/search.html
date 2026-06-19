@@ -218,7 +218,10 @@
 
     /* ─── 직장 주소 row ────────────────────────────────────── */
     .address-row { display: flex; gap: 10px; }
-    .address-row input { flex: 1; }
+    /* min-width:0 — 플렉스 기본 min-width:auto로 입력칸이 안 줄어 '주소 찾기'
+       버튼이 좁은 폰(≤~370px)에서 화면 밖으로 밀리던 가로 오버플로 수정.
+       데스크톱은 여유 폭이라 렌더 변화 없음. */
+    .address-row input { flex: 1; min-width: 0; }
     .wp-label {
       font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
       color: var(--color-brand-primary); margin-bottom: 6px;
@@ -638,7 +641,7 @@
     <section class="section">
       <div class="section-head">
         <span class="section-num num">2</span>
-        <span class="section-title">가격 범위</span>
+        <span class="section-title">예산 범위</span>
         <span class="info-wrap">
           <button type="button" class="info-btn" aria-label="안내">i</button>
           <div class="info-popover">
@@ -676,7 +679,7 @@
     <section class="section">
       <div class="section-head">
         <span class="section-num num">3</span>
-        <span class="section-title">최대 통근시간</span>
+        <span class="section-title">최대 통근 시간</span>
         <span class="info-wrap">
           <button type="button" class="info-btn" aria-label="안내">i</button>
           <div class="info-popover">

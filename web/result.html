@@ -359,7 +359,22 @@
       background: var(--color-brand-primary); color: #fff;
       font-size: 11px; font-weight: 700; padding: 0 4px;
     }
-    .sort-toggle-btn .sort-arrow { font-size: 10px; color: var(--color-text-tertiary); transition: transform .2s; }
+    /* 접기/펼치기 어포던스 — 상태 텍스트+셰브론 알약 */
+    .sort-toggle-btn { border-radius: 8px; transition: background .15s; }
+    .sort-toggle-btn:hover { background: var(--color-brand-bg-subtle); }
+    .sort-toggle-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      background: var(--color-bg-subtle); border: 1px solid var(--color-border-default);
+      font-size: 11px; font-weight: 600; color: var(--color-text-secondary);
+      transition: border-color .15s, color .15s;
+    }
+    .sort-toggle-btn:hover .sort-toggle-pill {
+      border-color: var(--color-brand-primary); color: var(--color-brand-primary);
+    }
+    .sort-toggle-label::after { content: '펼치기'; }
+    .sort-toggle-btn.open .sort-toggle-label::after { content: '접기'; }
+    .sort-toggle-btn .sort-arrow { font-size: 11px; line-height: 1; transition: transform .2s; }
     .sort-toggle-btn.open .sort-arrow { transform: rotate(180deg); }
     /* 접힘 시 정렬 칩·힌트 숨김 → 매물 공간 확보 */
     .sort-panel:not(.open) .sort-chips-wrap,
@@ -1133,22 +1148,22 @@
       font-size: 14px; line-height: 1; margin-bottom: 1px;
     }
     /* 통근시간 색상 */
-    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
-    .pin-t1 .pin-body { background:#16a34a; }
-    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
-    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
-    .pin-t2 .pin-body { background:#3b82f6; }
-    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
-    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
-    .pin-t3 .pin-body { background:#f97316; }
-    .pin-t3 .pin-body::after { border-top-color:#f97316; }
-    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
-    .pin-t4 .pin-body { background:#ef4444; }
-    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
-    /* 추천 핀 — 보라 */
-    .pin-best .pin-roof { border-bottom-color:#6d28d9; }
-    .pin-best .pin-body { background:#6d28d9; }
-    .pin-best .pin-body::after { border-top-color:#6d28d9; }
+    .pin-t1 .pin-roof { border-bottom-color:#FF6FB5; }
+    .pin-t1 .pin-body { background:#FF6FB5; }
+    .pin-t1 .pin-body::after { border-top-color:#FF6FB5; }
+    .pin-t2 .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-t2 .pin-body { background:#C45ED6; }
+    .pin-t2 .pin-body::after { border-top-color:#C45ED6; }
+    .pin-t3 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t3 .pin-body { background:#7C3FE6; }
+    .pin-t3 .pin-body::after { border-top-color:#7C3FE6; }
+    .pin-t4 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t4 .pin-body { background:#7C3FE6; }
+    .pin-t4 .pin-body::after { border-top-color:#7C3FE6; }
+    /* 추천 핀 — 틸 */
+    .pin-best .pin-roof { border-bottom-color:#00C9A7; }
+    .pin-best .pin-body { background:#00C9A7; }
+    .pin-best .pin-body::after { border-top-color:#00C9A7; }
     /* 복수 평형 뱃지 */
     .pin-multi {
       position: absolute; top: -6px; right: -6px;
@@ -1303,14 +1318,24 @@
       box-shadow: -4px 0 20px rgba(0,0,0,0.08);
     }
     .detail-panel__header {
-      padding: 14px 16px 0;
+      padding: 13px 14px;
       display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      background: var(--color-brand-gradient);
+      box-shadow: 0 2px 8px rgba(124, 63, 230, 0.22);
     }
-    .detail-panel__title { font-size: 16px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-panel__title { font-size: 14px; font-weight: 700; flex: 1; line-height: 1.4; color: #fff; }
+    .detail-fav-btn {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      font-size: 20px; color: rgba(255,255,255,0.7);
+      padding: 2px 4px; line-height: 1;
+      transition: color 150ms, transform 150ms;
+    }
+    .detail-fav-btn:hover { color: #fff; transform: scale(1.2); }
+    .detail-fav-btn.active { color: #fff; }
     .detail-panel__close {
       flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-      border: 1px solid var(--color-border-default); background: var(--color-bg-subtle);
-      cursor: pointer; font-size: 14px; color: var(--color-text-secondary);
+      border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.18);
+      cursor: pointer; font-size: 14px; color: #fff;
       display: flex; align-items: center; justify-content: center;
     }
     .detail-panel__tabs {
@@ -1947,10 +1972,12 @@
       border-width: 1.5px;
     }
     .dp-route__head {
-      display: flex; align-items: baseline; gap: 8px;
+      display: flex; flex-direction: column; align-items: stretch; gap: 9px;
       cursor: pointer;
       margin-bottom: 4px;
     }
+    .dp-route__topline { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .dp-route__sub { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; margin-left: 8px; }
     .dp-route__time {
       font-size: 18px; font-weight: 700;
       color: var(--color-brand-primary);
@@ -1973,6 +2000,32 @@
     .dp-route__body { display: none; padding-top: 8px; }
     .dp-route__body.open { display: block; }
     .dp-route.best .dp-route__chev { transform: rotate(180deg); }
+
+    /* 한 줄 여정 요약 바 + 펼침 타임라인 */
+    .dp-bar { display: flex; gap: 3px; height: 28px; }
+    .dp-seg {
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 700; padding: 0 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-width: 0; font-feature-settings: 'tnum';
+    }
+    .dp-tl-row {
+      display: flex; gap: 11px; padding: 9px 0;
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .dp-tl-row:last-child { border-bottom: none; }
+    .dp-tl-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+    .dp-tl-dot.walk { width: 9px; height: 9px; margin-top: 5px; margin-left: 2px; background: var(--color-text-tertiary); }
+    .dp-tl-info { flex: 1; min-width: 0; }
+    .dp-tl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .dp-tl-badge {
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 5px;
+    }
+    .dp-tl-time { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; }
+    .dp-tl-sta { font-size: 14px; color: var(--color-text-primary); line-height: 1.4; }
+    .dp-tl-sta .arr { color: var(--color-text-tertiary); margin: 0 5px; }
+    .dp-tl-walk { font-size: 13px; color: var(--color-text-secondary); }
 
     .dp-step {
       display: flex; align-items: center; gap: 10px;
@@ -2190,6 +2243,114 @@
     .bucket-body {
       background: var(--color-bg-subtle);
     }
+
+    /* ════════════════════════════════════════════════════════════
+       spec-12 · 모바일 전용 UX (≤767px 한정)
+       ⚠️ PC 무영향 원칙: 이 블록 규칙은 모바일에서만 적용되며
+       데스크톱(≥768px) 렌더링·동작에 일절 영향을 주지 않는다.
+       기존 데스크톱 선언은 수정하지 않고 여기서 override만 한다.
+       (소스 맨 끝 배치 → 동일 특이도 규칙을 소스순서로 안전하게 덮어씀)
+       ════════════════════════════════════════════════════════════ */
+    /* 모바일 토글 버튼 기본값: 데스크톱에선 숨김(추가 셀렉터 — 기존 요소 무영향) */
+    .mobile-view-toggle { display: none; }
+
+    @media (max-width: 767px) {
+      /* A·C. 레이아웃: .result-layout이 flex이므로 flex-direction으로 세로 스택
+         (기존 315행 블록은 flex에 무효한 grid-template이라 실제 동작 안 했음) */
+      .result-layout { flex-direction: column; }
+      .left-panel {
+        width: 100%; min-width: 0; flex: 1 1 auto; min-height: 0;
+        border-right: none; border-bottom: 1px solid var(--color-border-strong);
+        /* spec-12 #2: 좌측패널 전체를 스크롤 컨테이너로 → 정렬패널 펼침 시
+           칩이 지도 경계에서 잘리던 문제 해소(좌측 영역 안에서 스크롤). */
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      .cards-panel { overflow: visible; flex: 0 0 auto; }
+      /* spec-12 #2: 리스트 모드는 전체 리스트(지도 접음) — 네이버/직방식 토글.
+         32vh 지도를 항상 띄우면 좁은 화면에서 정렬칩이 지도에 잘리므로,
+         지도는 '지도 보기' 토글(.mobile-map-focus)에서만 전체로 노출. */
+      .map-panel {
+        width: 100%; min-width: 0;
+        flex: 0 0 0; height: 0; min-height: 0; overflow: hidden;
+      }
+
+      /* spec-12 #2: 지도 범례 컴팩트화 (작은 모바일 지도에 맞춰 축소) */
+      #map-legend {
+        top: 8px; left: 8px; padding: 9px 12px; min-width: 0; border-radius: 10px;
+      }
+      #map-legend .lg-title { margin-bottom: 6px; font-size: 10px; }
+      #map-legend .lg-row { margin-bottom: 5px; font-size: 12px; gap: 7px; }
+      #map-legend .lg-dot { width: 10px; height: 10px; }
+      #map-legend .lg-divider { margin: 6px 0; }
+
+      /* spec-12 #(로딩): 분석 대기 화면 video-row가 가로 flex라 모바일에서
+         사이드패널(소리 켜기·플레이리스트)이 화면 밖으로 잘림 → 세로 스택 */
+      .video-row { flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
+      .video-stage { width: min(72vw, 240px); }
+      .video-side { width: min(82vw, 300px); flex: none; }
+
+      /* C. 지도 우선 모드 — 토글로 .mobile-map-focus 부여 시 리스트 접고 지도 확대 */
+      .result-layout.mobile-map-focus .left-panel {
+        flex: 0 0 0; height: 0; min-height: 0; overflow: hidden; border: none;
+      }
+      .result-layout.mobile-map-focus .map-panel {
+        flex: 1 1 auto; height: 100%; min-height: 0;
+      }
+
+      /* C. 모바일 전용 플로팅 토글 버튼 (position:fixed → flex 흐름 무영향) */
+      .mobile-view-toggle {
+        display: inline-flex; align-items: center; gap: 6px;
+        /* spec-12 #4: Kakao 로고·저작권(코너) 위로 띄워 안 가리게 + 가로 중앙 */
+        position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+        z-index: 880;
+        padding: 10px 18px;
+        background: var(--color-brand-gradient); color: #fff;
+        border: none; border-radius: var(--radius-pill);
+        font-family: inherit; font-size: 14px; font-weight: 700;
+        box-shadow: var(--shadow-brand-strong); cursor: pointer;
+      }
+      /* 상세/채팅 열려 있으면 토글 숨김(겹침 방지) — :has() CSS만, JS 무변경 */
+      .result-layout:has(.detail-panel.open) .mobile-view-toggle,
+      .result-layout:has(.chat-panel:not(.hidden)) .mobile-view-toggle {
+        display: none;
+      }
+
+      /* A. 상세 패널 → 하단 바텀시트 (데스크톱 480px 사이드패널은 무손상) */
+      .detail-panel {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; min-width: 0; height: 88vh; max-height: 88vh;
+        transform: translateY(101%);
+        transition: transform .28s ease;
+        border-left: none; border-radius: 16px 16px 0 0;
+        overflow: hidden; z-index: 910;
+      }
+      .detail-panel.open {            /* 데스크톱 .open(480px·border·shadow) 재정의 */
+        width: 100%; min-width: 0;
+        transform: translateY(0);
+        border-left: none;
+        box-shadow: 0 -8px 28px rgba(0,0,0,0.35);
+      }
+      /* D(Phase 2). 바텀시트 상단 그립바 — 스와이프 닫기 시각 단서 (CSS만) */
+      .detail-panel__header { padding-top: 18px; position: relative; }
+      .detail-panel__header::before {
+        content: ''; position: absolute; top: 7px; left: 50%;
+        transform: translateX(-50%);
+        width: 40px; height: 4px; border-radius: 2px;
+        background: rgba(255,255,255,0.55); pointer-events: none;
+      }
+
+      /* B. 친구 채팅 패널 → 전폭 (데스크톱 440px 사이드패널은 무손상) */
+      .chat-panel {
+        width: 100%; min-width: 0; max-width: none; border-radius: 0;
+        /* iOS Safari 100vh 이슈: 하단 툴바 영역 포함분만큼 입력창이 잘림 → dvh로 보이는 뷰포트 기준 */
+        height: calc(100dvh - 54px);
+      }
+      .chat-panel__resize { display: none; }   /* 모바일에선 가로 리사이즈 불필요 */
+      /* 홈 인디케이터(노치 폰) 안전영역만큼 입력창 하단 여백 확보 */
+      .chat-panel__input-row {
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      }
+    }
   </style>
 </head>
 <body>
@@ -2269,6 +2430,11 @@
   </div>
 
   <div class="result-layout">
+    <!-- spec-12: 모바일 전용 지도↔리스트 토글 (데스크톱 display:none, position:fixed) -->
+    <button class="mobile-view-toggle" id="mobile-view-toggle"
+            onclick="toggleMobileView()" aria-label="지도/리스트 전환">
+      <span id="mvt-label">지도 보기</span>
+    </button>
     <!-- 좌측: fav-tabs(상단 고정) + sort-panel + cards-panel(스크롤) -->
     <div class="left-panel">
       <div id="fav-tabs" class="fav-tabs" style="display:none">
@@ -2277,9 +2443,9 @@
       </div>
       <div class="sort-panel" id="sort-panel">
         <div class="sort-panel-header">
-          <button class="sort-toggle-btn" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:0;height:auto;gap:6px">
+          <button class="sort-toggle-btn open" id="sort-toggle-btn" onclick="toggleSortPanel()" aria-expanded="true" style="padding:4px 8px;height:auto;gap:8px">
             <span class="sort-panel-title">정렬 기준</span>
-            <span class="sort-arrow">▾</span>
+            <span class="sort-toggle-pill"><span class="sort-toggle-label"></span><span class="sort-arrow">▾</span></span>
           </button>
           <button class="sort-panel-reset" onclick="resetSort()">✕ 초기화</button>
         </div>
@@ -2313,6 +2479,7 @@
     <div class="detail-panel" id="detail-panel">
       <div class="detail-panel__header">
         <h2 class="detail-panel__title" id="detail-title">-</h2>
+        <button class="detail-fav-btn" id="detail-fav-btn" title="찜하기" onclick="_toggleDetailFav(this)">♡</button>
         <button class="detail-panel__close" onclick="closeDetail()">✕</button>
       </div>
       <div class="detail-panel__tabs">
@@ -2365,14 +2532,15 @@
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
     <div class="map-panel" style="position:relative">
+      <button id="route-back-btn" onclick="backToList()" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:50;display:none;align-items:center;gap:6px;background:#FF6A39;color:#fff;border:none;border-radius:20px;padding:10px 20px;font-size:14px;font-weight:700;box-shadow:0 3px 12px rgba(0,0,0,.3);cursor:pointer;">↩ 목록으로 돌아가기</button>
       <div id="map"></div>
       <div id="map-legend">
-        <div class="lg-title">통근시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>31–45분</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>46–60분</span></div>
+        <div class="lg-title">통근 시간</div>
+        <div class="lg-row"><div class="lg-dot" style="background:#FF6FB5"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>45분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#7C3FE6"></div><span>60분 이하</span></div>
         <hr class="lg-divider">
-        <div class="lg-row"><div class="lg-dot" style="background:#6d28d9"></div><span>추천 단지</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#00C9A7"></div><span>BADUGI 추천</span></div>
       </div>
     </div>
   </div>
@@ -2670,11 +2838,11 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#FF6FB5'; // ≤30분 → 핑크
     const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
-    if (start <= 45) return '#f97316'; // 46~60분 → 주황
-    return '#f97316';
+    if (start <= 31) return '#C45ED6'; // 31~45분 → 퍼플
+    if (start <= 45) return '#7C3FE6'; // 46~60분 → 바이올렛
+    return '#7C3FE6';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
@@ -2815,7 +2983,7 @@ function setActiveAptPin(aptSeq){
 function clearActiveAptPin(){ setActiveAptPin(null); }
 
 // 카드 클릭: 지도 pan + 단지 상세 모달 열기 (spec-17)
-function panToCard(aptSeq){ openDetail(aptSeq); }
+function panToCard(aptSeq){ showDetail(aptSeq, window._lastWpId || 0); }
 
 // ── 단지 상세 모달 (spec-17) ─────────────────────────────────
 const _detailCache = {};
@@ -2866,6 +3034,65 @@ function closeDetail() {
   clearActiveAptPin();  // spec-38: 핀 강조 해제
 }
 function closeDetailOnBg(e) {}
+
+// ── spec-12: 모바일 전용 — 지도↔리스트 포커스 전환 ──────────────
+// 데스크톱에선 토글 버튼이 display:none이라 호출되지 않으며,
+// 호출돼도 matchMedia 가드로 즉시 종료 → PC 동작 경로 무영향.
+function toggleMobileView() {
+  if (!window.matchMedia('(max-width: 767px)').matches) return;  // 데스크톱 무동작
+  const layout = document.querySelector('.result-layout');
+  if (!layout) return;
+  const mapFocus = layout.classList.toggle('mobile-map-focus');
+  const label = document.getElementById('mvt-label');
+  if (label) label.textContent = mapFocus ? '리스트 보기' : '지도 보기';
+  // 지도 컨테이너 크기 변경 → Kakao 재배치 (레이아웃 정착 후)
+  setTimeout(() => {
+    try {
+      if (typeof kakaoMap !== 'undefined' && kakaoMap) {
+        kakaoMap.relayout();
+        if (typeof _recenterApt === 'function') _recenterApt();
+      }
+    } catch (e) {}
+  }, 80);
+}
+
+// ── spec-12 Phase 2: 모바일 바텀시트 헤더를 아래로 스와이프 → 닫기 ──
+// 헤더(그립바)만 대상이라 본문 스크롤과 충돌 없음. 데스크톱은 matchMedia
+// 가드로 touchstart에서 즉시 종료 → PC 동작/렌더 무영향 (순수 추가).
+(function initMobileSheetSwipe() {
+  const mq = window.matchMedia('(max-width: 767px)');
+  const panel = document.getElementById('detail-panel');
+  if (!panel) return;
+  const header = panel.querySelector('.detail-panel__header');
+  if (!header) return;
+  let startY = 0, dy = 0, dragging = false;
+  const CLOSE_PX = 100;
+
+  header.addEventListener('touchstart', (e) => {
+    if (!mq.matches || !panel.classList.contains('open')) return;  // 데스크톱/닫힘 무동작
+    startY = e.touches[0].clientY; dy = 0; dragging = true;
+    panel.style.transition = 'none';
+  }, { passive: true });
+
+  header.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy < 0) dy = 0;                       // 아래로만 따라감
+    panel.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  function end() {
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = '';              // CSS 전환 복원
+    panel.style.transform = '';               // 인라인 제거 → CSS 클래스가 제어
+    if (dy > CLOSE_PX && typeof closeDetail === 'function') closeDetail();  // 닫기
+    dy = 0;                                    // 임계 미달 시 .open이 제자리 스냅백
+  }
+  header.addEventListener('touchend', end, { passive: true });
+  header.addEventListener('touchcancel', end, { passive: true });
+})();
+
 function switchDetailTab(name, btn) {
   document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -2875,7 +3102,19 @@ function switchDetailTab(name, btn) {
 
 function _renderDetail(d) {
   document.getElementById('detail-loading').style.display = 'none';
-  document.getElementById('detail-title').textContent = d.apt_nm || '-';
+  const _titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = _titleParts.join(' ') || '-';
+
+  // fav 버튼 상태 동기화
+  const _favBtn = document.getElementById('detail-fav-btn');
+  if(_favBtn){
+    const seq = d.apt_seq; const pt = '';
+    _favBtn.dataset.aptSeq = seq; _favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    _favBtn.textContent = active ? '♥' : '♡';
+    _favBtn.classList.toggle('active', active);
+    _favBtn.title = active ? '찜 해제' : '찜하기';
+  }
 
   // ── 단지정보 탭 ────────────────────────────────────────────
   const b = d.building || {};
@@ -3017,6 +3256,8 @@ function _renderDetail(d) {
           const dist = p.distance_m < 1000 ? `${Math.round(p.distance_m)}m` : `${(p.distance_m/1000).toFixed(1)}km`;
           poiHtml += `<div class="detail-poi-row"
             data-poi-name="${escHtml(p.name||'')}"
+            data-poi-cat="${escHtml(p.category||'')}"
+            data-poi-sub="${escHtml(p.sub_category||'')}"
             data-walk-min="${p.walking_min||0}"
             data-dist-m="${Math.round(p.distance_m)||0}"
             onclick="togglePoiMarker(this)">
@@ -3079,13 +3320,67 @@ function _clearChatAttachment() {
 }
 
 // spec-25: Claude가 실제로 답변 가능한 질문으로 구성
-const CHAT_SUGGESTIONS = [
-  '최근 시세 트렌드 어때?',
-  '주변 단지 대비 시세는?',
-  '실거래 최근 거래 어때?',
-  '주차·교통 편해?',
-  '학군이랑 주변 환경은?',
-];
+// 채팅 첫 진입 기본 칩 풀 — 100% 팩트 기반(공공데이터·관리규약·실거래로 확인 가능),
+//  카테고리별로 구성. 가격예측·주관적 호재/악재·투자권유·소문성 질문은 절대 포함하지 않음.
+//  매 진입마다 _pickDefaultChips()로 카테고리 균형 + 랜덤 노출.
+const CHAT_SUGGESTION_POOL = {
+  '교통': [
+    '가까운 지하철역까지 도보 몇 분이야?',
+    '이용할 수 있는 지하철 노선은 뭐야?',
+    '버스정류장은 얼마나 가까워?',
+    '가장 가까운 지하철역이 어디야?',
+    '환승역까지 얼마나 걸려?',
+    '주요 업무지구까지 대중교통으로 얼마나 걸려?',
+    '광역버스나 간선버스 정류장 있어?',
+  ],
+  '학군/교육': [
+    '근처에 초·중·고 어디 있어?',
+    '초등학교까지 도보 몇 분이야?',
+    '주변에 학원가 있어?',
+    '도보권 중학교는 어디야?',
+    '가까운 고등학교 있어?',
+    '근처에 도서관 있어?',
+    '어린이집·유치원 가까이 있어?',
+  ],
+  '단지/시설': [
+    '몇 년에 지어졌고 몇 세대 단지야?',
+    '세대당 주차 대수는 얼마야?',
+    '난방 방식이랑 층수 알려줘',
+    '몇 개 동으로 이뤄져 있어?',
+    '평형 구성은 어떻게 돼?',
+    '용적률·건폐율은 어때?',
+    '엘리베이터나 단지 시설은 어때?',
+  ],
+  '주변환경': [
+    '도보권에 마트·병원 있어?',
+    '근처에 공원이나 녹지 있어?',
+    '편의시설은 뭐가 가까워?',
+    '대형마트나 백화점 가까워?',
+    '주변에 병원·약국 있어?',
+    '가까운 관공서(주민센터 등) 있어?',
+    '카페·음식점은 근처에 많아?',
+  ],
+  '시세/실거래': [
+    '최근 실거래가 얼마였어?',
+    '최근 6개월 시세 어떻게 변했어?',
+    '동 평균이랑 비교하면 어때?',
+    '평형별 실거래가 차이 있어?',
+    '최근 1년 거래량은 어때?',
+    '가장 최근 거래는 언제 몇 층이었어?',
+    '같은 평형 최고가·최저가 알려줘',
+  ],
+};
+// 서로 다른 카테고리에서 1개씩(카테고리 순서·카테고리 내 질문 모두 랜덤) n개 선택.
+function _pickDefaultChips(n = 5) {
+  const cats = Object.keys(CHAT_SUGGESTION_POOL).sort(() => Math.random() - 0.5);
+  const picks = [];
+  for (const c of cats) {
+    const arr = CHAT_SUGGESTION_POOL[c];
+    picks.push(arr[Math.floor(Math.random() * arr.length)]);
+    if (picks.length >= n) break;
+  }
+  return picks;
+}
 
 function _toggleFriend(btn) {
   btn.classList.toggle('open');
@@ -3136,8 +3431,17 @@ function openFriendChat(aptSeq, aptNm, pyeongType, lat, lng) {
     }
   } catch(e) {}
 
-  _renderChips(CHAT_SUGGESTIONS);
+  _renderChips(_pickDefaultChips());
   document.getElementById('chat-suggestions').style.display = '';
+  // spec-12 #3: 모바일은 상세 바텀시트(z910)와 채팅(z850)이 둘 다 전체화면이라
+  // 채팅이 상세 뒤에 가려짐 → 채팅 열 때 상세를 닫는다. (가드로 데스크톱 무영향:
+  // 데스크톱은 사이드 패널이라 둘이 공존)
+  try {
+    if (window.matchMedia('(max-width: 767px)').matches &&
+        document.getElementById('detail-panel').classList.contains('open')) {
+      closeDetail();
+    }
+  } catch (e) {}
   document.getElementById('chat-panel').classList.remove('hidden');
   document.getElementById('chat-input').focus();
 }
@@ -3172,10 +3476,55 @@ async function sendChatMessage(text) {
       }),
     });
     _clearChatAttachment();  // 전송 직후 첨부 초기화
-    const data = await res.json();
-    document.getElementById(loadId)?.remove();
-    const reply = data.reply || '잠깐, 다시 시도해봐.';
-    _appendChatMsg('assistant', escHtml(reply).replace(/\n/g, '<br>'));
+
+    const box = document.getElementById('chat-messages');
+    const bubble = document.getElementById(loadId);   // '생각 중...' 말풍선 재사용
+    let acc = '';
+    let suggestions = [];
+    let started = false;
+    const _render = () => { if (bubble) bubble.innerHTML = escHtml(acc).replace(/\n/g, '<br>'); };
+
+    if (!res.body || !res.body.getReader) {
+      // 스트리밍 미지원 환경 폴백 — JSON 한 번에 수신
+      const data = await res.json().catch(() => ({}));
+      acc = data.reply || '잠깐, 다시 시도해봐.';
+      suggestions = data.suggestions || [];
+      _render();
+    } else {
+      // SSE 스트림 파싱 (data: {json}\n\n)
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const parts = buf.split('\n\n');
+        buf = parts.pop();
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data:')) continue;
+          let payload;
+          try { payload = JSON.parse(line.slice(5).trim()); } catch { continue; }
+          if (payload.type === 'delta') {
+            if (!started) { started = true; if (bubble) bubble.innerHTML = ''; }
+            acc += payload.text;
+            _render();
+          } else if (payload.type === 'done') {
+            suggestions = payload.suggestions || [];
+          } else if (payload.type === 'error') {
+            if (!acc) { acc = payload.message || '에러가 났어. 잠깐 기다려봐.'; _render(); }
+          }
+        }
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    if (bubble) bubble.removeAttribute('id');
+    const reply = acc || '잠깐, 다시 시도해봐.';
+    if (bubble && !acc) bubble.innerHTML = escHtml(reply).replace(/\n/g, '<br>');
+    box.scrollTop = box.scrollHeight;
+
     _chatHistory.push({role:'user', content: message}, {role:'assistant', content: reply});
     if (_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
     try {
@@ -3184,8 +3533,8 @@ async function sendChatMessage(text) {
       }));
     } catch(e) {}
     // F2(spec-24): 동적 Chip 갱신
-    if (data.suggestions && data.suggestions.length) {
-      _renderChips(data.suggestions);
+    if (suggestions && suggestions.length) {
+      _renderChips(suggestions);
     }
   } catch {
     document.getElementById(loadId)?.remove();
@@ -3436,10 +3785,11 @@ function togglePoiMarker(row) {
   const poiName = row.dataset.poiName;
   const walkMin = parseInt(row.dataset.walkMin, 10) || 0;
   const distM   = parseInt(row.dataset.distM,  10) || 0;
-  showPoiMarker(row, poiName, walkMin, distM);
+  const sub     = row.dataset.poiSub || '';   // D01=지하철출구, D02=버스정류장
+  showPoiMarker(row, poiName, walkMin, distM, sub);
 }
 
-function showPoiMarker(row, poiName, walkMin, distM) {
+function showPoiMarker(row, poiName, walkMin, distM, sub) {
   if (!kakaoMap || !poiName) { if (row) row.classList.remove('poi-active'); return; }
   const card = resultData && resultData.cards
     ? resultData.cards.find(c => c.apt_seq === _currentAptSeq)
@@ -3449,11 +3799,8 @@ function showPoiMarker(row, poiName, walkMin, distM) {
   const distLabel = distM >= 1000 ? `${(distM/1000).toFixed(1)}km` : `${distM}m`;
   const walkLabel = walkMin ? `도보 ${walkMin}분 · ` : '';
   // spec-41: 넓은 시설(캠퍼스·역사)은 등록 좌표가 도보거리보다 멀 수 있어 반경을 넉넉히.
-  //  (이름 검증 + 거리순 정렬로 정확도 확보, 반경은 다른 지역 오매칭만 차단)
   const searchRadius = Math.min(Math.max(distM * 2 + 1500, 2000), 8000);
-
   const loc = new kakao.maps.LatLng(card.lat, card.lng);
-  const ps = new kakao.maps.services.Places();
   const opts = { location: loc, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE };
 
   function place(doc) {
@@ -3475,48 +3822,149 @@ function showPoiMarker(row, poiName, walkMin, distM) {
     _recenterApt();                          // 아파트 정중앙 고정 + 활성 핀 모두 보이게
   }
 
-  // spec-39/41: 이름 검증 후 배치. 풀네임 검색 → 일치 없으면 폴백 질의 재검색 →
-  //  그래도 없으면 틀린 핀 대신 안내(모르면 모른다). 최근접 무검증(data[0]) 폐기.
-  //  폴백 질의: "안암역 3번출구"처럼 다단어면 첫 단어("안암역")로, 아니면 앞 6글자로 재검색.
-  const firstToken = poiName.split(/\s+/)[0];
-  const fbQuery = (firstToken && firstToken.length >= 2 && firstToken !== poiName)
-    ? firstToken : (poiName.length > 4 ? poiName.substring(0, 6) : null);
-
-  function fail() {
-    row.classList.remove('poi-active');  // 핀 없이 활성표시만 남는 것 방지
-    _poiNotice('지도에서 위치를 확인하지 못했습니다');
+  // 사전 검증으로 좌표가 캐시돼 있으면 즉시 배치 (재검색 없이 확실히 찍힘)
+  if (row && row.dataset.poiX && row.dataset.poiY) {
+    place({ x: row.dataset.poiX, y: row.dataset.poiY });
+    return;
   }
 
+  _resolvePoiDoc(poiName, sub, opts).then(doc => {
+    if (_currentAptSeq !== card.apt_seq) { row.classList.remove('poi-active'); return; }
+    if (doc) { row.dataset.poiX = doc.x; row.dataset.poiY = doc.y; place(doc); }
+    else { row.classList.remove('poi-active'); _poiNotice('지도에서 위치를 확인하지 못했습니다'); }
+  });
+}
+
+// 시설명+유형으로 카카오에서 위치(doc{x,y})를 찾는다. 못 찾으면 null. (클릭·사전검증 공용)
+//  지하철역(SW8)은 카테고리 검색이 키워드보다 정확 — 역만 반환하므로 역명 매칭 실패 시 최근접 역.
+function _resolvePoiDoc(poiName, sub, opts) {
+  return new Promise(resolve => {
+    if (!kakao.maps.services || !kakao.maps.services.Places || !poiName) { resolve(null); return; }
+    const ps = new kakao.maps.services.Places();
+    if (sub === 'D01') {
+      const sta = poiName.replace(/\s*\d+\s*번?\s*출구.*$/, '').trim() || poiName;
+      ps.categorySearch('SW8', (data, status) => {
+        if (status === kakao.maps.services.Status.OK && data.length) {
+          const t = _normName(sta);
+          const hit = data.find(d => {
+            const c = _normName(d.place_name);
+            return c === t || (c.length >= 2 && (c.includes(t) || t.includes(c)));
+          }) || data[0];
+          resolve(hit); return;
+        }
+        _resolveByKeyword(ps, opts, poiName, sub, resolve);
+      }, opts);
+      return;
+    }
+    _resolveByKeyword(ps, opts, poiName, sub, resolve);
+  });
+}
+
+// 키워드 검색: 풀네임 → 폴백 질의. 버스는 결과 카테고리명('버스'/'정류장')도 일치로 인정.
+function _resolveByKeyword(ps, opts, poiName, sub, resolve) {
+  const isBus = sub === 'D02';
+  const tokens = poiName.split(/[\s.,·∙・]+/).filter(t => t.length >= 2);
+  const firstToken = tokens[0] || '';
+  const fbQuery = (firstToken && firstToken !== poiName)
+    ? firstToken : (poiName.length > 4 ? poiName.substring(0, 6) : null);
+  const pick = (data, status) => (status === kakao.maps.services.Status.OK && data.length)
+    ? _pickBestPoi(data, poiName, isBus) : null;
+
   ps.keywordSearch(poiName, (data, status) => {
-    const best = (status === kakao.maps.services.Status.OK && data.length)
-      ? _pickBestPoi(data, poiName) : null;
-    if (best) { place(best); return; }
-    if (!fbQuery) { fail(); return; }
-    ps.keywordSearch(fbQuery, (d2, s2) => {
-      const b2 = (s2 === kakao.maps.services.Status.OK && d2.length)
-        ? _pickBestPoi(d2, poiName) : null;
-      if (b2) place(b2); else fail();
+    const best = pick(data, status);
+    if (best) { resolve(best); return; }
+    if (!fbQuery) { resolve(null); return; }
+    const fbq = isBus ? `${fbQuery} 정류장` : fbQuery;
+    ps.keywordSearch(fbq, (d2, s2) => {
+      const b2 = pick(d2, s2) || (isBus && s2 === kakao.maps.services.Status.OK && d2.length ? d2[0] : null);
+      resolve(b2 || null);
     }, opts);
   }, opts);
 }
 
+// 사전 검증 후 "확인된 시설만" 렌더(깜빡임 없음). 검증 중엔 호출부의 스피너 유지.
+//  아파트별 캐시로 재진입 시 재검색 안 함. 동시 4건. 확인된 행엔 좌표 캐시(클릭 즉시 배치).
+const _poiResolveCache = {};   // aptSeq → { poiName: {x,y}|null }
+async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
+  if (!bodyEl) return;
+  const _empty = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">시설 데이터 없음</p>';
+  if (!poi || !poi.length) { bodyEl.innerHTML = _empty; return; }
+  const card = resultData && resultData.cards
+    ? resultData.cards.find(c => c.apt_seq === aptSeq) : null;
+  // 검증 불가 환경(카카오 서비스/좌표 없음)에선 그냥 전체 표시(폴백)
+  if (!kakaoMap || !kakao.maps.services || !card || !card.lat || !card.lng) {
+    bodyEl.innerHTML = renderPOIHTML(poi); return;
+  }
+  const loc = new kakao.maps.LatLng(card.lat, card.lng);
+  const cache = (_poiResolveCache[aptSeq] = _poiResolveCache[aptSeq] || {});
+
+  // renderPOIHTML과 동일한 표시 후보(allowedSubs 필터 + 상한)만 검증
+  const candidates = poi.slice(0, 60).filter(p => {
+    const allowed = POI_ALLOWED_SUBS[p.category];
+    return !allowed || allowed.has(p.sub_category);
+  });
+
+  const confirmedSet = new Set();
+  let idx = 0;
+  const worker = async () => {
+    while (idx < candidates.length) {
+      const p = candidates[idx++];
+      if (_currentAptSeq !== aptSeq) return;            // 다른 단지로 전환 → 중단
+      let doc = cache[p.name];
+      if (doc === undefined) {
+        const opts = { location: loc, radius: Math.min(Math.max((p.distance_m||0)*2+1500, 2000), 8000), sort: kakao.maps.services.SortBy.DISTANCE };
+        doc = await _resolvePoiDoc(p.name, p.sub_category || '', opts);
+        cache[p.name] = doc;                             // null도 캐시(재검색 방지)
+      }
+      if (doc) confirmedSet.add(p);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
+  if (_currentAptSeq !== aptSeq) return;                 // 그새 다른 단지 → 폐기
+
+  const confirmed = candidates.filter(p => confirmedSet.has(p));
+  if (!confirmed.length) {
+    bodyEl.innerHTML = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">지도에서 위치 확인되는 도보 시설이 없어요.</p>';
+    return;
+  }
+  bodyEl.innerHTML = renderPOIHTML(confirmed);           // 확인된 것만 한 번에 렌더
+  // 확인 좌표를 각 행에 주입 → 클릭 시 재검색 없이 즉시 배치
+  bodyEl.querySelectorAll('.detail-poi-row').forEach(row => {
+    const doc = cache[row.dataset.poiName];
+    if (doc) { row.dataset.poiX = doc.x; row.dataset.poiY = doc.y; }
+  });
+}
+
 // spec-39/41: POI 마커 위치 신뢰성 헬퍼 ──────────────────────
-function _normName(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+function _normName(s){
+  // 표기 차이(공백·구두점·괄호·중점·하이픈·슬래시 등)를 제거해 이름 매칭을 견고하게.
+  //  우리 DB명과 카카오 반환명이 같은 시설인데 표기만 달라 매칭 실패하던 문제 방지.
+  //  한글/영숫자 토큰은 보존 → 과도 제거로 인한 다른 시설 오매칭은 일으키지 않음.
+  return (s||'')
+    .toLowerCase()
+    .replace(/[\s·∙•・‧㈜/／\\|,，.．。()（）\[\]{}<>~\-‐‑‒–—―_'"`]+/g, '')
+    .replace(/(지하)?\d+층$/, '');   // 층 표기 제거 — 시설 정체성과 무관한 잡음
+}
 // Kakao 검색 결과(거리순 정렬됨) 중 우리 이름과 일치하는 가장 가까운 시설을 고른다.
 //  1순위 정확 일치, 2순위 부분 일치(한쪽이 다른쪽을 포함). 없으면 null.
 //  거리 검증은 하지 않는다 — 넓은 시설(캠퍼스·역사)의 등록 좌표는 도보 기준점과
 //  멀 수 있어 거리로 거르면 정상 시설이 탈락한다(spec-41). 지리 제약은 검색 반경이 담당.
-function _pickBestPoi(data, poiName){
+function _pickBestPoi(data, poiName, isBus){
   const target = _normName(poiName);
-  let exact = null, partial = null;
+  let exact = null, partial = null, byCat = null;
   for (const d of data){            // data는 location 기준 거리순 → 앞쪽이 더 가까움
     const cand = _normName(d.place_name);
     if (!cand) continue;
     if (cand === target){ if (!exact) exact = d; continue; }
     if (!partial && cand.length >= 2 && (cand.includes(target) || target.includes(cand)))
       partial = d;
+    // 버스: 이름이 안 맞아도 카테고리가 버스정류장이면 후보(가장 가까운 것)
+    if (isBus && !byCat){
+      const cn = d.category_name || '';
+      if (cn.includes('버스') || cn.includes('정류장')) byCat = d;
+    }
   }
-  return exact || partial || null;  // 이름 무관한 최근접(data[0]) 무검증 배치는 금지
+  return exact || partial || byCat || null;  // 이름 무관 최근접(data[0]) 무검증 배치는 금지
 }
 // 틀린 핀 대신 짧은 안내 (모르면 모른다)
 let _poiNoticeTimer = null;
@@ -3670,13 +4118,162 @@ const _routeCache = {};
 
 // ── 경로 폴리라인 렌더링 ──────────────────────────────────────
 let _routePolylines = [];
+let _routeSegments = [];   // [{pts:[LatLng], core:'#hex'}] 교통 구간(원본 좌표)
+let _routeWalks = [];      // [{a:LatLng, b:LatLng}] 도보 직선
+let _routePins = [];       // 승차/하차/환승역 핀
+let _lineListenerAdded = false;
 
 function clearRoutePolylines() {
   _routePolylines.forEach(p => p.setMap(null));
   _routePolylines = [];
+  _routePins.forEach(p => { if (p && p.ov) p.ov.setMap(null); });
+  _routePins = [];
+  _routeSegments = [];
+  _routeWalks = [];
 }
 
-// Douglas-Peucker 단순화 — 점 잔떨림·이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
+// 핀(위 동그라미·아래 뾰족) + 라벨(노선·역명). side로 라벨 높이 어긋나게(W1/W2 겹침 회피).
+function _addPin(latlng, color, lineText, stationText, side) {
+  const div = document.createElement('div');
+  div.style.cssText = 'pointer-events:none;display:flex;flex-direction:column;align-items:center;';
+  const tx = (side < 0) ? '54%' : '-54%';   // W1 왼쪽 / W2 오른쪽으로 비켜 겹침 회피(줌 무관)
+  let label = '';
+  if (lineText || stationText) {
+    label = '<div style="background:#fff;border:1px solid rgba(0,0,0,.14);border-radius:7px;padding:2px 7px;margin-bottom:3px;transform:translateX(' + tx + ');box-shadow:0 1px 3px rgba(0,0,0,.22);white-space:nowrap;font-family:sans-serif;line-height:1.3;">';
+    if (lineText) label += '<span style="color:' + color + ';font-weight:700;font-size:11px;">' + escHtml(lineText) + '</span>';
+    if (stationText) label += '<span style="color:#222;font-weight:500;font-size:12.5px;margin-left:' + (lineText ? '4px' : '0') + ';">' + escHtml(stationText) + '</span>';
+    label += '</div>';
+  }
+  div.innerHTML = label + '<svg width="20" height="27" viewBox="0 0 20 27" style="display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.3))"><path d="M10 26 C10 26 1 15.5 1 9.5 A9 9 0 1 1 19 9.5 C19 15.5 10 26 10 26 Z" fill="' + color + '" stroke="#FFFFFF" stroke-width="1.6"/><circle cx="10" cy="9.5" r="3.4" fill="#FFFFFF"/></svg>';
+  const ov = new kakao.maps.CustomOverlay({ position: latlng, content: div, xAnchor: 0.5, yAnchor: 1.0, zIndex: 7 });
+  ov.setMap(kakaoMap);
+  const _lw = ((lineText || '').length + (stationText || '').length) * 11 + 24;
+  _routePins.push({ ov: ov, latlng: latlng, side: side, w: _lw });
+}
+
+function _near2(a, b) {
+  const dx = a.getLng() - b.getLng(), dy = a.getLat() - b.getLat();
+  return dx * dx + dy * dy;
+}
+
+// 클릭한 아파트만 남기고 나머지는 지도에서 제거(setMap null — 줌해도 안 돌아옴). 복원은 unfocus.
+let _hiddenByFocus = [];
+function focusApt(aptSeq) {
+  const target = String(aptSeq);
+  _hiddenByFocus = [];
+  Object.entries(aptOverlayMap).forEach(([seq, ov]) => {
+    if (!ov) return;
+    if (seq === target) { if (ov.setZIndex) ov.setZIndex(60); return; }
+    let shown = true;
+    try { if (ov.getMap && !ov.getMap()) shown = false; } catch (e) {}
+    if (shown) { ov.setMap(null); _hiddenByFocus.push(ov); }
+  });
+  const btn = document.getElementById('route-back-btn'); if (btn) btn.style.display = 'flex';
+}
+function unfocusApts() {
+  _hiddenByFocus.forEach(ov => { try { ov.setMap(kakaoMap); } catch (e) {} });
+  _hiddenByFocus = [];
+  try { Object.values(aptOverlayMap).forEach(ov => { if (ov && ov.setZIndex) ov.setZIndex(3); }); } catch (e) {}
+  const btn = document.getElementById('route-back-btn'); if (btn) btn.style.display = 'none';
+}
+
+// 화면(픽셀) 좌표 기준 Douglas-Peucker — 현재 줌에서 안 보이는 굴곡만 제거
+function _dpScreen(P, eps) {
+  const n = P.length;
+  const keep = new Array(n).fill(false);
+  keep[0] = keep[n - 1] = true;
+  const stack = [[0, n - 1]];
+  while (stack.length) {
+    const sg = stack.pop(), a = sg[0], b = sg[1];
+    const ax = P[a][0], ay = P[a][1], bx = P[b][0], by = P[b][1];
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9;
+    let md = 0, mi = -1;
+    for (let i = a + 1; i < b; i++) {
+      const t = ((P[i][0] - ax) * dx + (P[i][1] - ay) * dy) / L2;
+      const cx = ax + t * dx, cy = ay + t * dy;
+      const d = Math.hypot(P[i][0] - cx, P[i][1] - cy);
+      if (d > md) { md = d; mi = i; }
+    }
+    if (md > eps && mi > -1) { keep[mi] = true; stack.push([a, mi], [mi, b]); }
+  }
+  return keep;
+}
+
+// 화면좌표 점열을 수직으로 offsetPx 만큼 밀어 LatLng로 — 두 루트 겹침 시 좌우 분리.
+// 진행방향과 무관하게 '일관된 측'으로 밀어야 반대방향 공유구간도 양쪽으로 갈림.
+function _offsetLatLngs(P, side, offsetPx, proj) {
+  const n = P.length, out = [];
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    let px = -dy, py = dx;  // 수직벡터
+    if (px < -1e-6 || (Math.abs(px) < 1e-6 && py < 0)) { px = -px; py = -py; }  // 일관 측
+    const ox = P[i][0] + side * offsetPx * px, oy = P[i][1] + side * offsetPx * py;
+    out.push(proj.coordsFromContainerPoint(new kakao.maps.Point(ox, oy)));
+  }
+  return out;
+}
+
+// 줌별 화면픽셀 단순화 + 좌우 오프셋 렌더 → 정확도 유지 + 매끈 + 겹쳐도 둘 다 보임
+function _renderRouteLines() {
+  _routePolylines.forEach(p => p.setMap(null));
+  _routePolylines = [];
+  if (!kakaoMap) return;
+  let proj = null;
+  try { proj = kakaoMap.getProjection(); } catch (e) { proj = null; }
+  const EPS = 2.0, OFF = 4.5;  // 단순화 픽셀 / 두 루트 좌우 분리 픽셀
+  _routeSegments.forEach(seg => {
+    let drawPts;
+    let P = null;
+    if (proj) {
+      try { P = seg.pts.map(ll => { const q = proj.containerPointFromCoords(ll); return [q.x, q.y]; }); }
+      catch (e) { P = null; }
+    }
+    if (P && P.length >= 2) {
+      let Pk = P;
+      if (P.length > 2) { const keep = _dpScreen(P, EPS); Pk = P.filter((_, i) => keep[i]); }
+      try { drawPts = smoothPath(_offsetLatLngs(Pk, seg.side, OFF, proj), 2); }
+      catch (e) { drawPts = smoothPath(seg.pts, 2); }
+    } else {
+      drawPts = smoothPath(seg.pts, 2);
+    }
+    _addRouteLine(drawPts, 11, '#1A1A1A');      // 검은 테두리
+    _addRouteLine(drawPts, 8, seg.core, 'solid'); // 본선
+  });
+  _routeWalks.forEach(w => {
+    let a = w.a, b = w.b;
+    if (proj) {
+      try {
+        const pa = proj.containerPointFromCoords(w.a), pb = proj.containerPointFromCoords(w.b);
+        const off = _offsetLatLngs([[pa.x, pa.y], [pb.x, pb.y]], w.side, OFF, proj);
+        a = off[0]; b = off[1];
+      } catch (e) {}
+    }
+    _addRouteLine([a, b], 6, '#27439C', 'shortdot');
+  });
+  _declutterPins();
+}
+
+// 줌별로 라벨 박스가 겹치면 우선순위 낮은 핀 숨김(다른 역끼리 크라우딩 해소).
+// W1/W2 같은역은 좌(W1)/우(W2)라 박스가 안 겹쳐 둘 다 유지됨.
+function _declutterPins() {
+  if (!kakaoMap || !_routePins.length) return;
+  let proj; try { proj = kakaoMap.getProjection(); } catch (e) { return; }
+  const kept = [], G = 4;
+  _routePins.forEach(p => {
+    let sp; try { sp = proj.containerPointFromCoords(p.latlng); } catch (e) { if (p.ov) p.ov.setMap(kakaoMap); return; }
+    let left, right;
+    if (p.side > 0) { right = sp.x - G; left = right - p.w; }
+    else { left = sp.x + G; right = left + p.w; }
+    const top = sp.y - 51, bot = sp.y - 25;
+    const hit = kept.some(r => !(right < r.left || left > r.right || bot < r.top || top > r.bot));
+    if (hit) { if (p.ov) p.ov.setMap(null); }
+    else { if (p.ov) p.ov.setMap(kakaoMap); kept.push({ left: left, right: right, top: top, bot: bot }); }
+  });
+}
+
+// Douglas-Peucker 단순화 — OSM 점 잔떨림·역쌍 이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
 function simplifyPath(pts, tol) {
   if (pts.length < 3) return pts;
   const P = pts.map(p => [p.getLng(), p.getLat()]);
@@ -3726,14 +4323,15 @@ function _addRouteLine(path, weight, col, style) {
   _routePolylines.push(line);
 }
 
-// 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
+// 4겹 선: 흰 외곽 → 루트색(목적지) → 흰 구분 → 옅은 수단색. 도보는 루트색 점선.
+// 개발용 가시화: 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
 //   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
 // 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
   const sd = window._lastSearchData || {};
-  const wp = (color === '#059669') ? sd.workplace_2 : sd.workplace;
+  const wp = (color === '#0CA678') ? sd.workplace_2 : sd.workplace;
   const wpLL = (wp && wp.lat) ? new kakao.maps.LatLng(wp.lat, wp.lng) : null;
   const apt = window._routeAptLatLng;
   const aptLL = (apt && apt.lat) ? new kakao.maps.LatLng(apt.lat, apt.lng) : null;
@@ -3748,22 +4346,39 @@ function drawRoutePolylines(options, color) {
       const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
       return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
     });
-    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null };
+    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null, line: step.line, from: step.from, to: step.to };
   });
 
-  // 2) 교통(버스·지하철) — 수단별 스타일
+  // 2) 교통 — 검은 테두리 + 루트색 본선. 수단 구분: 지하철=진한색 / 버스=연한색
+  const BUS_SHADE = { '#3B5BDB': '#91A7FF', '#0CA678': '#5BE0BA' };
+  const side = (color === '#3B5BDB') ? 1 : -1;   // W1=+ / W2=- 좌우 분리용
   parsed.forEach(s => {
     if (s.walk || !s.pts) return;
-    const clean = smoothPath(simplifyPath(s.pts, 0.00013), 3);
-    if (s.type === '지하철') {
-      _addRouteLine(clean, 9, '#FFFFFF');          // 흰 케이싱
-      _addRouteLine(clean, 6, color, 'solid');     // 지하철 = 실선
-    } else {
-      _addRouteLine(clean, 6, color, 'longdash');  // 버스 = longdash
-    }
+    const core = (s.type === '버스') ? (BUS_SHADE[color] || color) : color;
+    _routeSegments.push({ pts: s.pts, core: core, side: side });
   });
 
-  // 3) 도보 — 직선 점선(양 끝점 브리지)
+  // 2.5) 핀+라벨: 각 교통 구간 승차·하차. 환승(가까운 점)은 승차정보로 합쳐 표시.
+  const pinColor = (color === '#3B5BDB') ? '#3B5BDB' : '#0CA678';
+  const _stn = (sub, nm) => (sub && nm && !/역$/.test(nm)) ? (nm + '역') : (nm || '');
+  const entries = [];
+  parsed.forEach(s => {
+    if (s.walk || !s.pts) return;
+    const sub = s.type === '지하철';
+    const lineLabel = sub ? (s.line || '').replace(/^수도권\s*/, '') : ((s.line || '') + '번');
+    entries.push({ ll: s.pts[0], line: lineLabel, st: _stn(sub, s.from) });
+    entries.push({ ll: s.pts[s.pts.length - 1], line: lineLabel, st: _stn(sub, s.to) });
+  });
+  const kept = [];
+  entries.forEach(e => {
+    if (kept.length && _near2(kept[kept.length - 1].ll, e.ll) < 0.0008 * 0.0008) {
+      kept[kept.length - 1] = e;   // 환승: 나중(승차) 정보로 교체
+    } else { kept.push(e); }
+  });
+  // 역명 라벨은 하단 패널(요약 바·타임라인)이 대체 → 지도엔 승·하차 점만 깔끔하게
+  kept.forEach(e => _addPin(e.ll, pinColor, '', '', side));
+
+  // 3) 도보 직선 수집(양 끝점 브리지)
   parsed.forEach((s, i) => {
     if (!s.walk) return;
     let A = null;
@@ -3774,8 +4389,15 @@ function drawRoutePolylines(options, color) {
     for (let j = i + 1; j < parsed.length; j++)
       if (!parsed[j].walk && parsed[j].pts) { B = parsed[j].pts[0]; break; }
     if (!B) B = wpLL;
-    if (A && B) _addRouteLine([A, B], 4.5, color, 'shortdash');  // 도보 점선
+    if (A && B) _routeWalks.push({ a: A, b: B, side: side });
   });
+
+  // 4) 줌별 단순화로 렌더 + 줌/이동 시 재렌더(모든 줌에서 매끈, 정확도 유지)
+  _renderRouteLines();
+  if (!_lineListenerAdded) {
+    kakao.maps.event.addListener(kakaoMap, 'idle', _renderRouteLines);
+    _lineListenerAdded = true;
+  }
 }
 
 async function openRoute(aptSeq, wpId, aptNm, event) {
@@ -3783,6 +4405,7 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
   const _ac = (window._lastCards || (typeof resultData !== 'undefined' && resultData?.cards) || []).find(c => c.apt_seq === aptSeq);
   window._routeAptLatLng = (_ac && _ac.lat) ? { lat: _ac.lat, lng: _ac.lng } : null;
   clearRoutePolylines();
+  focusApt(aptSeq);
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -3815,15 +4438,16 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
       `<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
     return;
   }
+  drawRoutePolylines(routes1, '#3B5BDB');
+  if (routes2) drawRoutePolylines(routes2, '#0CA678');
   _renderRoutePanel(routes1, routes2);
-  drawRoutePolylines(routes1, '#9F1239');
-  if (routes2) drawRoutePolylines(routes2, '#059669');
 }
 
 function closeRoute() {
   document.getElementById('route-overlay').classList.add('hidden');
   document.body.style.overflow = '';
   clearRoutePolylines();
+  unfocusApts();
 }
 
 function closeRouteOnBg(event) {
@@ -3835,13 +4459,13 @@ function _renderRoutePanel(routes1, routes2) {
   let html = '';
   if (hasDual) {
     html += `<div class="route-panel__wp-tabs">
-      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">내 직장</button>
-      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">배우자 직장</button>
+      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">W1 직장</button>
+      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">W2 직장</button>
     </div>`;
   }
-  html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1)}</div>`;
+  html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1, '#3B5BDB')}</div>`;
   if (hasDual) {
-    html += `<div id="route-wp2-pane" style="display:none">${_routeOptionsHtml(routes2)}</div>`;
+    html += `<div id="route-wp2-pane" style="display:none">${_routeOptionsHtml(routes2, '#0CA678')}</div>`;
   }
   document.getElementById('route-body').innerHTML = html;
 }
@@ -3855,38 +4479,112 @@ function switchRouteWp(wp) {
   if (p2) p2.style.display = wp === 2 ? '' : 'none';
 }
 
-function _routeOptionsHtml(options) {
-  if (!options || !options.length)
-    return '<div style="padding:16px;color:var(--color-text-secondary);text-align:center;">경로 정보가 없어요</div>';
-  const LABELS = { WALK: '도보', BUS: '버스', SUBWAY: '지하철' };
-  const ICONS  = { WALK: '🚶', BUS: '🚌', SUBWAY: '🚇' };
-  return options.map((opt, idx) => {
-    const isBest = idx === 0;
-    const modeStr = [
-      opt.subway_cnt > 0 ? `지하철 ${opt.subway_cnt}회` : null,
-      opt.bus_cnt    > 0 ? `버스 ${opt.bus_cnt}회`     : null,
-    ].filter(Boolean).join(' + ') || '도보';
-    const stepsHtml = (opt.steps || []).map(s => {
-      const tk  = (s.type || '').toUpperCase();
-      const cls = tk === 'WALK' ? 'walk' : tk === 'BUS' ? 'bus' : 'subway';
-      const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
-      const staHtml  = (s.from || s.to)
-        ? `<div class="dp-step-sta">${escHtml(s.from || '')} → ${escHtml(s.to || '')}</div>` : '';
-      return `<div class="dp-step">
-        <div class="dp-step-type ${cls}">${ICONS[tk] || '→'} ${LABELS[tk] || tk}</div>
-        <div class="dp-step-info">${lineHtml}${staHtml}</div>
-        <div class="dp-step-time">${s.time_min != null ? s.time_min + '분' : ''}</div>
-      </div>`;
-    }).join('');
-    return `<div class="dp-route${isBest ? ' best' : ''}">
-      <div class="dp-route__head" onclick="this.nextElementSibling.classList.toggle('open'); const chev=this.querySelector('.dp-route__chev'); chev.style.transform=this.nextElementSibling.classList.contains('open')?'rotate(180deg)':''">
-        <div class="dp-route__time">${opt.total_time_min}<span class="unit">분</span></div>
-        <div class="dp-route__mode">${escHtml(modeStr)}</div>
-        <span class="dp-route__chev" style="${isBest?'transform:rotate(180deg)':''}">▼</span>
+// 지하철 호선명 → 공식 노선색 (수도권). 없으면 null → 호출부에서 테마색 대체.
+function _subwayColor(raw) {
+  const s = (raw || '').replace(/^수도권\s*/, '').replace(/[\s.]/g, '');
+  const M = {
+    '1호선':'#0052A4','2호선':'#009D3E','3호선':'#EF7C1C','4호선':'#00A5DE',
+    '5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BFA31D',
+    '경의중앙선':'#77C4A3','수인분당선':'#F5A200','신분당선':'#D31145',
+    '공항철도':'#0090D2','인천공항철도':'#0090D2','경춘선':'#0C8E72','경강선':'#003DA5',
+    '신림선':'#6789CA','우이신설선':'#B0CE18','서해선':'#8FC31F','김포골드라인':'#AD8605',
+    '의정부경전철':'#FDA600','에버라인':'#56AB2D','인천1호선':'#7CA8D5','인천2호선':'#ED8B00','GTX-A':'#9A6292',
+  };
+  if (M[s]) return M[s];
+  const m = s.match(/^([1-9])호선/);
+  if (m && M[m[1] + '호선']) return M[m[1] + '호선'];
+  for (const k of ['수인분당선','신분당선','경의중앙선','인천공항철도','공항철도','경춘선','경강선',
+                   '신림선','우이신설선','서해선','김포골드라인','의정부경전철','에버라인','인천1호선','인천2호선'])
+    if (s.includes(k)) return M[k];
+  if (s.includes('GTX')) return M['GTX-A'];
+  return null;
+}
+
+// 배경색 명도로 글자색(흑/백) 결정 — 노란 노선(수인분당 등)에 흰 글씨 방지.
+function _textOn(hex) {
+  if (!hex || hex[0] !== '#') return '#222';
+  const c = hex.slice(1);
+  const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#1a1a1a' : '#fff';
+}
+
+// step → 막대/배지 라벨. 지하철=호선명, 버스=번호, 도보=도보.
+function _segLabel(s) {
+  if (s.type === '도보' || s.type === '환승도보') return '도보';
+  if (s.type === '지하철') return (s.line || '').replace(/^수도권\s*/, '').replace(/\s/g, '') || '지하철';
+  return (s.line || '').replace(/\s*\(.*$/, '') || '버스';   // 버스 번호(괄호 설명 제거)
+}
+
+// 교통 구간 색 — 지하철=공식색(없으면 테마), 버스=테마색(임시), 도보=null(회색).
+function _segColor(s, theme) {
+  if (s.type === '도보' || s.type === '환승도보') return null;
+  if (s.type === '지하철') return _subwayColor(s.line) || theme;
+  return theme;   // 버스 — 종류 데이터 없어 임시 테마색
+}
+
+// 펼침 토글(셰브론 회전). best는 CSS로 펼친 상태라 명시 rotate(0deg)로 접음.
+function _rtToggle(head) {
+  const body = head.nextElementSibling;
+  const open = body.classList.toggle('open');
+  const chev = head.querySelector('.dp-route__chev');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// 경로 1개 = 한 줄 요약 바(헤드) + 펼침 타임라인(바디). theme=직장색(W1/W2).
+function routeCardHTML(opt, isBest, theme) {
+  theme = theme || '#3B5BDB';
+  const steps = opt.steps || [];
+
+  // 요약 바: 시간 있는 모든 구간을 시간비율 폭으로
+  const bar = steps.filter(s => s.time_min != null && s.time_min > 0).map(s => {
+    const t = s.time_min, c = _segColor(s, theme);
+    const bg = c || 'var(--color-bg-muted)';
+    const fg = c ? _textOn(c) : 'var(--color-text-secondary)';
+    const extra = c ? '' : 'min-width:54px;';
+    return `<div class="dp-seg" style="flex:${Math.max(t, 2)};background:${bg};color:${fg};${extra}">${escHtml(_segLabel(s))} (${t}분)</div>`;
+  }).join('');
+
+  // 펼침 타임라인
+  const tl = steps.map(s => {
+    if (s.type === '도보' || s.type === '환승도보') {
+      const dist = s.dist_m ? ` · 약 ${s.dist_m.toLocaleString()}m` : '';
+      return `<div class="dp-tl-row"><span class="dp-tl-dot walk"></span><div class="dp-tl-info"><span class="dp-tl-walk">도보 ${s.time_min || 0}분${dist}</span></div></div>`;
+    }
+    const c = _segColor(s, theme), fg = _textOn(c);
+    const sta = (s.from || s.to)
+      ? `<div class="dp-tl-sta">${escHtml(s.from || '')}<span class="arr">→</span>${escHtml(s.to || '')}</div>` : '';
+    return `<div class="dp-tl-row">
+      <span class="dp-tl-dot" style="background:${c}"></span>
+      <div class="dp-tl-info">
+        <div class="dp-tl-head"><span class="dp-tl-badge" style="background:${c};color:${fg}">${escHtml(_segLabel(s))}</span><span class="dp-tl-time">${s.time_min != null ? s.time_min + '분' : ''}</span></div>
+        ${sta}
       </div>
-      <div class="dp-route__body${isBest ? ' open' : ''}">${stepsHtml}</div>
     </div>`;
   }).join('');
+
+  const transit = (opt.bus_cnt || 0) + (opt.subway_cnt || 0);
+  const walkMin = steps.filter(s => s.type === '도보' || s.type === '환승도보').reduce((a, s) => a + (s.time_min || 0), 0);
+  const subParts = [];
+  if (transit > 1) subParts.push(`환승 ${transit - 1}회`);
+  if (walkMin) subParts.push(`도보 ${walkMin}분`);
+  const sub = subParts.length ? `<span class="dp-route__sub">${subParts.join(' · ')}</span>` : '';
+
+  return `<div class="dp-route${isBest ? ' best' : ''}">
+    <div class="dp-route__head" onclick="_rtToggle(this)">
+      <div class="dp-route__topline">
+        <span><span class="dp-route__time">${opt.total_time_min}<span class="unit">분</span></span>${sub}</span>
+        <span class="dp-route__chev" style="${isBest ? 'transform:rotate(180deg)' : ''}">⌄</span>
+      </div>
+      <div class="dp-bar">${bar}</div>
+    </div>
+    <div class="dp-route__body${isBest ? ' open' : ''}">${tl}</div>
+  </div>`;
+}
+
+function _routeOptionsHtml(options, theme) {
+  if (!options || !options.length)
+    return '<div style="padding:16px;color:var(--color-text-secondary);text-align:center;">경로 정보가 없어요</div>';
+  return options.map((opt, idx) => routeCardHTML(opt, idx === 0, theme || '#3B5BDB')).join('');
 }
 
 // 추천 카드 (긴 코멘트형)
@@ -3912,6 +4610,20 @@ function toggleFav(seq, pt, btn, ev) {
   if(favs.has(id)) { favs.delete(id); btn.classList.remove('active'); }
   else             { favs.add(id);    btn.classList.add('active'); }
   saveFavs(favs);
+  _updateFavTab();
+}
+
+function _toggleDetailFav(btn) {
+  const seq = btn.dataset.aptSeq; const pt = btn.dataset.pyeongType || '';
+  if(!seq) return;
+  const favs = loadFavs();
+  const id = favId(seq, pt);
+  const nowActive = favs.has(id);
+  if(nowActive) { favs.delete(id); } else { favs.add(id); }
+  saveFavs(favs);
+  btn.textContent = nowActive ? '♡' : '♥';
+  btn.classList.toggle('active', !nowActive);
+  btn.title = nowActive ? '찜하기' : '찜 해제';
   _updateFavTab();
 }
 
@@ -4089,31 +4801,7 @@ function renderRecCard(c, wpId, cmpMode=false){
     ${chip3Text ? `<span class="reason-chip reason-chip--neutral">${escHtml(chip3Text)}</span>` : ''}
   </div>`;
 
-  const comment = c.friend_comment || '';
-  const friendInner = comment
-    ? `<div class="rec-card__friend"
-        data-apt-seq="${c.apt_seq}" data-apt-nm="${escHtml(c.apt_nm||'')}" data-pyeong-type="${escHtml(c.pyeong_type||'')}"
-        data-lat="${c.lat||''}" data-lng="${c.lng||''}"
-        onclick="event.stopPropagation();_openChatFromEl(this)" style="cursor:pointer" title="더 물어보기">
-        <div class="rec-card__friend-avatar">친구</div>
-        <div>
-          <div class="rec-card__friend-label">한마디 <span style="font-size:11px;color:#aaa;">· 더 물어보기 →</span></div>
-          <div class="rec-card__friend-text">${escHtml(comment)}</div>
-        </div>
-      </div>`
-    : `<div class="rec-card__friend empty">
-        <div class="rec-card__friend-avatar">···</div>
-        <div>
-          <div class="rec-card__friend-label">한마디 (생성 중)</div>
-          <div class="rec-card__friend-text"><span class="spinner-mini"></span>살펴보는 중...</div>
-        </div>
-      </div>`;
-  const friendHtml = `
-    <button class="rec-card__friend-toggle" onclick="event.stopPropagation();_toggleFriend(this)" type="button">
-      <span>AI 한마디</span><span class="toggle-arrow">▼</span>
-    </button>
-    <div class="rec-card__friend-body-wrap">${friendInner}</div>`;
-
+  // AI 한마디(친구 코멘트)는 단지 클릭 시 상세 패널에 노출되므로 카드에선 제거(중복 제거)
   const favActive  = isFav(c.apt_seq, c.pyeong_type) ? ' active' : '';
   const favTitle   = favActive ? '관심 해제' : '관심 추가';
   const _rcId = favId(c.apt_seq, c.pyeong_type);
@@ -4134,7 +4822,6 @@ function renderRecCard(c, wpId, cmpMode=false){
     ${_whyTagsHtml(c.why_tags)}
     ${reasonsHtml}
     ${_commuteEconRow(c)}
-    ${friendHtml}
   </div>`;
 }
 
@@ -4610,22 +5297,75 @@ async function showDetail(aptSeq, wpId){
   if(kakaoMap && resultData){
     const card = resultData.cards.find(c=>c.apt_seq===aptSeq);
     if(card && card.lat && card.lng){
-      kakaoMap.panTo(new kakao.maps.LatLng(card.lat, card.lng));
+      const _ll = new kakao.maps.LatLng(card.lat, card.lng);
+      kakaoMap.panTo(_ll);   // 즉시 이동 시작 (반응성)
+      // 패널 펼침 트랜지션(width .25s) 동안엔 카카오가 옛 지도폭 기준이라 아파트가
+      // 우측으로 치우친다. 트랜지션 종료 후 relayout→정중앙 보정으로 고정.
+      let _centered = false;
+      const _fixCenter = (e) => {
+        if (e && e.propertyName !== 'width') return;
+        if (_centered) return; _centered = true;
+        sidePanel.removeEventListener('transitionend', _fixCenter);
+        if (_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
+        kakaoMap.relayout();
+        if (_poiMarkers.size === 0) kakaoMap.setCenter(_ll);
+        else _recenterApt();   // POI 핀 있으면 대칭 범위로 정중앙 유지
+      };
+      sidePanel.addEventListener('transitionend', _fixCenter);
+      setTimeout(_fixCenter, 360);   // 이미 열려있어 트랜지션 미발화 시 폴백
     }
   }
 
+  clearRoutePolylines();   // 이전 경로선 제거
+  const wpId2 = window._lastWpId2 || null;
+  currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
+  window._routeAptLatLng = (currentDetailCard && currentDetailCard.lat) ? {lat: currentDetailCard.lat, lng: currentDetailCard.lng} : null;
+
+  // 캐시 적중 시 즉시 렌더 (재클릭 빠름)
+  const cacheKey = `${aptSeq}:${wpId}`;
+  const cached = _showDetailCache[cacheKey];
+  if(cached){
+    renderDetailPanel(cached.detail, cached.routes, wpId);
+    drawRoutePolylines(cached.routes, '#3B5BDB');
+    if(cached.routes2) drawRoutePolylines(cached.routes2, '#0CA678');
+    return;
+  }
+
   try{
-    const [dRes, rRes] = await Promise.all([
-      fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-      fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-    ]);
-    const detail = await dRes.json();
-    const routes = (await rRes.json()).options || [];
-    currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
-    renderDetailPanel(detail, routes, wpId);
+    // detail·routes 동시 시작하되, 빠른 detail이 오면 패널 즉시 렌더.
+    // 느린 routes(대중교통 경로 계산)는 백그라운드로 통근 섹션만 채운다.
+    const detailP = fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
+    const routesP = fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
+    const routes2P = wpId2 ? fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}) : null;
+
+    const detail = await (await detailP).json();
+    if(_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
+    renderDetailPanel(detail, null, wpId);  // routes 로딩 표시로 즉시 렌더
+
+    // routes는 백그라운드에서 도착하면 통근 섹션 + 지도 경로선만 갱신
+    Promise.all([routesP, routes2P].filter(Boolean)).then(async (rs)=>{
+      const routes = (await rs[0].json()).options || [];
+      const routes2 = wpId2 && rs[1] ? ((await rs[1].json()).options || []) : null;
+      _showDetailCache[cacheKey] = {detail, routes, routes2};
+      if(_currentAptSeq !== aptSeq) return; // 다른 단지로 이동했으면 화면 갱신 안 함
+      _updateRoutesSection(routes);
+      drawRoutePolylines(routes, '#3B5BDB');       // 지도에 경로선 (W1)
+      if(routes2) drawRoutePolylines(routes2, '#0CA678');  // W2
+    }).catch(()=>{ if(_currentAptSeq===aptSeq) _updateRoutesSection([]); });
   } catch(e){
     document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
+}
+
+// showDetail 진행형 렌더용: detail/routes 캐시 + 통근 섹션 갱신 헬퍼
+const _showDetailCache = {};
+function _updateRoutesSection(routes){
+  const prev = document.getElementById('dp-route-preview');
+  const body = document.getElementById('dp-route-body');
+  if(prev) prev.innerHTML = routes.length
+    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
+    : '경로 정보 없음';
+  if(body) body.innerHTML = renderRoutesHTML(routes);
 }
 
 function backToList(){
@@ -4636,14 +5376,33 @@ function backToList(){
   document.getElementById('detail-resize-handle').style.display = 'none';
   document.querySelector('.detail-panel__tabs').style.display = '';
   clearActiveAptPin();  // spec-38: 핀 강조 해제
-  if(resultData) renderCards(resultData);
+  clearRoutePolylines();   // 경로선 제거
+  unfocusApts();           // 아파트 핀 모두 다시 표시 + 버튼 숨김
+  // 닫을 때 정렬 상태 유지: 정렬 선택이 있으면 정렬된 리스트로 복원(칩 선택 배지도 보존),
+  // 없으면 기본 렌더. renderCards는 정렬칩을 재생성해 선택을 지우므로 정렬 시엔 호출 안 함.
+  if(resultData){
+    if(_sortChecked && _sortChecked.length) applySortOrder();
+    else renderCards(resultData);
+  }
 }
 
 function renderDetailPanel(d, routes, wpId){
-  document.getElementById('detail-title').textContent = d.apt_nm || '';
+  const titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
+  document.getElementById('detail-title').textContent = titleParts.join(' ');
   const panel = document.getElementById('detail-body');
   const tier = currentDetailCard?.tier || d.tier || '';
   const cardRef = currentDetailCard || {};
+
+  // fav 버튼 상태 동기화
+  const favBtn = document.getElementById('detail-fav-btn');
+  if(favBtn){
+    const seq = d.apt_seq; const pt = cardRef.pyeong_type || '';
+    favBtn.dataset.aptSeq = seq; favBtn.dataset.pyeongType = pt;
+    const active = typeof isFav === 'function' && isFav(seq, pt);
+    favBtn.textContent = active ? '♥' : '♡';
+    favBtn.classList.toggle('active', active);
+    favBtn.title = active ? '찜 해제' : '찜하기';
+  }
   const bld = d.building || {};
   const thisYear = THIS_YEAR;
 
@@ -4679,10 +5438,12 @@ function renderDetailPanel(d, routes, wpId){
     ? `<div class="dp__commute">${escHtml(cardRef.transit_summary)} · 총 <span class="num">${cardRef.total_time_min}</span>분</div>`
     : '';
 
-  // ── 섹션 프리뷰 한 줄 만들기
-  const routePreview = routes.length
-    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
-    : '경로 정보 없음';
+  // ── 섹션 프리뷰 한 줄 만들기 (routes===null = 아직 로딩 중)
+  const routePreview = routes === null
+    ? '<span class="spinner-mini"></span>경로 불러오는 중…'
+    : (routes.length
+      ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
+      : '경로 정보 없음');
 
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
@@ -4733,15 +5494,10 @@ function renderDetailPanel(d, routes, wpId){
   const ICON_CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   panel.innerHTML = `
-    <!-- 헤더 -->
-    <div class="dp__header">
-      <button class="dp__back" onclick="backToList()">← 목록</button>
-      ${tier==='BEST'?`<span class="dp__badge">추천</span>`:''}
-    </div>
+    ${tier==='BEST'?`<div class="dp__header"><span class="dp__badge">추천</span></div>`:''}
 
     <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
-      <div class="dp__meta">${metaParts.join(' · ')}</div>
       ${statHtml}
       ${friendHtml}
     </div>
@@ -4752,11 +5508,13 @@ function renderDetailPanel(d, routes, wpId){
         <div class="dp__section-icon ic-commute">${ICON_CLOCK}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">통근 경로</span>
-          <span class="dp__section-preview">${routePreview}</span>
+          <span class="dp__section-preview" id="dp-route-preview">${routePreview}</span>
         </div>
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
-      <div class="dp__section-body">${renderRoutesHTML(routes)}</div>
+      <div class="dp__section-body" id="dp-route-body">${routes === null
+        ? '<div style="padding:18px;text-align:center;color:var(--color-text-tertiary);font-size:12px"><span class="spinner-mini"></span>경로 계산 중…</div>'
+        : renderRoutesHTML(routes)}</div>
     </div>
 
     <!-- 시세 분석 -->
@@ -4803,7 +5561,7 @@ function renderDetailPanel(d, routes, wpId){
         </div>
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
-      <div class="dp__section-body">${renderPOIHTML(d.poi)}</div>
+      <div class="dp__section-body" id="dp-poi-body"><div style="padding:14px;text-align:center;color:var(--color-text-tertiary);font-size:12px"><span class="spinner-mini"></span> 주변 시설 위치 확인 중…</div></div>
     </div>
 
     <!-- 건물 정보 (접힘) -->
@@ -4819,6 +5577,9 @@ function renderDetailPanel(d, routes, wpId){
       <div class="dp__section-body"><div class="dp-building-grid">${renderBuildingGrid(bld)}</div></div>
     </div>
   `;
+
+  // 도보 시설 사전 검증: 확인된 시설만 렌더(깜빡임 없음) + 좌표 캐시(클릭 즉시 배치)
+  _renderConfirmedPois(document.getElementById('dp-poi-body'), d.poi, d.apt_seq);
 
   // 차트 초기화 — 검색한 평형 탭 우선, 없으면 거래 많은 순 첫 번째
   detailChartData = d.chart;
@@ -4867,55 +5628,18 @@ function renderBuildingGrid(b){
 }
 
 // ── 경로 아코디언 ─────────────────────────────────────────────
-function routeModeLabel(o){
-  const bc=o.bus_cnt||0, sc=o.subway_cnt||0;
-  if(sc&&!bc) return sc>1?`지하철 ${sc}회환승`:'지하철 직통';
-  if(bc&&!sc) return bc>1?`버스 ${bc}회환승`:'버스 직통';
-  return `버스${bc}+지하철${sc}`;
-}
-function renderStepHTML(s){
-  const typeKo = s.type;
-  const cls = typeKo==='도보'||typeKo==='환승도보' ? 'walk'
-             : typeKo==='버스' ? 'bus'
-             : typeKo==='지하철' ? 'subway' : '';
-  const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
-  const staHtml  = (s.from||s.to)
-    ? `<div class="dp-step-sta">${escHtml(s.from||'')} → ${escHtml(s.to||'')}</div>` : '';
-  const distHtml = s.dist_m ? `<span style="font-size:11px;color:#aaa"> ${s.dist_m.toLocaleString()}m</span>` : '';
-  return `<div class="dp-step">
-    <span class="dp-step-type ${cls}">${escHtml(typeKo)}</span>
-    <span class="dp-step-info">${lineHtml}${staHtml}</span>
-    <span class="dp-step-time">${s.time_min}분${distHtml}</span>
-  </div>`;
-}
-function renderSingleRoute(o, isFirst){
-  const steps = o.steps.map(renderStepHTML).join('');
-  const modeLabel = routeModeLabel(o);
-  return `<div class="dp-route${isFirst?' best':''}">
-    <div class="dp-route__head" onclick="toggleRoute(this)">
-      <span class="dp-route__time"><span class="num">${o.total_time_min}</span><span class="unit">분</span></span>
-      <span class="dp-route__mode">${modeLabel}</span>
-      <span class="dp-route__chev">${isFirst?'▲':'▼'}</span>
-    </div>
-    <div class="dp-route__body ${isFirst?'open':''}">${steps}</div>
-  </div>`;
-}
-function renderRoutesHTML(routes){
+function renderRoutesHTML(routes, theme){
+  theme = theme || '#3B5BDB';
   if(!routes.length) return '<p style="font-size:13px;color:#aaa;">경로 정보 없음</p>';
-  if(routes.length===1) return renderSingleRoute(routes[0], true);
+  if(routes.length===1) return routeCardHTML(routes[0], true, theme);
 
-  const first = renderSingleRoute(routes[0], true);
-  const rest = routes.slice(1).map(o=>renderSingleRoute(o,false)).join('');
+  const first = routeCardHTML(routes[0], true, theme);
+  const rest = routes.slice(1).map(o=>routeCardHTML(o,false,theme)).join('');
   return `${first}
     <button class="dp-route-more-btn" onclick="toggleMoreRoutes(this)">
       다른 경로 보기 (${routes.length-1}개) ▼
     </button>
     <div id="dp-routes-extra">${rest}</div>`;
-}
-function toggleRoute(el){
-  const body = el.nextElementSibling;
-  const open = body.classList.toggle('open');
-  el.querySelector('.dp-route__chev').textContent = open?'▲':'▼';
 }
 function toggleMoreRoutes(btn){
   const extra = document.getElementById('dp-routes-extra');
@@ -5098,7 +5822,7 @@ const POI_SUB_LABEL = { D01: '지하철역', D02: '버스정류장' };
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
-  poi.slice(0,30).forEach(p=>{
+  poi.slice(0,60).forEach(p=>{
     // 카테고리별 서브카테고리 필터 (데이터 품질 이슈 제거)
     const allowedSubs = POI_ALLOWED_SUBS[p.category];
     if(allowedSubs && !allowedSubs.has(p.sub_category)) return;
@@ -5112,6 +5836,8 @@ function renderPOIHTML(poi){
     return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
       <div class="dp-poi-row detail-poi-row"
         data-poi-name="${escHtml(p.name||'')}"
+        data-poi-cat="${escHtml(p.category||'')}"
+        data-poi-sub="${escHtml(p.sub_category||'')}"
         data-walk-min="${p.walking_min||0}"
         data-dist-m="${Math.round(p.distance_m||0)}"
         onclick="togglePoiMarker(this)">
@@ -5159,11 +5885,11 @@ function initSortBar(cards) {
 
   document.getElementById('sort-bar').classList.add('visible');
 
-  // 정렬 패널 접힘 상태 초기화 (localStorage 기억, 기본 펼침)
+  // 정렬 패널: 결과 진입 시엔 항상 펼침으로 시작(사용자가 "왜 추천인지"부터 보게).
+  // 과거 접힘 선호(localStorage)는 존중하지 않는다 — 새 분석결과로 전환할 때마다 펼침.
   const _sp = document.getElementById('sort-panel');
   const _stb = document.getElementById('sort-toggle-btn');
-  let _open = true;
-  try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
+  const _open = true;
   _sp.classList.toggle('open', _open);
   _stb.classList.toggle('open', _open);
   _stb.setAttribute('aria-expanded', String(_open));
