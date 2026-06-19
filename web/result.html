@@ -310,6 +310,34 @@
       flex: 1; display: flex;
       min-height: 0;
     }
+
+    /* ── 왼쪽 탭 패널 ─────────────────────────────────── */
+    .lp-tab-nav {
+      display: flex; flex-shrink: 0;
+      border-bottom: 2px solid var(--color-border-default);
+      background: var(--color-surface);
+    }
+    .lp-tab-btn {
+      flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 600;
+      border: none; border-bottom: 2px solid transparent;
+      background: none; cursor: pointer;
+      color: var(--color-text-secondary);
+      margin-bottom: -2px; transition: color 150ms, border-color 150ms;
+    }
+    .lp-tab-btn.active {
+      color: var(--color-brand-primary);
+      border-bottom-color: var(--color-brand-primary);
+    }
+    .lp-tab-btn .lp-cnt {
+      font-size: 11px; font-weight: 700;
+      color: var(--color-brand-primary);
+      margin-left: 2px;
+    }
+    .lp-tab-pane {
+      display: none; flex-direction: column;
+      flex: 1; overflow-y: auto; min-height: 0;
+    }
+    .lp-tab-pane.active { display: flex; }
     /* 모바일 세로 분할: 카드 위 / 지도 아래 50vh */
     @media (max-width: 767px) {
       .result-layout {
@@ -583,6 +611,29 @@
     .adv-year-tick { font-size: 10px; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: var(--color-bg-muted); }
+    /* ── 목록 탭 카드 — 300px 패널 최적화 ──────────────────── */
+    #lp-tab-list .cards-panel { padding: 10px; overflow-y: auto; }
+    #lp-tab-list .rec-card { padding: 11px 36px 11px 12px; margin-bottom: 6px; }
+    #lp-tab-list .rec-card__slot { font-size: 10px; padding: 2px 8px; margin-bottom: 6px; }
+    #lp-tab-list .rec-card__title-row { gap: 6px; margin-bottom: 4px; }
+    #lp-tab-list .rec-card__title { font-size: 14px; }
+    #lp-tab-list .rec-card__price { font-size: 15px; }
+    #lp-tab-list .rec-card__price .unit { font-size: 11px; }
+    #lp-tab-list .rec-card__meta { font-size: 11px; margin-bottom: 6px; }
+    #lp-tab-list .rec-card__reasons { gap: 4px; margin-bottom: 6px; }
+    #lp-tab-list .reason-chip { font-size: 10.5px; padding: 3px 7px; }
+    #lp-tab-list .rec-card__footer { padding-top: 10px; gap: 8px; }
+    #lp-tab-list .rec-card__transit { font-size: 12px; gap: 6px; }
+    #lp-tab-list .rec-card__transit strong { font-size: 13px; }
+    #lp-tab-list .commute-chip { font-size: 11px; padding: 4px 9px; gap: 4px; }
+    #lp-tab-list .list-card { padding: 9px 34px 9px 11px; margin-bottom: 4px; gap: 8px; }
+    #lp-tab-list .list-card__name { font-size: 13px; }
+    #lp-tab-list .list-card__name .pt { font-size: 11px; }
+    #lp-tab-list .list-card__meta { font-size: 11px; }
+    #lp-tab-list .list-card__price { font-size: 13px; }
+    #lp-tab-list .fav-btn { font-size: 16px; right: 9px; top: 9px; }
+    #lp-tab-list .bucket-divider { font-size: 12px; padding: 14px 4px 8px; }
+
     /* spec-19: 리사이즈 핸들 */
     .resize-handle {
       width: 6px; flex-shrink: 0;
@@ -2574,10 +2625,16 @@
     </button>
     <!-- 좌측: 상세조건 필터 + 정렬 기준 패널 -->
     <div class="left-panel">
-      <div id="fav-tabs" class="fav-tabs" style="display:none">
-        <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
-        <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+      <!-- 탭 네비게이션 -->
+      <div class="lp-tab-nav">
+        <button class="lp-tab-btn active" data-tab="filter" onclick="switchLeftTab('filter')">필터</button>
+        <button class="lp-tab-btn" data-tab="list" onclick="switchLeftTab('list')">목록<span class="lp-cnt" id="lp-list-cnt"></span></button>
+        <button class="lp-tab-btn" data-tab="detail" onclick="switchLeftTab('detail')">상세</button>
       </div>
+
+      <!-- 탭: 필터 -->
+      <div class="lp-tab-pane active" id="lp-tab-filter">
+
       <!-- 상세조건 필터 패널 -->
       <div class="adv-filter-panel" id="adv-filter-panel">
         <div class="adv-filter-header">
@@ -2693,34 +2750,63 @@
         </div>
       </div>
 
-      <div class="sort-panel" id="sort-panel">
-        <div class="sort-panel-header" onclick="toggleSortPanel()" style="cursor:pointer">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="sort-panel-title">정렬 기준</span>
-            <button class="cards-show-btn" id="cards-show-btn" onclick="event.stopPropagation();toggleCardColumn()" title="매물 목록 열기">매물보기</button>
+      </div><!-- /lp-tab-filter -->
+
+      <!-- 탭: 목록 -->
+      <div class="lp-tab-pane" id="lp-tab-list">
+        <div class="sort-panel" id="sort-panel">
+          <div class="sort-panel-header" onclick="toggleSortPanel()" style="cursor:pointer">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="sort-panel-title">정렬 기준</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
+              <span class="sort-panel-arrow collapsed" id="sort-panel-arrow">▲</span>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
-            <span class="sort-panel-arrow collapsed" id="sort-panel-arrow">▲</span>
+          <div class="sort-panel-body collapsed" id="sort-panel-body">
+            <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+            <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
           </div>
         </div>
-        <div class="sort-panel-body collapsed" id="sort-panel-body">
-          <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-          <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+        <div id="fav-tabs" class="fav-tabs" style="display:none">
+          <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
+          <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
         </div>
-      </div>
-    </div>
-    <!-- 매물 카드 컬럼 -->
-    <div class="card-column collapsed" id="card-column" style="position:relative">
-      <button class="card-column-close" onclick="toggleCardColumn()" title="목록 닫기">✕</button>
-      <div class="cards-panel" id="cards-panel"></div>
-      <!-- spec-14: 비교 선택 하단 바 -->
-      <div class="compare-bar hidden" id="compare-bar">
-        <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
-        <button class="compare-bar__clear" onclick="clearCompare()">✕ 초기화</button>
-        <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
-      </div>
-    </div>
+        <div class="cards-panel" id="cards-panel"></div>
+        <div class="compare-bar hidden" id="compare-bar">
+          <span class="compare-bar__count" id="compare-bar-count">0개 선택됨</span>
+          <button class="compare-bar__clear" onclick="clearCompare()">✕ 초기화</button>
+          <button class="compare-bar__btn" id="compare-btn" disabled onclick="openCompare()">비교하기 →</button>
+        </div>
+      </div><!-- /lp-tab-list -->
+
+      <!-- 탭: 상세 -->
+      <div class="lp-tab-pane" id="lp-tab-detail">
+        <div class="detail-panel__header">
+          <h2 class="detail-panel__title" id="detail-title">-</h2>
+          <button class="detail-fav-btn" id="detail-fav-btn" title="찜하기" onclick="_toggleDetailFav(this)">♡</button>
+          <button class="detail-panel__close" onclick="closeDetail()">✕</button>
+        </div>
+        <div class="detail-panel__tabs">
+          <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
+          <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
+          <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
+        </div>
+        <div class="detail-panel__body" id="detail-body">
+          <div class="detail-loading" id="detail-loading">불러오는 중...</div>
+          <div class="detail-tab-pane active" id="detail-tab-info"></div>
+          <div class="detail-tab-pane" id="detail-tab-price"></div>
+          <div class="detail-tab-pane" id="detail-tab-poi"></div>
+        </div>
+      </div><!-- /lp-tab-detail -->
+
+    </div><!-- /left-panel -->
+
+    <!-- (기존 card-column·detail-panel 유지 — JS 참조 보호용, 숨김) -->
+    <div id="card-column" style="display:none"></div>
+    <div id="detail-panel" style="display:none"></div>
+    <div id="detail-resize-handle" style="display:none"></div>
     <!-- spec-18: 경로 상세 팝업 -->
     <div class="route-overlay hidden" id="route-overlay" onclick="closeRouteOnBg(event)">
       <div class="route-panel" id="route-panel">
@@ -2735,26 +2821,6 @@
       </div>
     </div>
 
-    <!-- spec-17: 단지 상세 사이드 패널 -->
-    <div class="resize-handle detail-resize-handle" id="detail-resize-handle" style="display:none"></div>
-    <div class="detail-panel" id="detail-panel">
-      <div class="detail-panel__header">
-        <h2 class="detail-panel__title" id="detail-title">-</h2>
-        <button class="detail-fav-btn" id="detail-fav-btn" title="찜하기" onclick="_toggleDetailFav(this)">♡</button>
-        <button class="detail-panel__close" onclick="closeDetail()">✕</button>
-      </div>
-      <div class="detail-panel__tabs">
-        <button class="detail-tab-btn active" onclick="switchDetailTab('info',this)">단지정보</button>
-        <button class="detail-tab-btn" onclick="switchDetailTab('price',this)">시세·거래</button>
-        <button class="detail-tab-btn" onclick="switchDetailTab('poi',this)">주변시설</button>
-      </div>
-      <div class="detail-panel__body" id="detail-body">
-        <div class="detail-loading" id="detail-loading">불러오는 중...</div>
-        <div class="detail-tab-pane active" id="detail-tab-info"></div>
-        <div class="detail-tab-pane" id="detail-tab-price"></div>
-        <div class="detail-tab-pane" id="detail-tab-poi"></div>
-      </div>
-    </div>
 
     <!-- spec-14: 비교 오버레이 -->
     <div class="compare-overlay hidden" id="compare-overlay" onclick="closeCompareOnBg(event)">
@@ -2857,6 +2923,13 @@ let kakaoMap = null;
 let overlays = [];
 let aptOverlayMap = {};   // apt_seq → CustomOverlay (핀 show/hide용)
 let panelMode = 'list';   // 'list' | 'detail'
+let _leftTab = 'filter';  // 'filter' | 'list' | 'detail'
+
+function switchLeftTab(name) {
+  _leftTab = name;
+  document.querySelectorAll('.lp-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.lp-tab-pane').forEach(p => p.classList.toggle('active', p.id === `lp-tab-${name}`));
+}
 let detailChart = null;
 let detailChartData = null;
 let _poiMarkers = new Map();  // spec-40: row(el) → { overlay, pos } (다중 POI 핀 유지)
@@ -3199,9 +3272,7 @@ function openDetail(aptSeq) {
   _currentAptSeq = aptSeq;
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
-  // 사이드 패널 먼저 열기 → relayout → setCenter (패널 열린 후 실제 지도 영역 기준으로 정중앙)
-  document.getElementById('detail-panel').classList.add('open');
-  document.getElementById('detail-resize-handle').style.display = '';
+  switchLeftTab('detail');
   document.body.style.overflow = '';
   if (kakaoMap && resultData) {
     const card = resultData.cards.find(c => c.apt_seq === aptSeq);
@@ -3230,13 +3301,7 @@ function openDetail(aptSeq) {
 }
 
 function closeDetail() {
-  if (panelMode === 'detail') {
-    backToList();
-  } else {
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('detail-resize-handle').style.display = 'none';
-    document.querySelector('.detail-panel__tabs').style.display = '';
-  }
+  backToList();
   clearPoiMarker();
   clearActiveAptPin();  // spec-38: 핀 강조 해제
 }
@@ -5164,6 +5229,7 @@ function renderCards(data){
   if (!_martSlider.mins.length) _initWalkSlider('mart', 'nearest_mart_min', _martSlider, data.cards);
 
   const allCards = _isAdvFilterActive() ? _filterCardsByAdv(data.cards) : data.cards;
+  _updateListTabCount(allCards.length);
 
   if(!allCards.length){
     const emptyMsg = dualMode
@@ -5545,14 +5611,10 @@ function backToList(){
   panelMode='list';
   if(detailChart){ detailChart.destroy(); detailChart=null; }
   detailChartData=null; currentTabKey=null;
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('detail-resize-handle').style.display = 'none';
-  document.querySelector('.detail-panel__tabs').style.display = '';
+  switchLeftTab('list');
   clearActiveAptPin();  // spec-38: 핀 강조 해제
   clearRoutePolylines();   // 경로선 제거
   unfocusApts();           // 아파트 핀 모두 다시 표시 + 버튼 숨김
-  // 닫을 때 정렬 상태 유지: 정렬 선택이 있으면 정렬된 리스트로 복원(칩 선택 배지도 보존),
-  // 없으면 기본 렌더. renderCards는 정렬칩을 재생성해 선택을 지우므로 정렬 시엔 호출 안 함.
   if(resultData){
     if(_sortChecked && _sortChecked.length) applySortOrder();
     else renderCards(resultData);
@@ -6098,10 +6160,7 @@ function _refreshSortUI() {
 
 // 매물 카드 컬럼 토글
 function toggleCardColumn() {
-  const col = document.getElementById('card-column');
-  const layout = document.querySelector('.result-layout');
-  const isCollapsed = col.classList.toggle('collapsed');
-  layout.classList.toggle('cards-hidden', isCollapsed);
+  switchLeftTab(_leftTab === 'list' ? 'filter' : 'list');
 }
 
 // 정렬 기준 드롭다운 토글
@@ -6608,6 +6667,11 @@ function resetAdvFilter() {
 function _isAdvFilterActive() {
   return _advFilter.pyeongMin !== null || _advFilter.yearMin !== null || _advFilter.unitsMin !== null ||
          _advFilter.elemMin !== null || _advFilter.parkMin !== null || _advFilter.martMin !== null;
+}
+
+function _updateListTabCount(n) {
+  const el = document.getElementById('lp-list-cnt');
+  if (el) el.textContent = n != null ? ` (${n})` : '';
 }
 
 function _applyAdvFilter() {
