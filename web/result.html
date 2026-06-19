@@ -3225,6 +3225,10 @@ async function runSearch(){
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
     onSearchDone();
+    // 상세 콜드 스타트 완화: 검색 직후(함수가 아직 따뜻할 때) 대표 단지 상세를
+    // 백그라운드로 미리 호출 → 서버리스 함수·DB 커넥션 풀 예열 + 캐시 채움.
+    // 사용자가 로딩 영상·목록을 보는 동안 끝나, 첫 상세 클릭이 빨라진다.
+    setTimeout(_prewarmTopDetail, 600);
     // LLM 폴링 즉시 시작 — 사용자가 음악 보는 동안 백그라운드에서 코멘트 미리 받아둠
     // (백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음)
     if(resultData.llm_pending){
@@ -5883,6 +5887,26 @@ async function showDetail(aptSeq, wpId){
 
 // showDetail 진행형 렌더용: detail/routes 캐시 + 통근 섹션 갱신 헬퍼
 const _showDetailCache = {};
+
+// 콜드 스타트 예열: 검색 직후 대표 단지 상세를 백그라운드로 미리 받아
+// 서버리스 함수·DB 풀을 데우고 캐시까지 채운다. (한 번만, 실패는 무시)
+let _prewarmed = false;
+function _prewarmTopDetail(){
+  if(_prewarmed || !resultData || !resultData.cards || !resultData.cards.length) return;
+  _prewarmed = true;
+  const wpId = resultData.wp_id;
+  const top = resultData.cards.find(c => c.is_recommended) || resultData.cards[0];
+  if(!top || !top.apt_seq) return;
+  const key = `${top.apt_seq}:${wpId}`;
+  if(_showDetailCache[key]) return;
+  const H = {headers:{'ngrok-skip-browser-warning':'1'}};
+  Promise.all([
+    fetch(`/api/apt/${top.apt_seq}/detail?wp_id=${wpId}`, H).then(r => r.ok ? r.json() : null),
+    fetch(`/api/apt/${top.apt_seq}/routes?wp_id=${wpId}`, H).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]).then(([detail, routesJson]) => {
+    if(detail) _showDetailCache[key] = { detail, routes: (routesJson && routesJson.options) || [], routes2: null };
+  }).catch(() => {});
+}
 function _updateRoutesSection(routes){
   const prev = document.getElementById('dp-route-preview');
   const body = document.getElementById('dp-route-body');
