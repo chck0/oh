@@ -611,6 +611,197 @@
     .adv-year-tick { font-size: 10px; }
     .map-panel { position: relative; flex: 1; min-width: 320px; }
     #map { width: 100%; height: 100%; background: var(--color-bg-muted); }
+    /* ── 상세 탭 — 300px 패널 최적화 ───────────────────────── */
+    #lp-tab-detail {
+      min-width: 0;
+      overflow-y: auto;
+      background: var(--color-bg-subtle);
+    }
+    #lp-tab-detail .detail-panel__header {
+      padding: 9px 10px;
+      gap: 6px;
+    }
+    #lp-tab-detail .detail-panel__title {
+      min-width: 0;
+      font-size: 12.5px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #lp-tab-detail .detail-fav-btn { width: 24px; font-size: 16px; flex-shrink: 0; }
+    #lp-tab-detail .detail-panel__close { width: 24px; height: 24px; font-size: 12px; flex-shrink: 0; }
+    #lp-tab-detail .detail-panel__tabs { padding: 5px 8px 0; gap: 2px; }
+    #lp-tab-detail .detail-tab-btn { padding: 6px 2px; font-size: 11.5px; line-height: 1.2; }
+    #lp-tab-detail .detail-panel__body { padding: 0 8px 14px; }
+    #lp-tab-detail .detail-section { margin-bottom: 12px; }
+    #lp-tab-detail .detail-section__title { font-size: 10px; margin-bottom: 5px; }
+    #lp-tab-detail .detail-kv { gap: 8px 10px; }
+    #lp-tab-detail .detail-kv__label { font-size: 10.5px; }
+    #lp-tab-detail .detail-kv__value { font-size: 12.5px; line-height: 1.35; }
+    #lp-tab-detail .detail-kv__sub { font-size: 11px; }
+
+    #lp-tab-detail .dp__hero {
+      padding: 10px;
+      border-radius: 11px;
+      margin: 8px 0 0;
+    }
+    #lp-tab-detail .dp__name {
+      font-size: 14px;
+      line-height: 1.3;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #lp-tab-detail .dp__meta {
+      font-size: 11px;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+    #lp-tab-detail .dp-statrow {
+      padding: 8px 2px;
+      margin-bottom: 8px;
+      border-radius: 9px;
+    }
+    #lp-tab-detail .dp-stat { padding: 0 3px; }
+    #lp-tab-detail .dp-stat + .dp-stat::before { height: 22px; }
+    #lp-tab-detail .dp-stat-num { font-size: 15px; letter-spacing: 0; }
+    #lp-tab-detail .dp-stat-unit { font-size: 10px; }
+    #lp-tab-detail .dp-stat-label {
+      font-size: 9.5px;
+      line-height: 1.25;
+      margin-top: 3px;
+      white-space: normal;
+    }
+    #lp-tab-detail .dp-stat-py { font-size: 8.5px; }
+    #lp-tab-detail .dp-chips { gap: 4px; margin-bottom: 8px; }
+    #lp-tab-detail .dp-chip { font-size: 10.5px; padding: 3px 8px; }
+    #lp-tab-detail .dp-verdict {
+      padding: 9px 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      border-radius: 9px;
+    }
+    #lp-tab-detail .dp-verdict-sub { font-size: 10.5px; margin-top: 3px; }
+    #lp-tab-detail .dp__commute {
+      font-size: 11.5px;
+      padding: 4px 8px;
+      margin-bottom: 8px;
+      max-width: 100%;
+      white-space: normal;
+    }
+    #lp-tab-detail .dp__friend {
+      padding: 10px 11px 11px;
+      border-radius: 10px;
+    }
+    #lp-tab-detail .dp__friend-head { gap: 6px; margin-bottom: 7px; }
+    #lp-tab-detail .dp__friend-label { font-size: 11px; }
+    #lp-tab-detail .dp__friend-cta { font-size: 10px; padding: 3px 7px; }
+    #lp-tab-detail .dp__friend-avatar { width: 21px; height: 21px; font-size: 10px; }
+    #lp-tab-detail .dp__friend-text { font-size: 12px; line-height: 1.58; }
+
+    #lp-tab-detail .dp__section {
+      border-radius: 11px;
+      margin: 8px 0 0;
+    }
+    #lp-tab-detail .dp__section-head { padding: 10px 11px; gap: 8px; }
+    #lp-tab-detail .dp__section-icon { width: 26px; height: 26px; border-radius: 8px; }
+    #lp-tab-detail .dp__section-icon svg { width: 14px; height: 14px; }
+    #lp-tab-detail .dp__section-title { font-size: 12.5px; line-height: 1.25; }
+    #lp-tab-detail .dp__section-preview {
+      font-size: 10.8px;
+      line-height: 1.35;
+      margin-top: 1px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #lp-tab-detail .dp__section-chev { width: 18px; height: 18px; }
+    #lp-tab-detail .dp__section.open .dp__section-body {
+      margin: 0 11px;
+      padding: 10px 0 11px;
+    }
+
+    #lp-tab-detail .dp-route {
+      padding: 9px 10px;
+      margin-bottom: 7px;
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    #lp-tab-detail .dp-route__head { gap: 6px; }
+    #lp-tab-detail .dp-route__topline { gap: 6px; }
+    #lp-tab-detail .dp-route__summary { gap: 5px; }
+    #lp-tab-detail .dp-route__time { font-size: 18px; }
+    #lp-tab-detail .dp-route__time .unit { font-size: 10.5px; }
+    #lp-tab-detail .dp-route__mode { font-size: 11.5px; line-height: 1.35; min-width: 0; }
+    #lp-tab-detail .dp-route__rank { height: 19px; padding: 0 6px; font-size: 9.5px; }
+    #lp-tab-detail .dp-route__meta { font-size: 10.5px; gap: 4px; }
+    #lp-tab-detail .dp-route__pill { min-height: 18px; padding: 0 5px; }
+    #lp-tab-detail .dp-route__chev { width: 21px; height: 21px; font-size: 11px; }
+    #lp-tab-detail .dp-bar { min-height: 28px; gap: 2px; padding: 2px; }
+    #lp-tab-detail .dp-seg { font-size: 9.5px; padding: 0 4px; border-radius: 6px; }
+    #lp-tab-detail .dp-tl { padding-left: 2px; }
+    #lp-tab-detail .dp-tl-row { gap: 8px; padding: 7px 0; }
+    #lp-tab-detail .dp-tl-dot { width: 13px; height: 13px; margin-top: 3px; }
+    #lp-tab-detail .dp-tl-dot.walk { width: 10px; height: 10px; }
+    #lp-tab-detail .dp-tl-head { gap: 5px; flex-wrap: wrap; }
+    #lp-tab-detail .dp-tl-badge { font-size: 10px; padding: 2px 6px; }
+    #lp-tab-detail .dp-tl-time { font-size: 10.5px; }
+    #lp-tab-detail .dp-tl-sta { font-size: 11.5px; line-height: 1.4; }
+    #lp-tab-detail .dp-tl-sta .arr { margin: 0 3px; }
+    #lp-tab-detail .dp-tl-walk { font-size: 11px; }
+
+    #lp-tab-detail .dp-building-grid { gap: 7px 9px; }
+    #lp-tab-detail .dp-bld-label { font-size: 10px; }
+    #lp-tab-detail .dp-bld-value { font-size: 12px; line-height: 1.35; }
+    #lp-tab-detail .dp-kpis { gap: 5px; margin-bottom: 9px; }
+    #lp-tab-detail .dp-kpi { padding: 8px 4px; border-radius: 7px; }
+    #lp-tab-detail .dp-kpi-label { font-size: 9.8px; margin-bottom: 3px; }
+    #lp-tab-detail .dp-kpi-value { font-size: 13px; }
+    #lp-tab-detail .dp-chart-wrap { height: 142px; }
+    #lp-tab-detail .dp-pyeong-tabs { gap: 4px; margin-bottom: 7px; }
+    #lp-tab-detail .dp-tab { padding: 4px 8px; font-size: 10.5px; }
+    #lp-tab-detail .dp-chart-legend { font-size: 10px; gap: 8px; margin-bottom: 6px; }
+
+    #lp-tab-detail .dp-trade-group { margin-bottom: 10px; }
+    #lp-tab-detail .dp-trade-group-title { font-size: 10.5px; margin-bottom: 4px; padding-bottom: 4px; }
+    #lp-tab-detail .dp-trade-table { font-size: 10.8px; table-layout: fixed; }
+    #lp-tab-detail .dp-trade-table th { padding: 5px 3px; font-size: 9.8px; }
+    #lp-tab-detail .dp-trade-table td {
+      padding: 6px 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #lp-tab-detail .dp-trade-table th:nth-child(1),
+    #lp-tab-detail .dp-trade-table td:nth-child(1) { width: 27%; }
+    #lp-tab-detail .dp-trade-table th:nth-child(2),
+    #lp-tab-detail .dp-trade-table td:nth-child(2) { width: 22%; }
+    #lp-tab-detail .dp-trade-table th:nth-child(3),
+    #lp-tab-detail .dp-trade-table td:nth-child(3) { width: 34%; }
+    #lp-tab-detail .dp-trade-table th:nth-child(4),
+    #lp-tab-detail .dp-trade-table td:nth-child(4) { width: 17%; text-align: right; }
+
+    #lp-tab-detail .dp-poi-category {
+      font-size: 10.5px;
+      margin: 9px 0 4px;
+      padding-bottom: 4px;
+    }
+    #lp-tab-detail .dp-poi-row { font-size: 11.5px; padding: 6px 0; gap: 6px; }
+    #lp-tab-detail .dp-poi-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #lp-tab-detail .dp-poi-tag { font-size: 10px; }
+    #lp-tab-detail .dp-poi-dist { font-size: 10.5px; flex-shrink: 0; }
+
     /* ── 목록 탭 카드 — 300px 패널 최적화 ──────────────────── */
     #lp-tab-list .cards-panel { padding: 10px; overflow-y: auto; }
     #lp-tab-list .rec-card { padding: 11px 36px 11px 12px; margin-bottom: 6px; }
