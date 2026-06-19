@@ -2049,7 +2049,20 @@
       padding: 10px 16px 0;
       margin-top: 3px;
     }
-
+    .tt-pyeong-row {
+      display: flex; justify-content: flex-end;
+      padding: 0 12px 4px; margin-top: -4px;
+    }
+    .tt-pyeong-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: #F0EDFF; color: #6B33E6;
+      border: 1.5px solid #C4B5FD; border-radius: 20px;
+      padding: 3px 9px; font-size: 10.5px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; user-select: none;
+      transition: background 100ms, transform 60ms;
+    }
+    .tt-pyeong-chip:hover { background: #E0D4FF; transform: scale(1.05); }
+    .tt-pyeong-chip.hidden { display: none; }
     /* ════════════════════════════════════════════════════════
        [6] 상세 패널
        ════════════════════════════════════════════════════════ */
@@ -3073,6 +3086,9 @@
 <!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
 <div class="pin-tooltip hidden" id="pin-tooltip">
   <div class="pin-tooltip__title" id="tt-title"></div>
+  <div class="tt-pyeong-row">
+    <span class="tt-pyeong-chip hidden" id="tt-pyeong-chip" onclick="event.stopPropagation();_ttClickPyeong()"></span>
+  </div>
   <div class="pin-tooltip__section">
     <div class="pin-tooltip__section-label">최근 거래 금액</div>
     <div class="pin-tooltip__price-row">
@@ -5655,11 +5671,22 @@ let tooltipTimer = null;
 
 // 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
 let _ttGroup = null;
+let _ttSeq = null, _ttWpId = null;
 
+function _ttClickPyeong(){
+  const seq = _ttSeq, wpId = _ttWpId;
+  if(!seq) return;
+  hideTooltip();
+  window._pendingDetailAction = 'trade';
+  showDetail(seq, wpId);
+  switchLeftTab('detail');
+}
 function showTooltip(pinEl, group, wpId){
   if(!group || !group.cards.length) return;
   clearTimeout(tooltipTimer);
   _ttGroup = group;
+  _ttSeq = group.apt_seq;
+  _ttWpId = wpId;
 
   const c = group.cards[0];
 
@@ -5686,6 +5713,16 @@ function showTooltip(pinEl, group, wpId){
   const footParts = [`${(group.kaptdaCnt||0).toLocaleString()}세대`];
   if(group.build_year) footParts.push(`${group.build_year}년 준공`);
   document.getElementById('tt-footer').textContent = footParts.join(' · ');
+
+  // 평형 칩: 복수 평형일 때만 표시
+  const chipEl = document.getElementById('tt-pyeong-chip');
+  const n = group.cards.length;
+  if(n > 1){
+    chipEl.textContent = `평형 ${n}가지 실거래 비교 →`;
+    chipEl.classList.remove('hidden');
+  } else {
+    chipEl.classList.add('hidden');
+  }
 
   // 위치
   tooltip.classList.remove('hidden');
@@ -6010,6 +6047,19 @@ function renderDetailPanel(d, routes, wpId){
 
   // 도보 시설 사전 검증: 확인된 시설만 렌더(깜빡임 없음) + 좌표 캐시(클릭 즉시 배치)
   _renderConfirmedPois(document.getElementById('dp-poi-body'), d.poi, d.apt_seq);
+
+  // 평형 칩 클릭 → 실거래 내역 섹션 펼치고 스크롤
+  if(window._pendingDetailAction === 'trade'){
+    window._pendingDetailAction = null;
+    requestAnimationFrame(() => {
+      const tradeSection = [...panel.querySelectorAll('.dp__section')]
+        .find(s => s.querySelector('.ic-trade'));
+      if(tradeSection){
+        tradeSection.classList.add('open');
+        setTimeout(() => tradeSection.scrollIntoView({behavior:'smooth', block:'start'}), 80);
+      }
+    });
+  }
 
   // 차트 초기화 — 검색한 평형 탭 우선, 없으면 거래 많은 순 첫 번째
   detailChartData = d.chart;
