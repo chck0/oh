@@ -160,14 +160,13 @@
       width: 100%; max-width: 640px;
     }
     .video-stage {
-      flex-shrink: 0;
-      width: 280px; aspect-ratio: 9/16;
-      background: var(--color-bg-base);
+      width: 100%; aspect-ratio: 16/9;
+      background: #000;
       border-radius: 12px; overflow: hidden;
       position: relative;
       box-shadow: var(--shadow-xl);
     }
-    .video-stage video { width: 100%; height: 100%; object-fit: cover; }
+    .video-stage iframe { width: 100%; height: 100%; border: none; display: block; }
     .video-title {
       position: absolute; bottom: 0; left: 0; right: 0;
       padding: 12px 14px 11px;
@@ -1583,112 +1582,55 @@
        ════════════════════════════════════════════════════════ */
     .pin-tooltip {
       position: fixed; z-index: 900;
-      width: 310px;
-      background: var(--color-bg-panel);
-      border: 1px solid var(--color-border-strong);
-      border-radius: 12px;
-      box-shadow: var(--shadow-xl);
-      overflow: hidden;
+      width: 240px;
+      background: #000;
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      padding: 18px 20px 16px;
       cursor: pointer;
       transition: opacity 100ms ease;
     }
     .pin-tooltip.hidden { display: none; }
-    .pin-tooltip__head { padding: 14px 16px 0; }
-    .pin-tooltip__top {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 10px; margin-bottom: 3px;
+    .pin-tooltip__title {
+      font-size: 17px; font-weight: 800;
+      letter-spacing: -0.025em; line-height: 1.3;
+      color: #fff;
+      margin-bottom: 18px;
     }
-    .pin-tooltip__name {
-      font-size: 16px; font-weight: 700;
-      letter-spacing: -0.01em;
-      color: var(--color-text-primary);
-      line-height: 1.3;
-    }
-    .pin-tooltip__badge {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.05em;
-      background: var(--color-brand-primary);
-      color: var(--color-text-on-brand);
-      padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      flex-shrink: 0;
-    }
-    .pin-tooltip__meta {
-      font-size: 13px; color: var(--color-text-secondary);
-      font-feature-settings: 'tnum';
-      margin-bottom: 14px;
-      font-weight: 500;
-    }
-    .pin-tooltip__tabs {
-      display: flex; gap: 0;
-      border-bottom: 1px solid var(--color-border-default);
-      padding: 0 16px;
-    }
-    .pin-tooltip__tab {
-      padding: 10px 0; margin-right: 18px;
-      font-size: 13.5px; font-weight: 600;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 120ms;
-      font-feature-settings: 'tnum';
-    }
-    .pin-tooltip__tab:hover { color: var(--color-text-secondary); }
-    .pin-tooltip__tab.active {
-      background: var(--color-brand-gradient);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      border-bottom-color: var(--purple-500);
-    }
-    .pin-tooltip__body { padding: 12px 16px 0; }
-    .pin-tooltip__metric-row {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .pin-tooltip__metric {
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .pin-tooltip__metric-label {
+    .pin-tooltip__section { margin-bottom: 14px; }
+    .pin-tooltip__section-label {
       font-size: 11px; font-weight: 700;
-      color: var(--color-text-tertiary);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      margin-bottom: 1px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 6px;
     }
-    .pin-tooltip__metric-val {
-      font-size: 17px; font-weight: 700;
-      color: var(--color-text-primary);
-      font-feature-settings: 'tnum';
-      letter-spacing: -0.01em;
+    .pin-tooltip__price-row {
+      display: flex; align-items: baseline; gap: 10px;
     }
-    .pin-tooltip__metric-val .unit {
+    .pin-tooltip__price-val {
+      font-size: 26px; font-weight: 800;
+      color: #fff; font-feature-settings: 'tnum';
+      letter-spacing: -0.03em;
+    }
+    .pin-tooltip__pyeong {
+      font-size: 26px; font-weight: 800;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: -0.02em;
+    }
+    .pin-tooltip__date {
       font-size: 12px; font-weight: 500;
-      color: var(--color-text-secondary);
-      margin-left: 2px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 5px; font-feature-settings: 'tnum';
     }
-    .pin-tooltip__metric-sub {
-      font-size: 12px;
-      color: var(--color-text-secondary);
-      font-feature-settings: 'tnum';
-      margin-top: 2px;
-      font-weight: 500;
+    .pin-tooltip__route {
+      font-size: 15px; font-weight: 600;
+      color: #fff;
     }
-    .pin-tooltip__comment {
-      font-size: 13px; line-height: 1.6;
-      color: var(--color-text-primary);
-      background: var(--color-brand-bg-subtle);
-      border-left: 3px solid var(--color-brand-primary);
-      padding: 9px 12px;
-      border-radius: 5px;
-      margin-bottom: 14px;
-      white-space: pre-line;
-      font-weight: 500;
-    }
-    .pin-tooltip__comment.empty {
-      background: var(--color-bg-subtle);
-      border-color: var(--color-border-default);
-      color: var(--color-text-tertiary);
-      font-style: italic;
+    .pin-tooltip__footer {
+      font-size: 12px; font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 12px;
+      margin-top: 4px;
     }
 
     /* ════════════════════════════════════════════════════════
@@ -2233,19 +2175,10 @@
 
   <div class="video-row">
     <div class="video-stage">
-      <video id="video-current" autoplay muted playsinline></video>
-      <video id="video-next" muted playsinline preload="auto" style="display:none;"></video>
-      <div class="video-title" id="video-title"></div>
-    </div>
-    <div class="video-side">
-      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" aria-label="소리 켜기">
-        <span class="mute-icon" id="mute-icon">🔇</span>
-        <span class="mute-text" id="mute-text">소리 켜기</span>
-      </button>
-      <div class="playlist">
-        <div class="playlist-head">Playlist <span class="pl-count" id="pl-count"></span></div>
-        <div class="playlist-items" id="playlist-items"></div>
-      </div>
+      <iframe id="yt-player"
+        src="https://www.youtube.com/embed/Jqj2XrQuHQE?autoplay=1&mute=1&loop=1&playlist=Jqj2XrQuHQE&rel=0&modestbranding=1&controls=1"
+        allow="autoplay; encrypted-media"
+        allowfullscreen></iframe>
     </div>
   </div>
 
@@ -2391,77 +2324,23 @@
 
 <!-- 핀 호버 툴팁 — 단지 단위. 평형 2개 이상이면 탭으로 전환 -->
 <div class="pin-tooltip hidden" id="pin-tooltip">
-  <div class="pin-tooltip__head">
-    <div class="pin-tooltip__top">
-      <span class="pin-tooltip__name" id="tt-apt-nm"></span>
-      <span class="pin-tooltip__badge" id="tt-badge" style="display:none">추천</span>
+  <div class="pin-tooltip__title" id="tt-title"></div>
+  <div class="pin-tooltip__section">
+    <div class="pin-tooltip__section-label">최근 거래 금액</div>
+    <div class="pin-tooltip__price-row">
+      <span class="pin-tooltip__price-val" id="tt-price-val"></span>
+      <span class="pin-tooltip__pyeong" id="tt-pyeong"></span>
     </div>
-    <div class="pin-tooltip__meta" id="tt-meta"></div>
+    <div class="pin-tooltip__date" id="tt-date"></div>
   </div>
-  <div class="pin-tooltip__tabs" id="tt-pt-tabs" style="display:none"></div>
-  <div class="pin-tooltip__body">
-    <div class="pin-tooltip__metric-row">
-      <div class="pin-tooltip__metric">
-        <span class="pin-tooltip__metric-label">통근</span>
-        <span class="pin-tooltip__metric-val" id="tt-transit-val"></span>
-        <span class="pin-tooltip__metric-sub" id="tt-transit-sub"></span>
-      </div>
-      <div class="pin-tooltip__metric">
-        <span class="pin-tooltip__metric-label" id="tt-price-label">가격대</span>
-        <span class="pin-tooltip__metric-val" id="tt-price-val"></span>
-        <span class="pin-tooltip__metric-sub" id="tt-price-sub"></span>
-      </div>
-    </div>
-    <div class="pin-tooltip__comment" id="tt-comment" style="display:none"></div>
+  <div class="pin-tooltip__section">
+    <div class="pin-tooltip__section-label">출퇴근 경로</div>
+    <div class="pin-tooltip__route" id="tt-route"></div>
   </div>
+  <div class="pin-tooltip__footer" id="tt-footer"></div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-//  영상 플레이리스트
-// ═══════════════════════════════════════════════════════
-const VIDEOS = [
-  '어이(크레용팝).mp4','lnsomnia(휘성).mp4','Love is(트라이앵글).mp4',
-  'No1(보아).mp4','Rollin (브레이브걸스).mp4','Shake It(씨스타).mp4',
-  '우리집(2PM).mp4','Hold Up (Neo, Jeiff).mp4',
-];
-const VIDEO_BASE = '/static/videos/';
-const vCurr = document.getElementById('video-current');
-const vNext = document.getElementById('video-next');
-const vTitle = document.getElementById('video-title');
-let currentIdx = 0; let playedRecently = new Set();
-function shortName(f){ return f.replace(/\.mp4$/,''); }
-function pickRandomNext(){
-  if(playedRecently.size>=VIDEOS.length-1) playedRecently.clear();
-  let c=VIDEOS.map((_,i)=>i).filter(i=>i!==currentIdx&&!playedRecently.has(i));
-  if(!c.length) c=VIDEOS.map((_,i)=>i).filter(i=>i!==currentIdx);
-  return c[Math.floor(Math.random()*c.length)];
-}
-function playVideo(idx){
-  currentIdx=idx; playedRecently.add(idx);
-  vCurr.src=VIDEO_BASE+encodeURIComponent(VIDEOS[idx]); vCurr.load(); vCurr.play().catch(()=>{});
-  vTitle.textContent=shortName(VIDEOS[idx]);
-  vNext.src=VIDEO_BASE+encodeURIComponent(VIDEOS[pickRandomNext()]); vNext.load();
-  renderPlaylist();
-}
-vCurr.addEventListener('ended',()=>playVideo(pickRandomNext()));
-function toggleMute(){
-  const btn=document.getElementById('mute-btn');
-  const icon=document.getElementById('mute-icon'); const text=document.getElementById('mute-text');
-  if(vCurr.muted){ vCurr.muted=false; vNext.muted=false; icon.textContent='🔊'; text.textContent='소리 켜짐'; btn.classList.add('unmuted'); }
-  else{ vCurr.muted=true; vNext.muted=true; icon.textContent='🔇'; text.textContent='소리 켜기'; btn.classList.remove('unmuted'); }
-}
-function renderPlaylist(){
-  const plCount = document.getElementById('pl-count');
-  if(plCount) plCount.textContent = VIDEOS.length+'곡';
-  document.getElementById('playlist-items').innerHTML=VIDEOS.map((name,i)=>`
-    <div class="playlist-item ${i===currentIdx?'active':''}" onclick="playVideo(${i})">
-      <span class="pl-num">${String(i+1).padStart(2,'0')}</span>
-      <span class="pl-glyph">${i===currentIdx?'▶':''}</span>
-      <span>${shortName(name)}</span>
-    </div>`).join('');
-}
-playVideo(0);
 
 // ═══════════════════════════════════════════════════════
 //  검색 파라미터 + 전역 상태
@@ -4523,98 +4402,49 @@ let tooltipTimer = null;
 
 // 툴팁: 단지(group) 단위로 표시. group.cards 가 평형별 카드 배열.
 let _ttGroup = null;
-let _ttActivePtIdx = 0;
 
 function showTooltip(pinEl, group, wpId){
   if(!group || !group.cards.length) return;
   clearTimeout(tooltipTimer);
   _ttGroup = group;
-  _ttActivePtIdx = 0;
 
-  // 상단: 단지명 + 배지
-  document.getElementById('tt-apt-nm').textContent = group.apt_nm;
-  const badge = document.getElementById('tt-badge');
-  badge.style.display = group.any_recommended ? '' : 'none';
+  const c = group.cards[0];
 
-  // 메타
-  const thisYear = THIS_YEAR;
-  let metaParts = [group.umd_nm, `${group.kaptdaCnt.toLocaleString()}세대`];
-  if(group.build_year) metaParts.push(`${group.build_year}년 (${thisYear-group.build_year}년차)`);
-  document.getElementById('tt-meta').textContent = metaParts.join(' · ');
+  // 제목: 동 + 아파트명
+  document.getElementById('tt-title').textContent = `${group.umd_nm} ${group.apt_nm}`;
 
-  // 평형 탭 (밑줄형)
-  const tabsEl = document.getElementById('tt-pt-tabs');
-  if(group.cards.length > 1){
-    tabsEl.style.display = 'flex';
-    tabsEl.innerHTML = group.cards.map((c, i)=>
-      `<div class="pin-tooltip__tab ${i===0?'active':''}" data-pt-idx="${i}"
-            onclick="event.stopPropagation();switchTooltipPt(${i})">${escHtml(c.pyeong_type||'')}</div>`
-    ).join('');
+  // 최근 거래 금액
+  const lt = (c.recent_trades||[])[0];
+  const pyeongNum = (c.pyeong_type||'').match(/\d+/)?.[0] || '';
+  if(lt){
+    document.getElementById('tt-price-val').textContent = shortPrice(lt.amount) + '원';
+    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-date').textContent = `${lt.date} · ${lt.floor}층 거래 기준`;
   } else {
-    tabsEl.style.display = 'none';
+    document.getElementById('tt-price-val').textContent = shortPrice(c.price_low) + '~';
+    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-date').textContent = '거래 정보 없음';
   }
 
-  // 첫 평형 정보 렌더
-  renderTooltipPt(0);
+  // 출퇴근 경로
+  document.getElementById('tt-route').textContent = c.transit_summary || `${c.total_time_min}분`;
+
+  // 하단 정보
+  const footParts = [`${(group.kaptdaCnt||0).toLocaleString()}세대`];
+  if(group.build_year) footParts.push(`${group.build_year}년 준공`);
+  document.getElementById('tt-footer').textContent = footParts.join(' · ');
 
   // 위치
   tooltip.classList.remove('hidden');
   const pinRect = pinEl.getBoundingClientRect();
-  const ttW = tooltip.offsetWidth||296;
-  const ttH = tooltip.offsetHeight||280;
+  const ttW = tooltip.offsetWidth || 240;
+  const ttH = tooltip.offsetHeight || 200;
   let left = pinRect.left + pinRect.width/2 - ttW/2;
   let top  = pinRect.top - ttH - 10;
   left = Math.max(8, Math.min(left, window.innerWidth - ttW - 8));
   if(top < 60) top = pinRect.bottom + 8;
   tooltip.style.left = left+'px';
   tooltip.style.top  = top+'px';
-}
-
-function switchTooltipPt(idx){
-  if(!_ttGroup || idx === _ttActivePtIdx) return;
-  _ttActivePtIdx = idx;
-  document.querySelectorAll('.pin-tooltip__tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
-  renderTooltipPt(idx);
-}
-
-function renderTooltipPt(idx){
-  if(!_ttGroup) return;
-  const c = _ttGroup.cards[idx];
-  if(!c) return;
-
-  // 통근 메트릭
-  document.getElementById('tt-transit-val').innerHTML = `<span class="num">${c.total_time_min}</span><span class="unit">분</span>`;
-  document.getElementById('tt-transit-sub').textContent = c.transit_summary || '경로 정보 없음';
-
-  // 가격/거래 메트릭
-  const lt = (c.recent_trades||[])[0];
-  const priceLabel = document.getElementById('tt-price-label');
-  const priceVal = document.getElementById('tt-price-val');
-  const priceSub = document.getElementById('tt-price-sub');
-  if(lt){
-    priceLabel.textContent = '최근 거래';
-    priceVal.innerHTML = `<span class="num">${shortPrice(lt.amount).replace('억','')}</span><span class="unit">억</span>`;
-    priceSub.innerHTML = `<span class="num">${lt.date}</span> · ${lt.floor}층 ${escHtml(lt.gbn||'')}`;
-  } else {
-    priceLabel.textContent = '가격대';
-    priceVal.innerHTML = `<span class="num">${shortPrice(c.price_low).replace('억','')}</span><span class="unit">억</span>`;
-    priceSub.innerHTML = c.price_high && c.price_high!==c.price_low
-      ? `~<span class="num">${shortPrice(c.price_high)}</span> · <span class="num">${c.deal_count||0}</span>건`
-      : `<span class="num">${c.deal_count||0}</span>건 거래`;
-  }
-
-  // 코멘트
-  const comment = c.friend_comment||'';
-  const ttComment = document.getElementById('tt-comment');
-  if(comment){
-    ttComment.style.display = 'block';
-    ttComment.className = 'pin-tooltip__comment';
-    ttComment.textContent = comment;
-  } else {
-    ttComment.style.display = 'block';
-    ttComment.className = 'pin-tooltip__comment empty';
-    ttComment.innerHTML = '<span class="spinner-mini"></span>친구가 한마디 준비 중...';
-  }
 }
 function scheduleHideTooltip(){ tooltipTimer = setTimeout(hideTooltip, 250); }
 function hideTooltip(){ tooltip.classList.add('hidden'); }
