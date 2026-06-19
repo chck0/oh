@@ -324,9 +324,17 @@
     /* 좌측 패널 — fav-tabs(상단) + cards-panel(스크롤) 세로 배치 */
     .left-panel {
       display: flex; flex-direction: column;
-      overflow: hidden;
+      overflow-x: hidden; overflow-y: auto;
       min-height: 0;
-      width: 440px; min-width: 280px; flex-shrink: 0;
+      width: 280px; min-width: 220px; flex-shrink: 0;
+      border-right: 1px solid var(--color-border-strong);
+    }
+    .card-column {
+      width: 320px; min-width: 240px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--color-border-strong);
+      background: white;
     }
     .cards-panel {
       overflow-y: auto;
@@ -470,25 +478,16 @@
       background: none; border: none; cursor: pointer; padding: 2px 6px;
     }
     .sort-panel-reset:hover { color: var(--color-brand-primary); }
-    /* 플로팅 드롭다운 패널 */
+    /* 인라인 드롭다운 패널 (left-panel 내부) */
     .sort-panel-body {
-      position: fixed; z-index: 1000;
-      left: 448px; top: 390px;
-      background: #fff;
-      border: 1px solid var(--color-border-strong);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.15);
-      padding: 8px 0;
       display: flex; flex-direction: column; gap: 0;
-      transform-origin: top left;
-      transition: opacity .18s, transform .18s;
-      opacity: 1; transform: scale(1);
-      max-height: 70vh; overflow-y: auto;
-      min-width: 200px;
+      background: #fff;
+      border-top: 1px solid var(--color-border-strong);
+      overflow-y: auto;
+      max-height: 60vh;
     }
     .sort-panel-body.collapsed {
-      opacity: 0; transform: scaleY(0);
-      pointer-events: none;
+      display: none;
     }
     /* 엑셀 드롭다운 스타일 */
     .sort-chips-wrap {
@@ -2332,7 +2331,14 @@
             <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
           </div>
         </div>
+        <div class="sort-panel-body collapsed" id="sort-panel-body">
+          <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
+          <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
+        </div>
       </div>
+    </div>
+    <!-- 매물 카드 컬럼 -->
+    <div class="card-column">
       <div class="cards-panel" id="cards-panel"></div>
       <!-- spec-14: 비교 선택 하단 바 -->
       <div class="compare-bar hidden" id="compare-bar">
@@ -5088,13 +5094,8 @@ let _sortPanelOpen = false;
 function toggleSortPanel() {
   _sortPanelOpen = !_sortPanelOpen;
   const body = document.getElementById('sort-panel-body');
-  const header = document.getElementById('sort-panel');
   body.classList.toggle('collapsed', !_sortPanelOpen);
   document.getElementById('sort-panel-arrow').classList.toggle('collapsed', !_sortPanelOpen);
-  if (_sortPanelOpen) {
-    const rect = header.getBoundingClientRect();
-    body.style.top = rect.top + 'px';
-  }
 }
 // 드롭다운 외부 클릭 시 닫기
 document.addEventListener('click', e => {
@@ -5500,9 +5501,5 @@ function _filterCardsByAdv(cards) {
 // ── 실행 ─────────────────────────────────────────────────────
 runSearch();
 </script>
-<div class="sort-panel-body collapsed" id="sort-panel-body">
-  <div class="sort-chips-wrap" id="sort-chips-wrap"></div>
-  <div class="sort-hint" id="sort-hint">클릭 순서대로 <span class="hint-order">1순위 → 2순위 → 3순위</span> 자동 지정</div>
-</div>
 </body>
 </html>
