@@ -593,9 +593,9 @@
     #walk-panel-body { padding: 6px 12px 3px; background: var(--color-surface); }
     #walk-panel-body .adv-year-histogram { height: 29px; }
     #walk-panel-body .adv-year-thumb { width: 10px; height: 10px; }
-    #walk-panel-body .adv-filter-label { font-size: 9px; min-width: 36px; }
-    #walk-panel-body .adv-year-range-label { font-size: 9px; }
-    #walk-panel-body .adv-year-tick { font-size: 8px; }
+    #walk-panel-body .adv-filter-label { font-size: 9.9px; min-width: 36px; }
+    #walk-panel-body .adv-year-range-label { font-size: 9.9px; }
+    #walk-panel-body .adv-year-tick { font-size: 8.8px; }
     #walk-panel-body .adv-filter-row { margin-bottom: 2px; }
 
     /* 상세조건 — 6개 슬라이더 한 화면에 */
@@ -817,8 +817,11 @@
     #lp-tab-list .rec-card__transit { font-size: 12px; gap: 6px; }
     #lp-tab-list .rec-card__transit strong { font-size: 13px; }
     #lp-tab-list .commute-chip { font-size: 11px; padding: 4px 9px; gap: 4px; }
-    #lp-tab-list .list-card { padding: 9px 34px 9px 11px; margin-bottom: 4px; gap: 8px; }
+    #lp-tab-list .list-card { padding: 9px 28px 9px 11px; margin-bottom: 4px; gap: 6px; }
+    #lp-tab-list .list-card__right { min-width: 68px; }
     #lp-tab-list .list-card__name { font-size: 13px; }
+    #lp-tab-list .list-card__name.name-long { font-size: 11.8px; }
+    #lp-tab-list .list-card__name.name-xlong { font-size: 10.8px; }
     #lp-tab-list .list-card__name .pt { font-size: 11px; }
     #lp-tab-list .list-card__meta { font-size: 11px; }
     #lp-tab-list .list-card__price { font-size: 13px; }
@@ -1047,8 +1050,10 @@
       margin-bottom: 5px;
     }
     .rec-section-head p {
-      font-size: 12.5px; opacity: 0.9;
-      line-height: 1.55;
+      font-size: 11px; opacity: 0.9;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
     }
 
     /* ════════════════════════════════════════════════════════
@@ -1425,6 +1430,8 @@
       letter-spacing: -0.005em;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .list-card__name.name-long { font-size: 12.8px; letter-spacing: -0.02em; }
+    .list-card__name.name-xlong { font-size: 11.8px; letter-spacing: -0.03em; }
     .list-card__name .pt {
       font-size: 12px; font-weight: 600;
       color: var(--color-text-secondary);
@@ -3292,8 +3299,6 @@ function renderSummary(data){
     <span>${reqBody.min_price ? fmtPrice(reqBody.min_price)+'~'+fmtPrice(reqBody.max_price) : fmtPrice(reqBody.max_price)+' 이하'}</span>
     <span class="sep">·</span>
     <span>${reqBody.max_minutes}분 이내</span>
-    <span class="sep">·</span>
-    <span>${reqBody.pyeong_types.join(', ')}</span>
     ${reqBody.min_kaptdaCnt?`<span class="sep">·</span><span>${reqBody.min_kaptdaCnt.toLocaleString()}세대 이상</span>`:''}
     ${reqBody.build_year_min?`<span class="sep">·</span><span>${reqBody.build_year_min}년 이후</span>`:''}
     <span class="stats">총 ${(data.stats.total||0).toLocaleString()}개 (평형 분리)</span>`;
@@ -5092,17 +5097,25 @@ function _toggleDetailFav(btn) {
   _updateFavTab();
 }
 
-function _updateFavTab() {
-  const favCnt = window._lastCards.filter(c => isFav(c.apt_seq, c.pyeong_type)).length;
-  const allCnt = window._lastCards.length;
+function _syncFavTabCounts() {
+  const visibleCards = _cardsAfterAdvFilter();
+  const favCnt = visibleCards.filter(c => isFav(c.apt_seq, c.pyeong_type)).length;
+  const allCnt = visibleCards.length;
   const cntEl  = document.getElementById('fav-tab-cnt');
   const allEl  = document.getElementById('fav-tab-all-cnt');
   const favBtn = document.getElementById('fav-tab-fav');
   if(cntEl)  cntEl.textContent  = favCnt;
   if(allEl)  allEl.textContent  = `(${allCnt})`;
   if(favBtn) favBtn.disabled    = favCnt === 0;
+}
+
+function _updateFavTab() {
+  _syncFavTabCounts();
   // 관심 탭 활성 중 ♥ 토글 시 → 패널 실시간 재렌더 (해제된 카드 즉시 사라짐)
-  if(_currentFavTab === 'fav') switchFavTab('fav');
+  if(_currentFavTab === 'fav') {
+    if(_sortChecked.length) applySortOrder();
+    else switchFavTab('fav');
+  }
 }
 
 function switchFavTab(tab) {
@@ -5111,28 +5124,23 @@ function switchFavTab(tab) {
   document.getElementById('fav-tab-fav').classList.toggle('active', tab === 'fav');
 
   const panel = document.getElementById('cards-panel');
-  const favs  = loadFavs();
 
   if(tab === 'all') {
-    // 전체 카드 다시 렌더 + 전체 핀 복원
-    filterMapPins(null);
+    const cards = _cardsForCurrentList();
+    filterMapPins(_isAdvFilterActive() ? cards.map(c => c.apt_seq) : null);
     clearCompare();  // spec-14: 탭 전환 시 비교 선택 초기화
-    if(window._lastSearchData) renderCards(window._lastSearchData);
+    if(_sortChecked.length) applySortOrder();
+    else if(window._lastSearchData) renderCards(window._lastSearchData);
   } else {
     // 관심 단지만 필터 렌더
-    const cards = window._lastCards.filter(c => favs.has(favId(c.apt_seq, c.pyeong_type)));
+    const cards = _cardsForCurrentList();
     if(!cards.length) {
       panel.innerHTML = `<div class="fav-empty">❤️‍🔥 아직 관심 단지가 없어요<br><span style="font-size:12px;color:#aaa">카드의 ♥ 버튼을 눌러 저장해보세요</span></div>`;
+      _updateListTabCount(0);
       return;
     }
-    let html = '';
-    cards.forEach(c => {
-      if(c.is_recommended) html += renderRecCard(c, window._lastWpId, true);
-      else                  html += renderListCard(c, window._lastWpId, true);
-    });
-    panel.innerHTML = html;
-    // 지도 핀 동기화
-    if(window.filterMapPins) window.filterMapPins(cards.map(c => c.apt_seq));
+    if(_sortChecked.length) applySortOrder();
+    else _renderSortedFlat(cards);
     // spec-14: 비교 바 표시 (이미 선택된 항목 있으면 체크 복원)
     _updateCompareBar();
   }
@@ -5376,11 +5384,14 @@ function renderListCard(c, wpId, cmpMode=false){
     ? `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">W1 <strong class="num">${c.total_time_min_1}분</strong> · W2 <strong class="num">${c.total_time_min_2}분</strong></span>`
     : `<span class="commute-chip" style="cursor:pointer;font-size:11px" title="경로 상세 보기" onclick="event.stopPropagation();openRoute('${c.apt_seq}',${wpId||0},'${escHtml(c.apt_nm)}')">${escHtml(c.transit_summary||'')} <strong class="num">${c.total_time_min}분</strong></span>`;
 
+  const aptNameLen = [...(c.apt_nm || '')].length;
+  const nameClass = aptNameLen >= 12 ? ' name-xlong' : aptNameLen >= 9 ? ' name-long' : '';
+
   return `<article class="list-card" onclick="panToCard('${c.apt_seq}')">
     ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
-      <div class="list-card__name">${escHtml(c.apt_nm)}<span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
+      <div class="list-card__name${nameClass}">${escHtml(c.apt_nm)}</div>
       <div class="list-card__meta">${metaParts.join(' · ')}</div>
     </div>
     <div class="list-card__right">
@@ -5467,7 +5478,7 @@ function renderCards(data){
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가</p>
     </div>`;
   }
 
@@ -6394,16 +6405,21 @@ document.addEventListener('click', e => {
 function updateSortDropdowns() {}
 function onSortChange() { applySortOrder(); }
 
-function applySortOrder() {
-  const keys = _sortChecked;
-
-  if (!keys.length) {
-    if (window._lastSearchData) renderCards(window._lastSearchData);
-    return;
-  }
-
+function _cardsAfterAdvFilter() {
   const cards = [...(window._lastCards || [])];
-  cards.sort((a, b) => {
+  return _isAdvFilterActive() ? _filterCardsByAdv(cards) : cards;
+}
+
+function _cardsForCurrentList() {
+  const cards = _cardsAfterAdvFilter();
+  if(_currentFavTab !== 'fav') return cards;
+  const favs = loadFavs();
+  return cards.filter(c => favs.has(favId(c.apt_seq, c.pyeong_type)));
+}
+
+function _sortCards(cards, keys) {
+  const sorted = [...cards];
+  sorted.sort((a, b) => {
     for (const key of keys) {
       const [field, dir] = key.split(':');
       const av = a[field] ?? null;
@@ -6416,8 +6432,19 @@ function applySortOrder() {
     }
     return 0;
   });
+  return sorted;
+}
 
-  _renderSortedFlat(cards);
+function applySortOrder() {
+  const keys = _sortChecked;
+  const cards = _cardsForCurrentList();
+
+  if (!keys.length) {
+    _renderSortedFlat(cards);
+    return;
+  }
+
+  _renderSortedFlat(_sortCards(cards, keys));
 }
 
 function _renderSortedFlat(cards) {
@@ -6425,16 +6452,22 @@ function _renderSortedFlat(cards) {
   if (!data) return;
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
-  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>전체 ${cards.length}곳</h3></div>`;
+  const title = _currentFavTab === 'fav' ? '관심' : '전체';
+  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
-  _updateFavTab();
+  _updateListTabCount(cards.length);
+  _syncFavTabCounts();
+  if(window.filterMapPins) {
+    const shouldLimitPins = _currentFavTab === 'fav' || _isAdvFilterActive();
+    window.filterMapPins(shouldLimitPins ? cards.map(c => c.apt_seq) : null);
+  }
 }
 
 function resetSort() {
   _sortChecked = [];
   _refreshSortUI();
-  if (window._lastSearchData) renderCards(window._lastSearchData);
+  applySortOrder();
 }
 
 // ── 상세조건 필터 ──────────────────────────────────────────────
@@ -6868,9 +6901,11 @@ function _updateListTabCount(n) {
 function _applyAdvFilter() {
   document.getElementById('adv-filter-reset-btn').style.display = _isAdvFilterActive() ? '' : 'none';
   if (window._lastSearchData) {
-    const filtered = _isAdvFilterActive() ? _filterCardsByAdv(window._lastCards) : null;
+    const filtered = _cardsForCurrentList();
     if (window.filterMapPins) window.filterMapPins(filtered ? filtered.map(c => c.apt_seq) : null);
-    renderCards(window._lastSearchData);
+    if(_sortChecked.length) applySortOrder();
+    else if(_currentFavTab === 'fav') _renderSortedFlat(filtered);
+    else renderCards(window._lastSearchData);
   }
 }
 
