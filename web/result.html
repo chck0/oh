@@ -3241,6 +3241,8 @@ function _renderDetail(d) {
           const dist = p.distance_m < 1000 ? `${Math.round(p.distance_m)}m` : `${(p.distance_m/1000).toFixed(1)}km`;
           poiHtml += `<div class="detail-poi-row"
             data-poi-name="${escHtml(p.name||'')}"
+            data-poi-cat="${escHtml(p.category||'')}"
+            data-poi-sub="${escHtml(p.sub_category||'')}"
             data-walk-min="${p.walking_min||0}"
             data-dist-m="${Math.round(p.distance_m)||0}"
             onclick="togglePoiMarker(this)">
@@ -3714,10 +3716,11 @@ function togglePoiMarker(row) {
   const poiName = row.dataset.poiName;
   const walkMin = parseInt(row.dataset.walkMin, 10) || 0;
   const distM   = parseInt(row.dataset.distM,  10) || 0;
-  showPoiMarker(row, poiName, walkMin, distM);
+  const sub     = row.dataset.poiSub || '';   // D01=지하철출구, D02=버스정류장
+  showPoiMarker(row, poiName, walkMin, distM, sub);
 }
 
-function showPoiMarker(row, poiName, walkMin, distM) {
+function showPoiMarker(row, poiName, walkMin, distM, sub) {
   if (!kakaoMap || !poiName) { if (row) row.classList.remove('poi-active'); return; }
   const card = resultData && resultData.cards
     ? resultData.cards.find(c => c.apt_seq === _currentAptSeq)
@@ -3753,26 +3756,55 @@ function showPoiMarker(row, poiName, walkMin, distM) {
     _recenterApt();                          // 아파트 정중앙 고정 + 활성 핀 모두 보이게
   }
 
-  // spec-39/41: 이름 검증 후 배치. 풀네임 검색 → 일치 없으면 폴백 질의 재검색 →
-  //  그래도 없으면 틀린 핀 대신 안내(모르면 모른다). 최근접 무검증(data[0]) 폐기.
-  //  폴백 질의: "안암역 3번출구"처럼 다단어면 첫 단어("안암역")로, 아니면 앞 6글자로 재검색.
-  const firstToken = poiName.split(/\s+/)[0];
-  const fbQuery = (firstToken && firstToken.length >= 2 && firstToken !== poiName)
-    ? firstToken : (poiName.length > 4 ? poiName.substring(0, 6) : null);
-
   function fail() {
     row.classList.remove('poi-active');  // 핀 없이 활성표시만 남는 것 방지
     _poiNotice('지도에서 위치를 확인하지 못했습니다');
   }
 
+  // ── 교통시설(D01 지하철 / D02 버스): 좌표 미저장 → 카카오로 위치 확정 ──
+  //  지하철역(SW8)은 카테고리 검색이 키워드보다 훨씬 정확하다. 카테고리 검색은
+  //  '지하철역'만 반환하므로 역명 매칭 실패 시에도 최근접 역을 안전하게 쓸 수 있다.
+  if (sub === 'D01' && kakao.maps.services.Places) {
+    const sta = poiName.replace(/\s*\d+\s*번?\s*출구.*$/, '').trim() || poiName; // "용산역 1번출구"→"용산역"
+    ps.categorySearch('SW8', (data, status) => {
+      if (status === kakao.maps.services.Status.OK && data.length) {
+        const t = _normName(sta);
+        const hit = data.find(d => {
+          const c = _normName(d.place_name);
+          return c === t || (c.length >= 2 && (c.includes(t) || t.includes(c)));
+        }) || data[0];   // 카테고리가 지하철역을 보장 → 최근접도 정확한 타입
+        place(hit); return;
+      }
+      // 카테고리 검색 실패 시 키워드로 폴백
+      _keywordPlace(ps, opts, poiName, sub, place, fail);
+    }, opts);
+    return;
+  }
+
+  // 버스정류장(D02) 및 일반 시설: 키워드 검색 + (버스는 카테고리명까지 허용)
+  _keywordPlace(ps, opts, poiName, sub, place, fail);
+}
+
+// 키워드 검색으로 위치 찾기. 풀네임 → 폴백 질의 순. 버스는 결과의 카테고리명
+//  ('버스'/'정류장')도 일치로 인정해 이름이 안 맞아도 정류장을 잡는다.
+function _keywordPlace(ps, opts, poiName, sub, place, fail) {
+  const isBus = sub === 'D02';
+  // 폴백 질의: 공백·점·중점으로 분리한 첫 의미 토큰, 없으면 앞 6글자.
+  const tokens = poiName.split(/[\s.,·∙・]+/).filter(t => t.length >= 2);
+  const firstToken = tokens[0] || '';
+  const fbQuery = (firstToken && firstToken !== poiName)
+    ? firstToken : (poiName.length > 4 ? poiName.substring(0, 6) : null);
+
+  const pick = (data, status) => (status === kakao.maps.services.Status.OK && data.length)
+    ? _pickBestPoi(data, poiName, isBus) : null;
+
   ps.keywordSearch(poiName, (data, status) => {
-    const best = (status === kakao.maps.services.Status.OK && data.length)
-      ? _pickBestPoi(data, poiName) : null;
+    const best = pick(data, status);
     if (best) { place(best); return; }
     if (!fbQuery) { fail(); return; }
-    ps.keywordSearch(fbQuery, (d2, s2) => {
-      const b2 = (s2 === kakao.maps.services.Status.OK && d2.length)
-        ? _pickBestPoi(d2, poiName) : null;
+    const fbq = isBus ? `${fbQuery} 정류장` : fbQuery;   // 버스는 '정류장' 부가로 적중률↑
+    ps.keywordSearch(fbq, (d2, s2) => {
+      const b2 = pick(d2, s2) || (isBus && s2 === kakao.maps.services.Status.OK && d2.length ? d2[0] : null);
       if (b2) place(b2); else fail();
     }, opts);
   }, opts);
@@ -3784,17 +3816,22 @@ function _normName(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
 //  1순위 정확 일치, 2순위 부분 일치(한쪽이 다른쪽을 포함). 없으면 null.
 //  거리 검증은 하지 않는다 — 넓은 시설(캠퍼스·역사)의 등록 좌표는 도보 기준점과
 //  멀 수 있어 거리로 거르면 정상 시설이 탈락한다(spec-41). 지리 제약은 검색 반경이 담당.
-function _pickBestPoi(data, poiName){
+function _pickBestPoi(data, poiName, isBus){
   const target = _normName(poiName);
-  let exact = null, partial = null;
+  let exact = null, partial = null, byCat = null;
   for (const d of data){            // data는 location 기준 거리순 → 앞쪽이 더 가까움
     const cand = _normName(d.place_name);
     if (!cand) continue;
     if (cand === target){ if (!exact) exact = d; continue; }
     if (!partial && cand.length >= 2 && (cand.includes(target) || target.includes(cand)))
       partial = d;
+    // 버스: 이름이 안 맞아도 카테고리가 버스정류장이면 후보(가장 가까운 것)
+    if (isBus && !byCat){
+      const cn = d.category_name || '';
+      if (cn.includes('버스') || cn.includes('정류장')) byCat = d;
+    }
   }
-  return exact || partial || null;  // 이름 무관한 최근접(data[0]) 무검증 배치는 금지
+  return exact || partial || byCat || null;  // 이름 무관 최근접(data[0]) 무검증 배치는 금지
 }
 // 틀린 핀 대신 짧은 안내 (모르면 모른다)
 let _poiNoticeTimer = null;
