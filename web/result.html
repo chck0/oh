@@ -5758,29 +5758,39 @@ tooltip.addEventListener('mouseleave', ()=>scheduleHideTooltip());
 //  상세 패널
 // ═══════════════════════════════════════════════════════
 
-// 진단 모드: URL에 ?diag=1 이 있으면 상세 로딩 시간을 화면에 표시 (DevTools 불필요)
+// 진단 모드: URL에 ?diag=1 이 있으면 상세 로딩 시간/응답정보를 화면에 표시 (DevTools 불필요)
 const _DIAG = new URLSearchParams(location.search).has('diag');
-function _showDiag(serverTiming, clientFetchMs){
+let _diagClickN = 0;
+function _showDiag(res, clientFetchMs){
+  _diagClickN++;
   let box = document.getElementById('diag-box');
   if(!box){
     box = document.createElement('div');
     box.id = 'diag-box';
-    box.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:99999;background:rgba(10,8,12,.92);color:#fff;font:11.5px/1.6 ui-monospace,monospace;padding:11px 13px;border-radius:10px;max-width:280px;white-space:pre-wrap;box-shadow:0 6px 22px rgba(0,0,0,.45);cursor:pointer';
+    box.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:99999;background:rgba(10,8,12,.93);color:#fff;font:11px/1.55 ui-monospace,monospace;padding:11px 13px;border-radius:10px;max-width:300px;white-space:pre-wrap;box-shadow:0 6px 22px rgba(0,0,0,.45);cursor:pointer';
     box.title = '탭하면 닫힘';
     box.onclick = () => box.remove();
     document.body.appendChild(box);
   }
-  // "key;dur=123, key2;dur=45" 파싱 → 큰 값부터 정렬
-  const parts = (serverTiming || '').split(',').map(s => s.trim()).filter(Boolean)
+  const h = (k) => res.headers.get(k) || '-';
+  // Server-Timing 파싱 → 큰 값부터
+  const parts = (res.headers.get('Server-Timing') || '').split(',').map(s => s.trim()).filter(Boolean)
     .map(s => { const m = s.match(/^([^;]+);dur=([\d.]+)/); return m ? [m[1], Math.round(+m[2])] : null; })
     .filter(Boolean).sort((a,b) => b[1] - a[1]);
-  const lines = ['⏱ 상세 로딩 진단  (탭하면 닫힘)', '─────────────',
-    `① 클라이언트 대기(TTFB): ${clientFetchMs}ms`];
+  const lines = [`⏱ 상세 진단 #${_diagClickN}  (탭하면 닫힘)`, '─────────────',
+    `대기(TTFB): ${clientFetchMs}ms`,
+    `HTTP: ${res.status} ${res.ok ? 'OK' : '오류'}`,
+    `vercel-cache: ${h('x-vercel-cache')}`,
+    `age: ${h('age')}`,
+    `vercel-id: ${h('x-vercel-id')}`];
   if(parts.length){
-    lines.push('② 서버 구간(ms):');
-    parts.slice(0, 10).forEach(([k, v]) => lines.push(`   ${k}: ${v}`));
+    lines.push('서버 구간(ms):');
+    parts.slice(0, 9).forEach(([k, v]) => lines.push(`  ${k}: ${v}`));
   } else {
-    lines.push('② 서버 Server-Timing 헤더 없음');
+    lines.push('Server-Timing: 없음');
+    // 헤더가 떨궈진 건지 확인용 — 응답 헤더 키 목록
+    const keys = [...res.headers.keys()];
+    lines.push('헤더키: ' + (keys.join(',') || '(없음)'));
   }
   box.textContent = lines.join('\n');
 }
@@ -5851,7 +5861,7 @@ async function showDetail(aptSeq, wpId){
     const routes2P = wpId2 ? fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}) : null;
 
     const detailRes = await detailP;
-    if(_DIAG) _showDiag(detailRes.headers.get('Server-Timing'), Math.round(performance.now() - _diagT0));
+    if(_DIAG) _showDiag(detailRes, Math.round(performance.now() - _diagT0));
     const detail = await detailRes.json();
     if(_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
     renderDetailPanel(detail, null, wpId);  // routes 로딩 표시로 즉시 렌더
