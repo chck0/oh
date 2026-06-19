@@ -13,7 +13,7 @@ import asyncio
 from fastapi import APIRouter, Depends, Response
 
 from app.db import get_db, connect as db_connect
-from app.portable import year_minus
+from app.portable import list_columns, year_minus
 from config import cfg
 
 router = APIRouter()
@@ -268,8 +268,11 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
                 timings[name + '_conn'] = _conn_ms
 
     # ── Phase 1: 기본 단지 정보 (umd_nm 확보 + early return) ──────
-    apt = await asyncio.to_thread(_run, 'apt', lambda c: c.execute("""
-        SELECT a.apt_nm, a.umd_nm, a."kaptAddr", a.kaptdaCnt, a.lat, a.lng,
+    def _b_apt(c):
+        apt_cols = set(list_columns(c, 'apartments'))
+        addr_select = 'a."kaptAddr"' if 'kaptAddr' in apt_cols else "'' AS \"kaptAddr\""
+        return c.execute(f"""
+        SELECT a.apt_nm, a.umd_nm, {addr_select}, a.kaptdaCnt, a.lat, a.lng,
                k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
                k.kaptDongCnt, k.kaptdEcnt,
                k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
@@ -280,7 +283,9 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
         FROM apartments a
         LEFT JOIN kapt_complexes k USING(kaptCode)
         WHERE a.apt_seq = ?
-    """, [apt_seq]).fetchone())
+        """, [apt_seq]).fetchone()
+
+    apt = await asyncio.to_thread(_run, 'apt', _b_apt)
     timings['phase1'] = round((time.time()-t0)*1000)
     if not apt:
         print(f'[detail {apt_seq}] 단지 없음 — timings: {timings}')
@@ -582,7 +587,7 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
     response.headers['Server-Timing'] = ', '.join(
         f'{k};dur={v}' for k, v in timings.items())
 
-    kapt_addr = apt.get('kaptAddr', '') or ''
+    kapt_addr = apt['kaptAddr'] if 'kaptAddr' in apt.keys() else ''
     gu_nm = next((t for t in kapt_addr.split() if t.endswith('구')), '')
 
     return {
