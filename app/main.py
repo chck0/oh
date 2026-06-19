@@ -208,6 +208,45 @@ def health():
     }
 
 
+# ── 워밍업 — 콜드스타트 완화 (데모 안전용) ──────────────────
+# 페이지 로드 시 클라이언트가 백그라운드로 호출(fire-and-forget).
+# pool 첫 커넥션(Supabase pgBouncer 핸드셰이크)과 인메모리 캐시를 미리 데워
+# 사용자가 주소 입력/검색하는 수 초 동안 다음 요청들이 '따뜻한' 상태가 되게 한다.
+# 실패해도 페이지엔 영향 없음(클라이언트가 결과를 무시).
+@app.get("/api/warmup")
+def warmup():
+    out: dict = {'ok': True, 'steps': {}}
+    if _IMPORT_ERROR or db_connect is None:
+        return {'ok': False, 'error': 'import_failed'}
+    t0 = time.time()
+    try:
+        conn = db_connect()
+        try:
+            conn.execute('SELECT 1').fetchone()          # pool 첫 커넥션 워밍
+            out['steps']['pool_ms'] = int((time.time() - t0) * 1000)
+            try:
+                from app.search import _get_cached_apts
+                from app.workplaces import _wp_mem_cache
+                from app.portable import list_columns
+                out['steps']['apts'] = len(_get_cached_apts(conn))
+                if not _wp_mem_cache:                     # 비어 있을 때만 전체 로드
+                    cols = list_columns(conn, 'workplaces')
+                    for row in conn.execute('SELECT * FROM workplaces').fetchall():
+                        d = dict(zip(cols, [row[c] for c in cols]))
+                        if d.get('address_input'):
+                            _wp_mem_cache[d['address_input']] = d
+                out['steps']['workplaces'] = len(_wp_mem_cache)
+            except Exception as e:
+                out['steps']['cache_warn'] = f'{type(e).__name__}: {e}'
+        finally:
+            conn.close()
+    except Exception as e:
+        out = {'ok': False, 'error': f'{type(e).__name__}: {e}'}
+    if isinstance(out, dict):
+        out['total_ms'] = int((time.time() - t0) * 1000)
+    return out
+
+
 # ── 진단 엔드포인트 — 환경/DB/외부API 상태 한 번에 확인 ──────
 @app.get("/api/_debug")
 def debug_status():

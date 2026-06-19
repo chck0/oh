@@ -886,6 +886,10 @@ function fillAddress(addr, targetId) {
   if (el) el.value = addr;
 }
 
+// 콜드스타트 완화: 페이지 진입 즉시 백그라운드 워밍업 핑(pool·캐시 예열).
+// 사용자가 주소 입력하는 동안 다음 요청들이 '따뜻한' 상태가 되게 한다.
+fetch('/api/warmup', {headers:{'ngrok-skip-browser-warning':'1'}}).catch(()=>{});
+
 // 페이지 로드 시 자동 실행
 loadRecentSearches();
 

@@ -3133,6 +3133,10 @@ if(params.get('min_price')) reqBody.min_price=parseInt(params.get('min_price'), 
 if(params.get('workplace_address_2')) reqBody.workplace_address_2 = params.get('workplace_address_2');
 const dualMode = !!reqBody.workplace_address_2;
 
+// 콜드스타트 완화: 결과 페이지 진입 즉시 백그라운드 워밍업 핑(pool·캐시 예열).
+// 사용자가 결과 보는 동안 상세/경로 클릭이 '따뜻한' 커넥션을 쓰도록 한다.
+fetch('/api/warmup', {headers:{'ngrok-skip-browser-warning':'1'}}).catch(()=>{});
+
 let resultData = null;
 let kakaoMap = null;
 let overlays = [];
