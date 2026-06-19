@@ -5836,12 +5836,11 @@ function initSortBar(cards) {
 
   document.getElementById('sort-bar').classList.add('visible');
 
-  // 정렬 패널 접힘 상태 초기화 (localStorage 기억, 기본 펼침)
+  // 정렬 패널: 결과 진입 시엔 항상 펼침으로 시작(사용자가 "왜 추천인지"부터 보게).
+  // 과거 접힘 선호(localStorage)는 존중하지 않는다 — 새 분석결과로 전환할 때마다 펼침.
   const _sp = document.getElementById('sort-panel');
   const _stb = document.getElementById('sort-toggle-btn');
-  let _open = true;
-  try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
-  // 결과 진입 시 정렬 기준은 기본 펼침(모바일 포함). 저장된 사용자 선호만 존중.
+  const _open = true;
   _sp.classList.toggle('open', _open);
   _stb.classList.toggle('open', _open);
   _stb.setAttribute('aria-expanded', String(_open));
