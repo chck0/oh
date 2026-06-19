@@ -354,7 +354,7 @@
       display: flex; flex-direction: column;
       overflow-x: hidden; overflow-y: auto;
       min-height: 0;
-      width: 300px; min-width: 220px; flex-shrink: 0;
+      width: 340px; min-width: 220px; flex-shrink: 0;
       border-right: 1px solid var(--color-border-strong);
     }
     .card-column {
@@ -488,7 +488,7 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    .adv-year-bar.in-range { background: var(--color-brand-primary); border-color: var(--color-brand-primary); }
+    .adv-year-bar.in-range { background: var(--color-brand-gradient); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -496,7 +496,7 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: var(--color-brand-primary); border-radius: 2px;
+      background: var(--color-brand-gradient); border-radius: 2px;
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -5395,6 +5395,22 @@ function renderListCard(c, wpId, cmpMode=false){
   </article>`;
 }
 
+// spec-26: 아파트 직접 검색 바 — 목록 탭 상단 공통 (기본·정렬·관심 뷰 동일)
+function _aptSearchBarHtml(){
+  return `
+    <div class="apt-search-bar">
+      <div class="apt-search-input-wrap">
+        <input type="text" id="apt-search-input"
+          placeholder="아파트 이름으로 직접 검색… (예: 래미안)"
+          maxlength="30" autocomplete="off"
+          oninput="_onAptSearchInput()"
+          onkeydown="if(event.key==='Escape')_hideAptDropdown()">
+        <div class="apt-search-dropdown" id="apt-search-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div id="apt-search-result"></div>`;
+}
+
 function renderCards(data){
   panelMode='list';
   const panel=document.getElementById('cards-panel');
@@ -5445,7 +5461,6 @@ function renderCards(data){
   const recommended = allCards.filter(c=>c.is_recommended);
   const rest        = allCards.filter(c=>!c.is_recommended);
   const wpId = data.wp_id;
-  const totalRest = rest.length || 1;
 
   // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
   const partialBanner = data.meta?.partial
@@ -5455,86 +5470,23 @@ function renderCards(data){
   let html = partialBanner;
 
   // spec-26: 아파트 직접 검색 바 (추천 목록 바로 위)
-  html += `
-    <div class="apt-search-bar">
-      <div class="apt-search-input-wrap">
-        <input type="text" id="apt-search-input"
-          placeholder="아파트 이름으로 직접 검색… (예: 래미안)"
-          maxlength="30" autocomplete="off"
-          oninput="_onAptSearchInput()"
-          onkeydown="if(event.key==='Escape')_hideAptDropdown()">
-        <div class="apt-search-dropdown" id="apt-search-dropdown" style="display:none"></div>
-      </div>
-    </div>
-    <div id="apt-search-result"></div>`;
+  html += _aptSearchBarHtml();
 
-  // 추천 요약 헤더만 표시 (개별 카드 없음)
+  // 추천 카드 — 요약 헤더 + 개별 카드 렌더
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
       <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가</p>
     </div>`;
+    html += recommended.map(c => renderRecCard(c, wpId)).join('');
   }
 
-  if(false && rest.length){
-    const buckets = data.buckets || [];
-    html += `<div class="bucket-divider">그 외 매물 ${rest.length}곳 (펼쳐서 보기)</div>`;
-    buckets.forEach(b=>{
-      const inBucket = rest.filter(c=>c.bucket_idx===b.idx);
-      if(!inBucket.length) return;
-
-      // 집계: 가격 최저/최고/평균
-      const prices = inBucket.map(c=>c.price_low).filter(p=>p>0);
-      const minP = prices.length ? Math.min(...prices) : 0;
-      const maxP = prices.length ? Math.max(...prices) : 0;
-      const avgP = prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : 0;
-
-      // 평형별 카운트
-      const byPt = {};
-      inBucket.forEach(c=>{ byPt[c.pyeong_type]=(byPt[c.pyeong_type]||0)+1; });
-      const ptChips = Object.entries(byPt)
-        .sort((a,b)=>a[0].localeCompare(b[0],'ko'))
-        .map(([pt, cnt])=>`<span class="bucket-pt-chip">${escHtml(pt)} <strong class="num">${cnt}</strong></span>`)
-        .join('');
-
-      // 전체 대비 비율
-      const ratioPct = Math.round(inBucket.length/totalRest*100);
-
-      // 본문 (펼친 상태)
-      const byPtList = {};
-      inBucket.forEach(c=>{ (byPtList[c.pyeong_type]=byPtList[c.pyeong_type]||[]).push(c); });
-      let body = '';
-      Object.entries(byPtList).sort((a,b)=>a[0].localeCompare(b[0],'ko')).forEach(([pt, items])=>{
-        items.sort((a,b)=>a.price_low - b.price_low);
-        body += `<div class="bucket-pt-label">${escHtml(pt)} · ${items.length}곳 · 가격순</div>`;
-        body += items.map(c=>renderListCard(c, wpId)).join('');
-      });
-
-      html += `<div class="bucket-section">
-        <div class="bucket-head" onclick="toggleBucket(this)">
-          <div class="bucket-head__top">
-            <div class="bucket-head__title">
-              <span class="bucket-head__time">${escHtml(b.label)}</span>
-              <span class="bucket-head__cnt num">${inBucket.length}곳</span>
-            </div>
-            <div class="bucket-head__chev">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-          </div>
-          ${prices.length ? `<div class="bucket-head__bottom">
-            <span class="bucket-head__price">
-              <strong class="num">${shortPrice(minP)}</strong><span class="price-sep">~</span><strong class="num">${shortPrice(maxP)}</strong>
-              <span style="color:var(--color-text-tertiary);margin-left:6px;">· 평균 <span class="num">${shortPrice(avgP)}</span></span>
-            </span>
-          </div>` : ''}
-          <div class="bucket-head__bottom">
-            <div class="bucket-head__pts">${ptChips}</div>
-          </div>
-          <div class="bucket-head__ratio"><div class="bucket-head__ratio-fill" style="width:${ratioPct}%"></div></div>
-        </div>
-        <div class="bucket-body">${body}</div>
-      </div>`;
-    });
+  // 그 외 매물 — 일반 리스트 카드 렌더
+  if(rest.length){
+    if(recommended.length){
+      html += `<div class="rec-section-head" style="margin-top:8px"><h3>그 외 ${rest.length}곳</h3></div>`;
+    }
+    html += rest.map(c => renderListCard(c, wpId)).join('');
   }
 
   panel.innerHTML = html;
@@ -6447,7 +6399,8 @@ function _renderSortedFlat(cards) {
   const panel = document.getElementById('cards-panel');
   const wpId = data.wp_id;
   const title = _currentFavTab === 'fav' ? '관심' : '전체';
-  let html = `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
+  let html = _aptSearchBarHtml();
+  html += `<div class="rec-section-head" style="margin-top:8px"><h3>${title} ${cards.length}곳</h3></div>`;
   html += cards.map(c => c.is_recommended ? renderRecCard(c, wpId) : renderListCard(c, wpId)).join('');
   panel.innerHTML = html;
   _updateListTabCount(cards.length);
