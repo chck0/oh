@@ -357,7 +357,7 @@ async def apt_detail(apt_seq: str, wp_id: int, response: Response):
             )
               AND walking_min <= ?
             ORDER BY distance_m
-            LIMIT 50
+            LIMIT 90
         """, [apt_seq, cfg.POI_WALK_MAX_MIN]).fetchall()
 
     # spec-43: slope·building_register를 독립 커넥션으로 진짜 병렬화. 누락 테이블은 무해 처리.
