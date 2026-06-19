@@ -5128,15 +5128,23 @@ async function showDetail(aptSeq, wpId){
     }
   }
 
+  clearRoutePolylines();   // 이전 경로선 제거
   try{
-    const [dRes, rRes] = await Promise.all([
+    const wpId2 = window._lastWpId2 || null;
+    const fetches = [
       fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
       fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-    ]);
-    const detail = await dRes.json();
-    const routes = (await rRes.json()).options || [];
+    ];
+    if(wpId2) fetches.push(fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}));
+    const results = await Promise.all(fetches);
+    const detail = await results[0].json();
+    const routes = (await results[1].json()).options || [];
+    const routes2 = wpId2 ? ((await results[2].json()).options || []) : null;
     currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
+    window._routeAptLatLng = (currentDetailCard && currentDetailCard.lat) ? {lat: currentDetailCard.lat, lng: currentDetailCard.lng} : null;
     renderDetailPanel(detail, routes, wpId);
+    drawRoutePolylines(routes, '#3B5BDB');       // 지도에 경로선 (W1)
+    if(routes2) drawRoutePolylines(routes2, '#0CA678');  // W2
   } catch(e){
     document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
