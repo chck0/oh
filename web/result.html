@@ -3430,7 +3430,27 @@ window.filterMapPins = function(seqs) {
   Object.entries(aptOverlayMap).forEach(([seq, overlay]) => {
     overlay.setMap(!seqSet || seqSet.has(seq) ? kakaoMap : null);
   });
+  _updatePinLabelsForFilter();
 };
+
+// 상세필터(평형 등)가 켜지면 핀 라벨을 '필터를 통과하는 평형 중 최저가' 기준으로 갱신.
+// 전체 최저가 평형이 필터에서 빠지면(예: 20평대 필터인데 10평대가 최저가) 핀이 10평대로
+// 잘못 보이던 문제 해소. 필터 해제 시 다시 전체 최저가로 복원.
+function _updatePinLabelsForFilter() {
+  const advActive = (typeof _isAdvFilterActive === 'function') && _isAdvFilterActive();
+  document.querySelectorAll('.pin[data-apt-seq]').forEach(pinEl => {
+    const group = aptGroupMap[pinEl.dataset.aptSeq];
+    if (!group || !group.cards || !group.cards.length) return;
+    let pool = advActive ? _filterCardsByAdv(group.cards) : group.cards;
+    if (!pool.length) return;  // 통과 카드 없으면 핀은 어차피 숨겨짐
+    pool = pool.slice().sort((a, b) => a.price_low - b.price_low);
+    const main = pool[0];
+    const subEl = pinEl.querySelector('.pin-sub');
+    if (subEl) subEl.textContent = main.pyeong_type || '';
+    const multiEl = pinEl.querySelector('.pin-multi');
+    if (multiEl) { multiEl.textContent = pool.length; multiEl.style.display = pool.length > 1 ? '' : 'none'; }
+  });
+}
 
 // spec-38: 선택 단지 핀 강조 (지도에서 식별)
 let _activeAptOverlay = null;
