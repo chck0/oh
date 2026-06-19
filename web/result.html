@@ -3867,51 +3867,57 @@ function _resolveByKeyword(ps, opts, poiName, sub, resolve) {
   }, opts);
 }
 
-// 사전 검증: 도보 시설 목록 중 클릭 시 지도에서 위치 확인되는 것만 남기고 좌표 캐시.
-//  아파트별 캐시로 재진입 시 재검색 안 함. 동시 4건씩, 빈 카테고리 헤더도 정리.
+// 사전 검증 후 "확인된 시설만" 렌더(깜빡임 없음). 검증 중엔 호출부의 스피너 유지.
+//  아파트별 캐시로 재진입 시 재검색 안 함. 동시 4건. 확인된 행엔 좌표 캐시(클릭 즉시 배치).
 const _poiResolveCache = {};   // aptSeq → { poiName: {x,y}|null }
-async function _pruneUnconfirmedPois(scopeEl, aptSeq) {
-  if (!scopeEl || !kakaoMap || !kakao.maps.services) return;
+async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
+  if (!bodyEl) return;
+  const _empty = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">시설 데이터 없음</p>';
+  if (!poi || !poi.length) { bodyEl.innerHTML = _empty; return; }
   const card = resultData && resultData.cards
     ? resultData.cards.find(c => c.apt_seq === aptSeq) : null;
-  if (!card || !card.lat || !card.lng) return;
+  // 검증 불가 환경(카카오 서비스/좌표 없음)에선 그냥 전체 표시(폴백)
+  if (!kakaoMap || !kakao.maps.services || !card || !card.lat || !card.lng) {
+    bodyEl.innerHTML = renderPOIHTML(poi); return;
+  }
   const loc = new kakao.maps.LatLng(card.lat, card.lng);
   const cache = (_poiResolveCache[aptSeq] = _poiResolveCache[aptSeq] || {});
-  const rows = [...scopeEl.querySelectorAll('.detail-poi-row')];
 
-  const resolveOne = async (row) => {
-    if (_currentAptSeq !== aptSeq) return;             // 다른 단지로 전환됨 → 중단
-    const name = row.dataset.poiName;
-    const distM = parseInt(row.dataset.distM, 10) || 0;
-    let doc = cache[name];
-    if (doc === undefined) {
-      const opts = { location: loc, radius: Math.min(Math.max(distM*2+1500, 2000), 8000), sort: kakao.maps.services.SortBy.DISTANCE };
-      doc = await _resolvePoiDoc(name, row.dataset.poiSub || '', opts);
-      cache[name] = doc;                                // null도 캐시(재검색 방지)
-    }
-    if (_currentAptSeq !== aptSeq) return;
-    if (doc) { row.dataset.poiX = doc.x; row.dataset.poiY = doc.y; }
-    else { row.remove(); }                              // 확인 안 되는 시설은 목록에서 제거
-  };
-
-  // 동시성 4
-  let idx = 0;
-  const worker = async () => { while (idx < rows.length) await resolveOne(rows[idx++]); };
-  await Promise.all([worker(), worker(), worker(), worker()]);
-
-  if (_currentAptSeq !== aptSeq) return;
-  // 비어버린 카테고리 헤더 제거
-  scopeEl.querySelectorAll('.dp-poi-category').forEach(h => {
-    let n = h.nextElementSibling, has = false;
-    while (n && !n.classList.contains('dp-poi-category')) {
-      if (n.classList && n.classList.contains('detail-poi-row')) { has = true; break; }
-      n = n.nextElementSibling;
-    }
-    if (!has) h.remove();
+  // renderPOIHTML과 동일한 표시 후보(allowedSubs 필터 + 상한)만 검증
+  const candidates = poi.slice(0, 30).filter(p => {
+    const allowed = POI_ALLOWED_SUBS[p.category];
+    return !allowed || allowed.has(p.sub_category);
   });
-  if (!scopeEl.querySelector('.detail-poi-row')) {
-    scopeEl.innerHTML = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">지도에서 위치 확인되는 도보 시설이 없어요.</p>';
+
+  const confirmedSet = new Set();
+  let idx = 0;
+  const worker = async () => {
+    while (idx < candidates.length) {
+      const p = candidates[idx++];
+      if (_currentAptSeq !== aptSeq) return;            // 다른 단지로 전환 → 중단
+      let doc = cache[p.name];
+      if (doc === undefined) {
+        const opts = { location: loc, radius: Math.min(Math.max((p.distance_m||0)*2+1500, 2000), 8000), sort: kakao.maps.services.SortBy.DISTANCE };
+        doc = await _resolvePoiDoc(p.name, p.sub_category || '', opts);
+        cache[p.name] = doc;                             // null도 캐시(재검색 방지)
+      }
+      if (doc) confirmedSet.add(p);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  if (_currentAptSeq !== aptSeq) return;                 // 그새 다른 단지 → 폐기
+
+  const confirmed = candidates.filter(p => confirmedSet.has(p));
+  if (!confirmed.length) {
+    bodyEl.innerHTML = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">지도에서 위치 확인되는 도보 시설이 없어요.</p>';
+    return;
   }
+  bodyEl.innerHTML = renderPOIHTML(confirmed);           // 확인된 것만 한 번에 렌더
+  // 확인 좌표를 각 행에 주입 → 클릭 시 재검색 없이 즉시 배치
+  bodyEl.querySelectorAll('.detail-poi-row').forEach(row => {
+    const doc = cache[row.dataset.poiName];
+    if (doc) { row.dataset.poiX = doc.x; row.dataset.poiY = doc.y; }
+  });
 }
 
 // spec-39/41: POI 마커 위치 신뢰성 헬퍼 ──────────────────────
@@ -5565,7 +5571,7 @@ function renderDetailPanel(d, routes, wpId){
         </div>
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
-      <div class="dp__section-body" id="dp-poi-body">${renderPOIHTML(d.poi)}</div>
+      <div class="dp__section-body" id="dp-poi-body"><div style="padding:14px;text-align:center;color:var(--color-text-tertiary);font-size:12px"><span class="spinner-mini"></span> 주변 시설 위치 확인 중…</div></div>
     </div>
 
     <!-- 건물 정보 (접힘) -->
@@ -5582,8 +5588,8 @@ function renderDetailPanel(d, routes, wpId){
     </div>
   `;
 
-  // 도보 시설 사전 검증: 클릭 시 지도에서 위치 확인되는 시설만 남기고 좌표 캐시(클릭 즉시 배치)
-  _pruneUnconfirmedPois(document.getElementById('dp-poi-body'), d.apt_seq);
+  // 도보 시설 사전 검증: 확인된 시설만 렌더(깜빡임 없음) + 좌표 캐시(클릭 즉시 배치)
+  _renderConfirmedPois(document.getElementById('dp-poi-body'), d.poi, d.apt_seq);
 
   // 차트 초기화 — 검색한 평형 탭 우선, 없으면 거래 많은 순 첫 번째
   detailChartData = d.chart;
