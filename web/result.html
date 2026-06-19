@@ -1957,10 +1957,12 @@
       border-width: 1.5px;
     }
     .dp-route__head {
-      display: flex; align-items: baseline; gap: 8px;
+      display: flex; flex-direction: column; align-items: stretch; gap: 9px;
       cursor: pointer;
       margin-bottom: 4px;
     }
+    .dp-route__topline { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .dp-route__sub { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; margin-left: 8px; }
     .dp-route__time {
       font-size: 18px; font-weight: 700;
       color: var(--color-brand-primary);
@@ -1983,6 +1985,32 @@
     .dp-route__body { display: none; padding-top: 8px; }
     .dp-route__body.open { display: block; }
     .dp-route.best .dp-route__chev { transform: rotate(180deg); }
+
+    /* 한 줄 여정 요약 바 + 펼침 타임라인 */
+    .dp-bar { display: flex; gap: 3px; height: 28px; }
+    .dp-seg {
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 700; padding: 0 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-width: 0; font-feature-settings: 'tnum';
+    }
+    .dp-tl-row {
+      display: flex; gap: 11px; padding: 9px 0;
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .dp-tl-row:last-child { border-bottom: none; }
+    .dp-tl-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+    .dp-tl-dot.walk { width: 9px; height: 9px; margin-top: 5px; margin-left: 2px; background: var(--color-text-tertiary); }
+    .dp-tl-info { flex: 1; min-width: 0; }
+    .dp-tl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .dp-tl-badge {
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 5px;
+    }
+    .dp-tl-time { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; }
+    .dp-tl-sta { font-size: 14px; color: var(--color-text-primary); line-height: 1.4; }
+    .dp-tl-sta .arr { color: var(--color-text-tertiary); margin: 0 5px; }
+    .dp-tl-walk { font-size: 13px; color: var(--color-text-secondary); }
 
     .dp-step {
       display: flex; align-items: center; gap: 10px;
@@ -2470,6 +2498,7 @@
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
     <div class="map-panel" style="position:relative">
+      <button id="route-back-btn" onclick="backToList()" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:50;display:none;align-items:center;gap:6px;background:#FF6A39;color:#fff;border:none;border-radius:20px;padding:10px 20px;font-size:14px;font-weight:700;box-shadow:0 3px 12px rgba(0,0,0,.3);cursor:pointer;">↩ 목록으로 돌아가기</button>
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근 시간</div>
@@ -3891,13 +3920,162 @@ const _routeCache = {};
 
 // ── 경로 폴리라인 렌더링 ──────────────────────────────────────
 let _routePolylines = [];
+let _routeSegments = [];   // [{pts:[LatLng], core:'#hex'}] 교통 구간(원본 좌표)
+let _routeWalks = [];      // [{a:LatLng, b:LatLng}] 도보 직선
+let _routePins = [];       // 승차/하차/환승역 핀
+let _lineListenerAdded = false;
 
 function clearRoutePolylines() {
   _routePolylines.forEach(p => p.setMap(null));
   _routePolylines = [];
+  _routePins.forEach(p => { if (p && p.ov) p.ov.setMap(null); });
+  _routePins = [];
+  _routeSegments = [];
+  _routeWalks = [];
 }
 
-// Douglas-Peucker 단순화 — 점 잔떨림·이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
+// 핀(위 동그라미·아래 뾰족) + 라벨(노선·역명). side로 라벨 높이 어긋나게(W1/W2 겹침 회피).
+function _addPin(latlng, color, lineText, stationText, side) {
+  const div = document.createElement('div');
+  div.style.cssText = 'pointer-events:none;display:flex;flex-direction:column;align-items:center;';
+  const tx = (side < 0) ? '54%' : '-54%';   // W1 왼쪽 / W2 오른쪽으로 비켜 겹침 회피(줌 무관)
+  let label = '';
+  if (lineText || stationText) {
+    label = '<div style="background:#fff;border:1px solid rgba(0,0,0,.14);border-radius:7px;padding:2px 7px;margin-bottom:3px;transform:translateX(' + tx + ');box-shadow:0 1px 3px rgba(0,0,0,.22);white-space:nowrap;font-family:sans-serif;line-height:1.3;">';
+    if (lineText) label += '<span style="color:' + color + ';font-weight:700;font-size:11px;">' + escHtml(lineText) + '</span>';
+    if (stationText) label += '<span style="color:#222;font-weight:500;font-size:12.5px;margin-left:' + (lineText ? '4px' : '0') + ';">' + escHtml(stationText) + '</span>';
+    label += '</div>';
+  }
+  div.innerHTML = label + '<svg width="20" height="27" viewBox="0 0 20 27" style="display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.3))"><path d="M10 26 C10 26 1 15.5 1 9.5 A9 9 0 1 1 19 9.5 C19 15.5 10 26 10 26 Z" fill="' + color + '" stroke="#FFFFFF" stroke-width="1.6"/><circle cx="10" cy="9.5" r="3.4" fill="#FFFFFF"/></svg>';
+  const ov = new kakao.maps.CustomOverlay({ position: latlng, content: div, xAnchor: 0.5, yAnchor: 1.0, zIndex: 7 });
+  ov.setMap(kakaoMap);
+  const _lw = ((lineText || '').length + (stationText || '').length) * 11 + 24;
+  _routePins.push({ ov: ov, latlng: latlng, side: side, w: _lw });
+}
+
+function _near2(a, b) {
+  const dx = a.getLng() - b.getLng(), dy = a.getLat() - b.getLat();
+  return dx * dx + dy * dy;
+}
+
+// 클릭한 아파트만 남기고 나머지는 지도에서 제거(setMap null — 줌해도 안 돌아옴). 복원은 unfocus.
+let _hiddenByFocus = [];
+function focusApt(aptSeq) {
+  const target = String(aptSeq);
+  _hiddenByFocus = [];
+  Object.entries(aptOverlayMap).forEach(([seq, ov]) => {
+    if (!ov) return;
+    if (seq === target) { if (ov.setZIndex) ov.setZIndex(60); return; }
+    let shown = true;
+    try { if (ov.getMap && !ov.getMap()) shown = false; } catch (e) {}
+    if (shown) { ov.setMap(null); _hiddenByFocus.push(ov); }
+  });
+  const btn = document.getElementById('route-back-btn'); if (btn) btn.style.display = 'flex';
+}
+function unfocusApts() {
+  _hiddenByFocus.forEach(ov => { try { ov.setMap(kakaoMap); } catch (e) {} });
+  _hiddenByFocus = [];
+  try { Object.values(aptOverlayMap).forEach(ov => { if (ov && ov.setZIndex) ov.setZIndex(3); }); } catch (e) {}
+  const btn = document.getElementById('route-back-btn'); if (btn) btn.style.display = 'none';
+}
+
+// 화면(픽셀) 좌표 기준 Douglas-Peucker — 현재 줌에서 안 보이는 굴곡만 제거
+function _dpScreen(P, eps) {
+  const n = P.length;
+  const keep = new Array(n).fill(false);
+  keep[0] = keep[n - 1] = true;
+  const stack = [[0, n - 1]];
+  while (stack.length) {
+    const sg = stack.pop(), a = sg[0], b = sg[1];
+    const ax = P[a][0], ay = P[a][1], bx = P[b][0], by = P[b][1];
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9;
+    let md = 0, mi = -1;
+    for (let i = a + 1; i < b; i++) {
+      const t = ((P[i][0] - ax) * dx + (P[i][1] - ay) * dy) / L2;
+      const cx = ax + t * dx, cy = ay + t * dy;
+      const d = Math.hypot(P[i][0] - cx, P[i][1] - cy);
+      if (d > md) { md = d; mi = i; }
+    }
+    if (md > eps && mi > -1) { keep[mi] = true; stack.push([a, mi], [mi, b]); }
+  }
+  return keep;
+}
+
+// 화면좌표 점열을 수직으로 offsetPx 만큼 밀어 LatLng로 — 두 루트 겹침 시 좌우 분리.
+// 진행방향과 무관하게 '일관된 측'으로 밀어야 반대방향 공유구간도 양쪽으로 갈림.
+function _offsetLatLngs(P, side, offsetPx, proj) {
+  const n = P.length, out = [];
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    let px = -dy, py = dx;  // 수직벡터
+    if (px < -1e-6 || (Math.abs(px) < 1e-6 && py < 0)) { px = -px; py = -py; }  // 일관 측
+    const ox = P[i][0] + side * offsetPx * px, oy = P[i][1] + side * offsetPx * py;
+    out.push(proj.coordsFromContainerPoint(new kakao.maps.Point(ox, oy)));
+  }
+  return out;
+}
+
+// 줌별 화면픽셀 단순화 + 좌우 오프셋 렌더 → 정확도 유지 + 매끈 + 겹쳐도 둘 다 보임
+function _renderRouteLines() {
+  _routePolylines.forEach(p => p.setMap(null));
+  _routePolylines = [];
+  if (!kakaoMap) return;
+  let proj = null;
+  try { proj = kakaoMap.getProjection(); } catch (e) { proj = null; }
+  const EPS = 2.0, OFF = 4.5;  // 단순화 픽셀 / 두 루트 좌우 분리 픽셀
+  _routeSegments.forEach(seg => {
+    let drawPts;
+    let P = null;
+    if (proj) {
+      try { P = seg.pts.map(ll => { const q = proj.containerPointFromCoords(ll); return [q.x, q.y]; }); }
+      catch (e) { P = null; }
+    }
+    if (P && P.length >= 2) {
+      let Pk = P;
+      if (P.length > 2) { const keep = _dpScreen(P, EPS); Pk = P.filter((_, i) => keep[i]); }
+      try { drawPts = smoothPath(_offsetLatLngs(Pk, seg.side, OFF, proj), 2); }
+      catch (e) { drawPts = smoothPath(seg.pts, 2); }
+    } else {
+      drawPts = smoothPath(seg.pts, 2);
+    }
+    _addRouteLine(drawPts, 11, '#1A1A1A');      // 검은 테두리
+    _addRouteLine(drawPts, 8, seg.core, 'solid'); // 본선
+  });
+  _routeWalks.forEach(w => {
+    let a = w.a, b = w.b;
+    if (proj) {
+      try {
+        const pa = proj.containerPointFromCoords(w.a), pb = proj.containerPointFromCoords(w.b);
+        const off = _offsetLatLngs([[pa.x, pa.y], [pb.x, pb.y]], w.side, OFF, proj);
+        a = off[0]; b = off[1];
+      } catch (e) {}
+    }
+    _addRouteLine([a, b], 6, '#27439C', 'shortdot');
+  });
+  _declutterPins();
+}
+
+// 줌별로 라벨 박스가 겹치면 우선순위 낮은 핀 숨김(다른 역끼리 크라우딩 해소).
+// W1/W2 같은역은 좌(W1)/우(W2)라 박스가 안 겹쳐 둘 다 유지됨.
+function _declutterPins() {
+  if (!kakaoMap || !_routePins.length) return;
+  let proj; try { proj = kakaoMap.getProjection(); } catch (e) { return; }
+  const kept = [], G = 4;
+  _routePins.forEach(p => {
+    let sp; try { sp = proj.containerPointFromCoords(p.latlng); } catch (e) { if (p.ov) p.ov.setMap(kakaoMap); return; }
+    let left, right;
+    if (p.side > 0) { right = sp.x - G; left = right - p.w; }
+    else { left = sp.x + G; right = left + p.w; }
+    const top = sp.y - 51, bot = sp.y - 25;
+    const hit = kept.some(r => !(right < r.left || left > r.right || bot < r.top || top > r.bot));
+    if (hit) { if (p.ov) p.ov.setMap(null); }
+    else { if (p.ov) p.ov.setMap(kakaoMap); kept.push({ left: left, right: right, top: top, bot: bot }); }
+  });
+}
+
+// Douglas-Peucker 단순화 — OSM 점 잔떨림·역쌍 이음새 꺾임을 제거해 두꺼운 선이 매끈해짐
 function simplifyPath(pts, tol) {
   if (pts.length < 3) return pts;
   const P = pts.map(p => [p.getLng(), p.getLat()]);
@@ -3947,14 +4125,15 @@ function _addRouteLine(path, weight, col, style) {
   _routePolylines.push(line);
 }
 
-// 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
+// 4겹 선: 흰 외곽 → 루트색(목적지) → 흰 구분 → 옅은 수단색. 도보는 루트색 점선.
+// 개발용 가시화: 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
 //   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
 // 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
   const sd = window._lastSearchData || {};
-  const wp = (color === '#059669') ? sd.workplace_2 : sd.workplace;
+  const wp = (color === '#0CA678') ? sd.workplace_2 : sd.workplace;
   const wpLL = (wp && wp.lat) ? new kakao.maps.LatLng(wp.lat, wp.lng) : null;
   const apt = window._routeAptLatLng;
   const aptLL = (apt && apt.lat) ? new kakao.maps.LatLng(apt.lat, apt.lng) : null;
@@ -3969,22 +4148,39 @@ function drawRoutePolylines(options, color) {
       const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
       return isNaN(lat) || isNaN(lng) ? [] : [new kakao.maps.LatLng(lat, lng)];
     });
-    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null };
+    return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null, line: step.line, from: step.from, to: step.to };
   });
 
-  // 2) 교통(버스·지하철) — 수단별 스타일
+  // 2) 교통 — 검은 테두리 + 루트색 본선. 수단 구분: 지하철=진한색 / 버스=연한색
+  const BUS_SHADE = { '#3B5BDB': '#91A7FF', '#0CA678': '#5BE0BA' };
+  const side = (color === '#3B5BDB') ? 1 : -1;   // W1=+ / W2=- 좌우 분리용
   parsed.forEach(s => {
     if (s.walk || !s.pts) return;
-    const clean = smoothPath(simplifyPath(s.pts, 0.00013), 3);
-    if (s.type === '지하철') {
-      _addRouteLine(clean, 9, '#FFFFFF');          // 흰 케이싱
-      _addRouteLine(clean, 6, color, 'solid');     // 지하철 = 실선
-    } else {
-      _addRouteLine(clean, 6, color, 'longdash');  // 버스 = longdash
-    }
+    const core = (s.type === '버스') ? (BUS_SHADE[color] || color) : color;
+    _routeSegments.push({ pts: s.pts, core: core, side: side });
   });
 
-  // 3) 도보 — 직선 점선(양 끝점 브리지)
+  // 2.5) 핀+라벨: 각 교통 구간 승차·하차. 환승(가까운 점)은 승차정보로 합쳐 표시.
+  const pinColor = (color === '#3B5BDB') ? '#3B5BDB' : '#0CA678';
+  const _stn = (sub, nm) => (sub && nm && !/역$/.test(nm)) ? (nm + '역') : (nm || '');
+  const entries = [];
+  parsed.forEach(s => {
+    if (s.walk || !s.pts) return;
+    const sub = s.type === '지하철';
+    const lineLabel = sub ? (s.line || '').replace(/^수도권\s*/, '') : ((s.line || '') + '번');
+    entries.push({ ll: s.pts[0], line: lineLabel, st: _stn(sub, s.from) });
+    entries.push({ ll: s.pts[s.pts.length - 1], line: lineLabel, st: _stn(sub, s.to) });
+  });
+  const kept = [];
+  entries.forEach(e => {
+    if (kept.length && _near2(kept[kept.length - 1].ll, e.ll) < 0.0008 * 0.0008) {
+      kept[kept.length - 1] = e;   // 환승: 나중(승차) 정보로 교체
+    } else { kept.push(e); }
+  });
+  // 역명 라벨은 하단 패널(요약 바·타임라인)이 대체 → 지도엔 승·하차 점만 깔끔하게
+  kept.forEach(e => _addPin(e.ll, pinColor, '', '', side));
+
+  // 3) 도보 직선 수집(양 끝점 브리지)
   parsed.forEach((s, i) => {
     if (!s.walk) return;
     let A = null;
@@ -3995,8 +4191,15 @@ function drawRoutePolylines(options, color) {
     for (let j = i + 1; j < parsed.length; j++)
       if (!parsed[j].walk && parsed[j].pts) { B = parsed[j].pts[0]; break; }
     if (!B) B = wpLL;
-    if (A && B) _addRouteLine([A, B], 4.5, color, 'shortdash');  // 도보 점선
+    if (A && B) _routeWalks.push({ a: A, b: B, side: side });
   });
+
+  // 4) 줌별 단순화로 렌더 + 줌/이동 시 재렌더(모든 줌에서 매끈, 정확도 유지)
+  _renderRouteLines();
+  if (!_lineListenerAdded) {
+    kakao.maps.event.addListener(kakaoMap, 'idle', _renderRouteLines);
+    _lineListenerAdded = true;
+  }
 }
 
 async function openRoute(aptSeq, wpId, aptNm, event) {
@@ -4004,6 +4207,7 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
   const _ac = (window._lastCards || (typeof resultData !== 'undefined' && resultData?.cards) || []).find(c => c.apt_seq === aptSeq);
   window._routeAptLatLng = (_ac && _ac.lat) ? { lat: _ac.lat, lng: _ac.lng } : null;
   clearRoutePolylines();
+  focusApt(aptSeq);
   const overlay = document.getElementById('route-overlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -4036,15 +4240,16 @@ async function openRoute(aptSeq, wpId, aptNm, event) {
       `<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
     return;
   }
+  drawRoutePolylines(routes1, '#3B5BDB');
+  if (routes2) drawRoutePolylines(routes2, '#0CA678');
   _renderRoutePanel(routes1, routes2);
-  drawRoutePolylines(routes1, '#9F1239');
-  if (routes2) drawRoutePolylines(routes2, '#059669');
 }
 
 function closeRoute() {
   document.getElementById('route-overlay').classList.add('hidden');
   document.body.style.overflow = '';
   clearRoutePolylines();
+  unfocusApts();
 }
 
 function closeRouteOnBg(event) {
@@ -4056,13 +4261,13 @@ function _renderRoutePanel(routes1, routes2) {
   let html = '';
   if (hasDual) {
     html += `<div class="route-panel__wp-tabs">
-      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">내 직장</button>
-      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">배우자 직장</button>
+      <button class="route-panel__wp-tab active" id="route-wp1-tab" onclick="switchRouteWp(1)">W1 직장</button>
+      <button class="route-panel__wp-tab" id="route-wp2-tab" onclick="switchRouteWp(2)">W2 직장</button>
     </div>`;
   }
-  html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1)}</div>`;
+  html += `<div id="route-wp1-pane">${_routeOptionsHtml(routes1, '#3B5BDB')}</div>`;
   if (hasDual) {
-    html += `<div id="route-wp2-pane" style="display:none">${_routeOptionsHtml(routes2)}</div>`;
+    html += `<div id="route-wp2-pane" style="display:none">${_routeOptionsHtml(routes2, '#0CA678')}</div>`;
   }
   document.getElementById('route-body').innerHTML = html;
 }
@@ -4076,38 +4281,112 @@ function switchRouteWp(wp) {
   if (p2) p2.style.display = wp === 2 ? '' : 'none';
 }
 
-function _routeOptionsHtml(options) {
-  if (!options || !options.length)
-    return '<div style="padding:16px;color:var(--color-text-secondary);text-align:center;">경로 정보가 없어요</div>';
-  const LABELS = { WALK: '도보', BUS: '버스', SUBWAY: '지하철' };
-  const ICONS  = { WALK: '🚶', BUS: '🚌', SUBWAY: '🚇' };
-  return options.map((opt, idx) => {
-    const isBest = idx === 0;
-    const modeStr = [
-      opt.subway_cnt > 0 ? `지하철 ${opt.subway_cnt}회` : null,
-      opt.bus_cnt    > 0 ? `버스 ${opt.bus_cnt}회`     : null,
-    ].filter(Boolean).join(' + ') || '도보';
-    const stepsHtml = (opt.steps || []).map(s => {
-      const tk  = (s.type || '').toUpperCase();
-      const cls = tk === 'WALK' ? 'walk' : tk === 'BUS' ? 'bus' : 'subway';
-      const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
-      const staHtml  = (s.from || s.to)
-        ? `<div class="dp-step-sta">${escHtml(s.from || '')} → ${escHtml(s.to || '')}</div>` : '';
-      return `<div class="dp-step">
-        <div class="dp-step-type ${cls}">${ICONS[tk] || '→'} ${LABELS[tk] || tk}</div>
-        <div class="dp-step-info">${lineHtml}${staHtml}</div>
-        <div class="dp-step-time">${s.time_min != null ? s.time_min + '분' : ''}</div>
-      </div>`;
-    }).join('');
-    return `<div class="dp-route${isBest ? ' best' : ''}">
-      <div class="dp-route__head" onclick="this.nextElementSibling.classList.toggle('open'); const chev=this.querySelector('.dp-route__chev'); chev.style.transform=this.nextElementSibling.classList.contains('open')?'rotate(180deg)':''">
-        <div class="dp-route__time">${opt.total_time_min}<span class="unit">분</span></div>
-        <div class="dp-route__mode">${escHtml(modeStr)}</div>
-        <span class="dp-route__chev" style="${isBest?'transform:rotate(180deg)':''}">▼</span>
+// 지하철 호선명 → 공식 노선색 (수도권). 없으면 null → 호출부에서 테마색 대체.
+function _subwayColor(raw) {
+  const s = (raw || '').replace(/^수도권\s*/, '').replace(/[\s.]/g, '');
+  const M = {
+    '1호선':'#0052A4','2호선':'#009D3E','3호선':'#EF7C1C','4호선':'#00A5DE',
+    '5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BFA31D',
+    '경의중앙선':'#77C4A3','수인분당선':'#F5A200','신분당선':'#D31145',
+    '공항철도':'#0090D2','인천공항철도':'#0090D2','경춘선':'#0C8E72','경강선':'#003DA5',
+    '신림선':'#6789CA','우이신설선':'#B0CE18','서해선':'#8FC31F','김포골드라인':'#AD8605',
+    '의정부경전철':'#FDA600','에버라인':'#56AB2D','인천1호선':'#7CA8D5','인천2호선':'#ED8B00','GTX-A':'#9A6292',
+  };
+  if (M[s]) return M[s];
+  const m = s.match(/^([1-9])호선/);
+  if (m && M[m[1] + '호선']) return M[m[1] + '호선'];
+  for (const k of ['수인분당선','신분당선','경의중앙선','인천공항철도','공항철도','경춘선','경강선',
+                   '신림선','우이신설선','서해선','김포골드라인','의정부경전철','에버라인','인천1호선','인천2호선'])
+    if (s.includes(k)) return M[k];
+  if (s.includes('GTX')) return M['GTX-A'];
+  return null;
+}
+
+// 배경색 명도로 글자색(흑/백) 결정 — 노란 노선(수인분당 등)에 흰 글씨 방지.
+function _textOn(hex) {
+  if (!hex || hex[0] !== '#') return '#222';
+  const c = hex.slice(1);
+  const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#1a1a1a' : '#fff';
+}
+
+// step → 막대/배지 라벨. 지하철=호선명, 버스=번호, 도보=도보.
+function _segLabel(s) {
+  if (s.type === '도보' || s.type === '환승도보') return '도보';
+  if (s.type === '지하철') return (s.line || '').replace(/^수도권\s*/, '').replace(/\s/g, '') || '지하철';
+  return (s.line || '').replace(/\s*\(.*$/, '') || '버스';   // 버스 번호(괄호 설명 제거)
+}
+
+// 교통 구간 색 — 지하철=공식색(없으면 테마), 버스=테마색(임시), 도보=null(회색).
+function _segColor(s, theme) {
+  if (s.type === '도보' || s.type === '환승도보') return null;
+  if (s.type === '지하철') return _subwayColor(s.line) || theme;
+  return theme;   // 버스 — 종류 데이터 없어 임시 테마색
+}
+
+// 펼침 토글(셰브론 회전). best는 CSS로 펼친 상태라 명시 rotate(0deg)로 접음.
+function _rtToggle(head) {
+  const body = head.nextElementSibling;
+  const open = body.classList.toggle('open');
+  const chev = head.querySelector('.dp-route__chev');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// 경로 1개 = 한 줄 요약 바(헤드) + 펼침 타임라인(바디). theme=직장색(W1/W2).
+function routeCardHTML(opt, isBest, theme) {
+  theme = theme || '#3B5BDB';
+  const steps = opt.steps || [];
+
+  // 요약 바: 시간 있는 모든 구간을 시간비율 폭으로
+  const bar = steps.filter(s => s.time_min != null && s.time_min > 0).map(s => {
+    const t = s.time_min, c = _segColor(s, theme);
+    const bg = c || 'var(--color-bg-muted)';
+    const fg = c ? _textOn(c) : 'var(--color-text-secondary)';
+    const extra = c ? '' : 'min-width:54px;';
+    return `<div class="dp-seg" style="flex:${Math.max(t, 2)};background:${bg};color:${fg};${extra}">${escHtml(_segLabel(s))} (${t}분)</div>`;
+  }).join('');
+
+  // 펼침 타임라인
+  const tl = steps.map(s => {
+    if (s.type === '도보' || s.type === '환승도보') {
+      const dist = s.dist_m ? ` · 약 ${s.dist_m.toLocaleString()}m` : '';
+      return `<div class="dp-tl-row"><span class="dp-tl-dot walk"></span><div class="dp-tl-info"><span class="dp-tl-walk">도보 ${s.time_min || 0}분${dist}</span></div></div>`;
+    }
+    const c = _segColor(s, theme), fg = _textOn(c);
+    const sta = (s.from || s.to)
+      ? `<div class="dp-tl-sta">${escHtml(s.from || '')}<span class="arr">→</span>${escHtml(s.to || '')}</div>` : '';
+    return `<div class="dp-tl-row">
+      <span class="dp-tl-dot" style="background:${c}"></span>
+      <div class="dp-tl-info">
+        <div class="dp-tl-head"><span class="dp-tl-badge" style="background:${c};color:${fg}">${escHtml(_segLabel(s))}</span><span class="dp-tl-time">${s.time_min != null ? s.time_min + '분' : ''}</span></div>
+        ${sta}
       </div>
-      <div class="dp-route__body${isBest ? ' open' : ''}">${stepsHtml}</div>
     </div>`;
   }).join('');
+
+  const transit = (opt.bus_cnt || 0) + (opt.subway_cnt || 0);
+  const walkMin = steps.filter(s => s.type === '도보' || s.type === '환승도보').reduce((a, s) => a + (s.time_min || 0), 0);
+  const subParts = [];
+  if (transit > 1) subParts.push(`환승 ${transit - 1}회`);
+  if (walkMin) subParts.push(`도보 ${walkMin}분`);
+  const sub = subParts.length ? `<span class="dp-route__sub">${subParts.join(' · ')}</span>` : '';
+
+  return `<div class="dp-route${isBest ? ' best' : ''}">
+    <div class="dp-route__head" onclick="_rtToggle(this)">
+      <div class="dp-route__topline">
+        <span><span class="dp-route__time">${opt.total_time_min}<span class="unit">분</span></span>${sub}</span>
+        <span class="dp-route__chev" style="${isBest ? 'transform:rotate(180deg)' : ''}">⌄</span>
+      </div>
+      <div class="dp-bar">${bar}</div>
+    </div>
+    <div class="dp-route__body${isBest ? ' open' : ''}">${tl}</div>
+  </div>`;
+}
+
+function _routeOptionsHtml(options, theme) {
+  if (!options || !options.length)
+    return '<div style="padding:16px;color:var(--color-text-secondary);text-align:center;">경로 정보가 없어요</div>';
+  return options.map((opt, idx) => routeCardHTML(opt, idx === 0, theme || '#3B5BDB')).join('');
 }
 
 // 추천 카드 (긴 코멘트형)
@@ -4871,6 +5150,8 @@ function backToList(){
   document.getElementById('detail-resize-handle').style.display = 'none';
   document.querySelector('.detail-panel__tabs').style.display = '';
   clearActiveAptPin();  // spec-38: 핀 강조 해제
+  clearRoutePolylines();   // 경로선 제거
+  unfocusApts();           // 아파트 핀 모두 다시 표시 + 버튼 숨김
   if(resultData) renderCards(resultData);
 }
 
@@ -5113,55 +5394,18 @@ function renderBuildingGrid(b){
 }
 
 // ── 경로 아코디언 ─────────────────────────────────────────────
-function routeModeLabel(o){
-  const bc=o.bus_cnt||0, sc=o.subway_cnt||0;
-  if(sc&&!bc) return sc>1?`지하철 ${sc}회환승`:'지하철 직통';
-  if(bc&&!sc) return bc>1?`버스 ${bc}회환승`:'버스 직통';
-  return `버스${bc}+지하철${sc}`;
-}
-function renderStepHTML(s){
-  const typeKo = s.type;
-  const cls = typeKo==='도보'||typeKo==='환승도보' ? 'walk'
-             : typeKo==='버스' ? 'bus'
-             : typeKo==='지하철' ? 'subway' : '';
-  const lineHtml = s.line ? `<div class="dp-step-line">${escHtml(s.line)}</div>` : '';
-  const staHtml  = (s.from||s.to)
-    ? `<div class="dp-step-sta">${escHtml(s.from||'')} → ${escHtml(s.to||'')}</div>` : '';
-  const distHtml = s.dist_m ? `<span style="font-size:11px;color:#aaa"> ${s.dist_m.toLocaleString()}m</span>` : '';
-  return `<div class="dp-step">
-    <span class="dp-step-type ${cls}">${escHtml(typeKo)}</span>
-    <span class="dp-step-info">${lineHtml}${staHtml}</span>
-    <span class="dp-step-time">${s.time_min}분${distHtml}</span>
-  </div>`;
-}
-function renderSingleRoute(o, isFirst){
-  const steps = o.steps.map(renderStepHTML).join('');
-  const modeLabel = routeModeLabel(o);
-  return `<div class="dp-route${isFirst?' best':''}">
-    <div class="dp-route__head" onclick="toggleRoute(this)">
-      <span class="dp-route__time"><span class="num">${o.total_time_min}</span><span class="unit">분</span></span>
-      <span class="dp-route__mode">${modeLabel}</span>
-      <span class="dp-route__chev">${isFirst?'▲':'▼'}</span>
-    </div>
-    <div class="dp-route__body ${isFirst?'open':''}">${steps}</div>
-  </div>`;
-}
-function renderRoutesHTML(routes){
+function renderRoutesHTML(routes, theme){
+  theme = theme || '#3B5BDB';
   if(!routes.length) return '<p style="font-size:13px;color:#aaa;">경로 정보 없음</p>';
-  if(routes.length===1) return renderSingleRoute(routes[0], true);
+  if(routes.length===1) return routeCardHTML(routes[0], true, theme);
 
-  const first = renderSingleRoute(routes[0], true);
-  const rest = routes.slice(1).map(o=>renderSingleRoute(o,false)).join('');
+  const first = routeCardHTML(routes[0], true, theme);
+  const rest = routes.slice(1).map(o=>routeCardHTML(o,false,theme)).join('');
   return `${first}
     <button class="dp-route-more-btn" onclick="toggleMoreRoutes(this)">
       다른 경로 보기 (${routes.length-1}개) ▼
     </button>
     <div id="dp-routes-extra">${rest}</div>`;
-}
-function toggleRoute(el){
-  const body = el.nextElementSibling;
-  const open = body.classList.toggle('open');
-  el.querySelector('.dp-route__chev').textContent = open?'▲':'▼';
 }
 function toggleMoreRoutes(btn){
   const extra = document.getElementById('dp-routes-extra');
