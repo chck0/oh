@@ -10,7 +10,7 @@ search 모듈을 import하지 않으므로 순환 의존 없음.
 """
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from app.db import get_db, connect as db_connect
 from app.portable import year_minus
@@ -123,19 +123,24 @@ def _routes_query(conn) -> str:
 
 # ── GET /api/apt/{apt_seq}/routes ────────────────────────────
 @router.get("/apt/{apt_seq}/routes")
-def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
+def apt_routes(apt_seq: str, wp_id: int, response: Response, conn=Depends(get_db)):
     """단지 상세 — 모든 경로 옵션 (rank 1~N)"""
+    import time
+    timings = {}
+    t0 = time.time()
     # 뷰(v_apt_transit_options)는 SQLite 쿼리 플래너가 apt_seq 조건을 뷰 안으로 밀어넣지 못해
     # 전체 스캔 → 7초 소요. 2단계 조회(grid_key 먼저 → transit_routes 직접)로 0.001초로 단축.
     gk_row = conn.execute(
         "SELECT grid_key FROM apartments WHERE apt_seq=?", [apt_seq]
     ).fetchone()
+    timings['grid_key'] = round((time.time()-t0)*1000)
     if not gk_row or not gk_row['grid_key']:
         return {'apt_seq': apt_seq, 'wp_id': wp_id, 'options': []}
 
     rows = conn.execute(
         _routes_query(conn), [gk_row['grid_key'], wp_id]
     ).fetchall()
+    timings['routes_q'] = round((time.time()-t0)*1000)
 
     options = []
     for r in rows:
@@ -161,6 +166,10 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
             'subway_cnt': r['subway_cnt'],
             'steps': steps,
         })
+    timings['TOTAL'] = round((time.time()-t0)*1000)
+    print(f'[routes {apt_seq} wp{wp_id}] timings(ms): {timings} opts={len(options)}')
+    response.headers['Server-Timing'] = ', '.join(
+        f'{k};dur={v}' for k, v in timings.items())
     return {'apt_seq': apt_seq, 'wp_id': wp_id, 'options': options}
 
 
@@ -218,7 +227,7 @@ def search_apt_lookup(
 
 # ── GET /api/apt/{apt_seq}/detail ────────────────────────────
 @router.get("/apt/{apt_seq}/detail")
-async def apt_detail(apt_seq: str, wp_id: int):
+async def apt_detail(apt_seq: str, wp_id: int, response: Response):
     """
     상세 패널용 — 거래내역 + POI + 시세차트 데이터
     통근경로는 /routes 엔드포인트를 별도 호출
@@ -226,138 +235,127 @@ async def apt_detail(apt_seq: str, wp_id: int):
     쿼리 7개 병렬화: apt(umd_nm 의존) 먼저 1회, 나머지 6개를 asyncio.gather로
     동시 실행. 각 쿼리는 풀에서 커넥션을 빌려 독립 스레드에서 돈다.
     (Tokyo 시절 순차 ~480ms → 병렬 ~2회 왕복으로 단축)
+
+    구간별 계측: 각 쿼리의 '커넥션 획득(_conn)'과 '총 소요'를 분리 측정해
+    timings에 기록하고, Server-Timing 응답 헤더로 노출한다(브라우저 DevTools →
+    Network → detail 요청 → Timing 에서 구간별 ms 확인 가능).
     """
     import time
+    import threading
     timings = {}
+    _tlock = threading.Lock()
     t0 = time.time()
     threshold_year = year_minus(3)  # 3년 전 YYYY
 
-    # ── Phase 1: 기본 단지 정보 (umd_nm 확보 + early return) ──────
-    def _q_apt():
+    # 쿼리 1건을 돌리며 커넥션 획득 시간과 총 소요를 분리 계측하는 헬퍼.
+    # body(conn)을 호출하고 timings[name]=총ms, timings[name+'_conn']=커넥션ms 기록.
+    def _run(name, body):
+        _ta = time.time()
         c = db_connect()
+        _conn_ms = round((time.time() - _ta) * 1000)
         try:
-            return c.execute("""
-                SELECT a.apt_nm, a.umd_nm, a."kaptAddr", a.kaptdaCnt, a.lat, a.lng,
-                       k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
-                       k.kaptDongCnt, k.kaptdEcnt,
-                       k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
-                       k.codeHeatNm, k.codeHallNm,
-                       k.kaptBcompany,
-                       k.groundElChargerCnt, k.undergroundElChargerCnt,
-                       k.subwayLine, k.subwayStation, k.kaptdWtimesub
-                FROM apartments a
-                LEFT JOIN kapt_complexes k USING(kaptCode)
-                WHERE a.apt_seq = ?
-            """, [apt_seq]).fetchone()
+            return body(c)
         finally:
             c.close()
-    apt = await asyncio.to_thread(_q_apt)
-    timings['apt_info'] = round((time.time()-t0)*1000)
+            with _tlock:
+                timings[name] = round((time.time() - _ta) * 1000)
+                timings[name + '_conn'] = _conn_ms
+
+    # ── Phase 1: 기본 단지 정보 (umd_nm 확보 + early return) ──────
+    apt = await asyncio.to_thread(_run, 'apt', lambda c: c.execute("""
+        SELECT a.apt_nm, a.umd_nm, a."kaptAddr", a.kaptdaCnt, a.lat, a.lng,
+               k.kaptUsedate, k.kaptTopFloor, k.kaptBaseFloor,
+               k.kaptDongCnt, k.kaptdEcnt,
+               k.kaptdCccnt, k.kaptdPcnt, k.kaptdPcntu,
+               k.codeHeatNm, k.codeHallNm,
+               k.kaptBcompany,
+               k.groundElChargerCnt, k.undergroundElChargerCnt,
+               k.subwayLine, k.subwayStation, k.kaptdWtimesub
+        FROM apartments a
+        LEFT JOIN kapt_complexes k USING(kaptCode)
+        WHERE a.apt_seq = ?
+    """, [apt_seq]).fetchone())
+    timings['phase1'] = round((time.time()-t0)*1000)
     if not apt:
         print(f'[detail {apt_seq}] 단지 없음 — timings: {timings}')
         return {}
     umd_nm = apt['umd_nm']
 
-    # ── Phase 2: 나머지 6개 쿼리 병렬 (각자 풀 커넥션) ────────────
-    def _q_fc():
-        c = db_connect()
-        try:
-            return c.execute(
-                'SELECT pyeong_type, comment FROM apt_pt_friend_comment '
-                'WHERE apt_seq=? AND wp_id=? ORDER BY LENGTH(comment) DESC',
-                [apt_seq, wp_id]
-            ).fetchall()
-        finally:
-            c.close()
+    # ── Phase 2: 나머지 8개 쿼리 병렬 (각자 풀 커넥션) ────────────
+    def _b_fc(c):
+        return c.execute(
+            'SELECT pyeong_type, comment FROM apt_pt_friend_comment '
+            'WHERE apt_seq=? AND wp_id=? ORDER BY LENGTH(comment) DESC',
+            [apt_seq, wp_id]
+        ).fetchall()
 
-    def _q_tabs():
-        c = db_connect()
-        try:
-            return c.execute("""
-                SELECT pyeong_type, pyeong,
-                       COUNT(*) AS deal_count,
-                       MIN(deal_amount_int) AS price_min,
-                       MAX(deal_amount_int) AS price_max
-                FROM trade_history
-                WHERE apt_seq = ?
-                  AND deal_year >= ?
-                GROUP BY pyeong_type, pyeong
-                ORDER BY deal_count DESC
-            """, [apt_seq, threshold_year]).fetchall()
-        finally:
-            c.close()
+    def _b_tabs(c):
+        return c.execute("""
+            SELECT pyeong_type, pyeong,
+                   COUNT(*) AS deal_count,
+                   MIN(deal_amount_int) AS price_min,
+                   MAX(deal_amount_int) AS price_max
+            FROM trade_history
+            WHERE apt_seq = ?
+              AND deal_year >= ?
+            GROUP BY pyeong_type, pyeong
+            ORDER BY deal_count DESC
+        """, [apt_seq, threshold_year]).fetchall()
 
-    def _q_chart():
-        c = db_connect()
-        try:
-            return c.execute("""
-                SELECT pyeong_type, pyeong, deal_year, deal_month,
-                       ROUND(AVG(deal_amount_int)) AS avg_amount,
-                       COUNT(*) AS cnt
-                FROM trade_history
-                WHERE apt_seq = ?
-                  AND deal_year >= ?
-                GROUP BY pyeong_type, pyeong, deal_year, deal_month
-                ORDER BY pyeong_type, deal_year, deal_month
-            """, [apt_seq, threshold_year]).fetchall()
-        finally:
-            c.close()
+    def _b_chart(c):
+        return c.execute("""
+            SELECT pyeong_type, pyeong, deal_year, deal_month,
+                   ROUND(AVG(deal_amount_int)) AS avg_amount,
+                   COUNT(*) AS cnt
+            FROM trade_history
+            WHERE apt_seq = ?
+              AND deal_year >= ?
+            GROUP BY pyeong_type, pyeong, deal_year, deal_month
+            ORDER BY pyeong_type, deal_year, deal_month
+        """, [apt_seq, threshold_year]).fetchall()
 
-    def _q_dong():
-        c = db_connect()
-        try:
-            return c.execute("""
-                SELECT pyeong_type, deal_year, deal_month,
-                       ROUND(AVG(deal_amount_int)) AS avg_amount,
-                       COUNT(*) AS cnt
-                FROM trade_history
-                WHERE umd_nm = ?
-                  AND deal_year >= ?
-                GROUP BY pyeong_type, deal_year, deal_month
-                ORDER BY pyeong_type, deal_year, deal_month
-            """, [umd_nm, threshold_year]).fetchall()
-        finally:
-            c.close()
+    def _b_dong(c):
+        return c.execute("""
+            SELECT pyeong_type, deal_year, deal_month,
+                   ROUND(AVG(deal_amount_int)) AS avg_amount,
+                   COUNT(*) AS cnt
+            FROM trade_history
+            WHERE umd_nm = ?
+              AND deal_year >= ?
+            GROUP BY pyeong_type, deal_year, deal_month
+            ORDER BY pyeong_type, deal_year, deal_month
+        """, [umd_nm, threshold_year]).fetchall()
 
-    def _q_trades():
-        c = db_connect()
-        try:
-            return c.execute("""
-                SELECT deal_year, deal_month, deal_day,
-                       pyeong, pyeong_type, deal_amount_int, floor
-                FROM trade_recent
-                WHERE apt_seq = ?
-                UNION
-                SELECT deal_year, deal_month, deal_day,
-                       pyeong, pyeong_type, deal_amount_int, floor
-                FROM trade_history
-                WHERE apt_seq = ?
-                  AND deal_year >= ?
-                ORDER BY deal_year DESC, deal_month DESC, deal_day DESC
-                LIMIT 20
-            """, [apt_seq, apt_seq, threshold_year]).fetchall()
-        finally:
-            c.close()
+    def _b_trades(c):
+        return c.execute("""
+            SELECT deal_year, deal_month, deal_day,
+                   pyeong, pyeong_type, deal_amount_int, floor
+            FROM trade_recent
+            WHERE apt_seq = ?
+            UNION
+            SELECT deal_year, deal_month, deal_day,
+                   pyeong, pyeong_type, deal_amount_int, floor
+            FROM trade_history
+            WHERE apt_seq = ?
+              AND deal_year >= ?
+            ORDER BY deal_year DESC, deal_month DESC, deal_day DESC
+            LIMIT 20
+        """, [apt_seq, apt_seq, threshold_year]).fetchall()
 
-    def _q_poi():
-        c = db_connect()
-        try:
-            return c.execute("""
-                SELECT poi_lclas_cd, poi_mlsfc_cd, poi_nm, distance_m, walking_min
-                FROM apt_walking_poi
-                WHERE kaptCode = (
-                    SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1
-                )
-                  AND walking_min <= ?
-                ORDER BY distance_m
-                LIMIT 50
-            """, [apt_seq, cfg.POI_WALK_MAX_MIN]).fetchall()
-        finally:
-            c.close()
+    def _b_poi(c):
+        return c.execute("""
+            SELECT poi_lclas_cd, poi_mlsfc_cd, poi_nm, distance_m, walking_min
+            FROM apt_walking_poi
+            WHERE kaptCode = (
+                SELECT kaptCode FROM apartments WHERE apt_seq = ? LIMIT 1
+            )
+              AND walking_min <= ?
+            ORDER BY distance_m
+            LIMIT 50
+        """, [apt_seq, cfg.POI_WALK_MAX_MIN]).fetchall()
 
-    # spec-43: _q_infra 분리 — slope·building_register를 독립 커넥션으로 진짜 병렬화
-    def _q_slope():
-        c = db_connect()
+    # spec-43: slope·building_register를 독립 커넥션으로 진짜 병렬화. 누락 테이블은 무해 처리.
+    def _b_slope(c):
         try:
             return c.execute(
                 'SELECT apt_slope_avg FROM apt_slope WHERE kaptCode = '
@@ -366,11 +364,8 @@ async def apt_detail(apt_seq: str, wp_id: int):
             ).fetchone()
         except Exception:
             return None
-        finally:
-            c.close()
 
-    def _q_br():
-        c = db_connect()
+    def _b_br(c):
         try:
             return c.execute(
                 'SELECT vlRat, bcRat, strctCdNm, useAprDay FROM building_register '
@@ -380,19 +375,17 @@ async def apt_detail(apt_seq: str, wp_id: int):
             ).fetchall()
         except Exception:
             return []
-        finally:
-            c.close()
 
     (fc_rows, pyeong_tabs, chart_rows, dong_avg_rows, trade_rows, poi_rows,
      slope_row, br_rows) = await asyncio.gather(
-        asyncio.to_thread(_q_fc),
-        asyncio.to_thread(_q_tabs),
-        asyncio.to_thread(_q_chart),
-        asyncio.to_thread(_q_dong),
-        asyncio.to_thread(_q_trades),
-        asyncio.to_thread(_q_poi),
-        asyncio.to_thread(_q_slope),
-        asyncio.to_thread(_q_br),
+        asyncio.to_thread(_run, 'fc', _b_fc),
+        asyncio.to_thread(_run, 'tabs', _b_tabs),
+        asyncio.to_thread(_run, 'chart', _b_chart),
+        asyncio.to_thread(_run, 'dong', _b_dong),
+        asyncio.to_thread(_run, 'trades', _b_trades),
+        asyncio.to_thread(_run, 'poi', _b_poi),
+        asyncio.to_thread(_run, 'slope', _b_slope),
+        asyncio.to_thread(_run, 'br', _b_br),
     )
     infra = (slope_row, br_rows)
     timings['parallel_8q'] = round((time.time()-t0)*1000)
@@ -558,6 +551,9 @@ async def apt_detail(apt_seq: str, wp_id: int):
 
     timings['TOTAL'] = round((time.time()-t0)*1000)
     print(f'[detail {apt_seq}] timings(ms): {timings}')
+    # 브라우저 DevTools에서 구간별 ms 확인용 (Network → 요청 → Timing/Headers)
+    response.headers['Server-Timing'] = ', '.join(
+        f'{k};dur={v}' for k, v in timings.items())
 
     kapt_addr = apt.get('kaptAddr', '') or ''
     gu_nm = next((t for t in kapt_addr.split() if t.endswith('구')), '')
