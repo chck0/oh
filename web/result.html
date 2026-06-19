@@ -330,7 +330,7 @@
       border-right: 1px solid var(--color-border-strong);
     }
     .card-column {
-      width: 360px; min-width: 260px; flex-shrink: 0;
+      width: 340px; min-width: 220px; flex-shrink: 0;
       display: flex; flex-direction: column;
       overflow-x: hidden; overflow-y: hidden;
       min-height: 0;
@@ -350,18 +350,16 @@
       color: var(--color-text-secondary); z-index: 2;
     }
     .card-column-close:hover { background: #f5f5f5; color: var(--color-text-primary); }
-    .card-column-open-btn {
-      display: none; position: absolute; left: 0; top: 50%;
-      transform: translateY(-50%);
-      width: 20px; height: 48px; border-radius: 0 6px 6px 0;
-      border: 1px solid var(--color-border-default); border-left: none;
-      background: white; cursor: pointer; font-size: 11px;
-      align-items: center; justify-content: center;
-      color: var(--color-text-secondary); z-index: 10;
-      writing-mode: vertical-rl;
+    .cards-show-btn {
+      display: none;
+      font-size: 11px; font-weight: 600;
+      color: var(--color-brand-primary);
+      background: none; border: 1px solid var(--color-brand-primary);
+      border-radius: 4px; padding: 2px 7px;
+      cursor: pointer; white-space: nowrap;
     }
-    .card-column-open-btn:hover { background: #f5f5f5; }
-    .result-layout.cards-hidden .card-column-open-btn { display: flex; }
+    .cards-show-btn:hover { background: #fdf2f1; }
+    .result-layout.cards-hidden .cards-show-btn { display: inline-flex; }
     .cards-panel {
       overflow-y: auto;
       background: white;
@@ -511,6 +509,7 @@
       border-top: 1px solid var(--color-border-strong);
       overflow-y: auto;
       max-height: 60vh;
+      overscroll-behavior: contain;
     }
     .sort-panel-body.collapsed {
       display: none;
@@ -2356,7 +2355,10 @@
 
       <div class="sort-panel" id="sort-panel">
         <div class="sort-panel-header" onclick="toggleSortPanel()" style="cursor:pointer">
-          <span class="sort-panel-title">정렬 기준</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="sort-panel-title">정렬 기준</span>
+            <button class="cards-show-btn" id="cards-show-btn" onclick="event.stopPropagation();toggleCardColumn()" title="매물 목록 열기">매물보기</button>
+          </div>
           <div style="display:flex;align-items:center;gap:6px">
             <button class="sort-panel-reset" id="sort-panel-reset-btn" onclick="event.stopPropagation();resetSort()" style="display:none">✕ 초기화</button>
             <span class="sort-panel-arrow" id="sort-panel-arrow">▲</span>
@@ -2450,7 +2452,6 @@
     <div class="resize-handle" id="resize-handle"></div>
     <!-- 우측: 지도 -->
     <div class="map-panel" style="position:relative">
-      <button class="card-column-open-btn" id="card-column-open-btn" onclick="toggleCardColumn()" title="목록 열기">목록</button>
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근시간</div>
@@ -4104,8 +4105,7 @@ function splitPrice(manwon){
 // 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
 function renderListCard(c, wpId, cmpMode=false){
   const thisYear = THIS_YEAR;
-  let metaParts = [escHtml(c.umd_nm), `${c.kaptdaCnt.toLocaleString()}세대`];
-  if(c.build_year) metaParts.push(`${c.build_year}년 (${thisYear-c.build_year}년차)`);
+  let metaParts = [escHtml(c.umd_nm)];
 
   const comment = c.friend_comment || '';
   const commentHtml = comment
@@ -4127,8 +4127,8 @@ function renderListCard(c, wpId, cmpMode=false){
     ${_lcCmpHtml}
     <button class="fav-btn${favActiveL}" onclick="toggleFav('${escHtml(c.apt_seq)}','${escHtml(c.pyeong_type||'')}',this,event)" title="${favTitleL}">♥</button>
     <div class="list-card__top">
-      <div class="list-card__name">${escHtml(c.apt_nm)}<span class="pt">${escHtml(c.pyeong_type||'')}</span></div>
-      <div class="list-card__meta">${metaParts.join(' · ')}</div>
+      <div class="list-card__name">${escHtml(c.apt_nm)}</div>
+      <div class="list-card__meta">${[escHtml(c.pyeong_type||''), ...metaParts].join(' · ')}</div>
     </div>
     <div class="list-card__right">
       <div class="list-card__price num">${shortPrice(c.price_low)}${_priceChgBadge(c.price_chg_6m_pct)}</div>
@@ -4210,7 +4210,7 @@ function renderCards(data){
   if(recommended.length){
     html += `<div class="rec-section-head">
       <h3>추천 ${recommended.length}곳</h3>
-      <p>통근시간대 × 평형 매트릭스에서 각 슬롯별 최저가 단지예요.</p>
+      <p>통근시간 × 평형 매트릭스에서 슬롯별 최저가</p>
     </div>`;
   }
 
