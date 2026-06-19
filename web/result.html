@@ -4344,6 +4344,16 @@ function _resolveByKeyword(ps, opts, poiName, sub, resolve) {
   }, opts);
 }
 
+// 두 좌표(위경도) 직선거리(m) — 카카오 검증 좌표로 POI 거리 보정에 사용
+function _haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+const _POI_WALK_M_PER_MIN = 75;  // 백엔드 WALK_M_PER_MIN와 동일
+
 // 사전 검증 후 "확인된 시설만" 렌더(깜빡임 없음). 검증 중엔 호출부의 스피너 유지.
 //  아파트별 캐시로 재진입 시 재검색 안 함. 동시 4건. 확인된 행엔 좌표 캐시(클릭 즉시 배치).
 const _poiResolveCache = {};   // aptSeq → { poiName: {x,y}|null }
@@ -4389,6 +4399,16 @@ async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
     bodyEl.innerHTML = '<p style="font-size:13px;color:var(--color-text-tertiary);padding:4px 0;">지도에서 위치 확인되는 도보 시설이 없어요.</p>';
     return;
   }
+  // 검증된 실제 좌표로 거리 재계산 — 저장된 distance_m가 부정확한 경우(예: 0분·3m) 보정
+  confirmed.forEach(p => {
+    const doc = cache[p.name];
+    if (!doc) return;
+    const vd = _haversineM(card.lat, card.lng, parseFloat(doc.y), parseFloat(doc.x));
+    if (isFinite(vd) && vd > 0) {
+      p._verDistM = Math.round(vd);
+      p._verWalkMin = Math.max(1, Math.round(vd / _POI_WALK_M_PER_MIN));
+    }
+  });
   bodyEl.innerHTML = renderPOIHTML(confirmed);           // 확인된 것만 한 번에 렌더
   // 확인 좌표를 각 행에 주입 → 클릭 시 재검색 없이 즉시 배치
   bodyEl.querySelectorAll('.detail-poi-row').forEach(row => {
@@ -5668,6 +5688,7 @@ async function showDetail(aptSeq, wpId){
   _currentAptSeq = aptSeq;
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
+  switchLeftTab('detail');  // 아파트 클릭(목록·지도 핀) 시 좌측 상세 탭 자동 전환
 
   // 사이드 패널 열기
   const sidePanel = document.getElementById('detail-panel');
@@ -6214,19 +6235,24 @@ function renderPOIHTML(poi){
     if(!groups[key]) groups[key]=[];
     groups[key].push(p);
   });
+  // 표시 거리/도보: 검증 보정값(_verDistM) 우선, 없으면 저장값. 도보는 거리에서 일관 산출(최소 1분)
+  const effDist = p => Math.round((p._verDistM != null ? p._verDistM : p.distance_m) || 0);
+  const effWalk = p => (p._verWalkMin != null ? p._verWalkMin
+                        : Math.max(1, Math.round(effDist(p) / _POI_WALK_M_PER_MIN)));
   const orderedKeys = [...POI_ORDER.filter(k=>groups[k]), ...(groups['기타']?['기타']:[])];
   return orderedKeys.map(key=>{
     const catName = POI_CAT_NAME[key]||'기타';
-    return `<div class="dp-poi-category">${catName}</div>${groups[key].map(p=>`
+    const rows = groups[key].slice().sort((a,b)=>effDist(a)-effDist(b));  // 보정 거리 기준 가까운 순
+    return `<div class="dp-poi-category">${catName}</div>${rows.map(p=>`
       <div class="dp-poi-row detail-poi-row"
         data-poi-name="${escHtml(p.name||'')}"
         data-poi-cat="${escHtml(p.category||'')}"
         data-poi-sub="${escHtml(p.sub_category||'')}"
-        data-walk-min="${p.walking_min||0}"
-        data-dist-m="${Math.round(p.distance_m||0)}"
+        data-walk-min="${effWalk(p)}"
+        data-dist-m="${effDist(p)}"
         onclick="togglePoiMarker(this)">
         <div class="dp-poi-name">${escHtml(p.name)}${POI_SUB_LABEL[p.sub_category] ? ` <span class="dp-poi-tag">(${POI_SUB_LABEL[p.sub_category]})</span>` : ''}</div>
-        <div class="dp-poi-dist"><span class="num">도보 ${p.walking_min}분</span> · <span class="num">${Math.round(p.distance_m||0)}m</span></div>
+        <div class="dp-poi-dist"><span class="num">도보 ${effWalk(p)}분</span> · <span class="num">${effDist(p) >= 1000 ? (effDist(p)/1000).toFixed(1)+'km' : effDist(p)+'m'}</span></div>
       </div>`).join('')}`;
   }).join('');
 }
