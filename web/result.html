@@ -4117,8 +4117,8 @@ function _renderRouteLines() {
     } else {
       drawPts = smoothPath(seg.pts, 2);
     }
-    _addRouteLine(drawPts, 11, '#1A1A1A');      // 검은 테두리
-    _addRouteLine(drawPts, 8, seg.core, 'solid'); // 본선
+    _addRouteLine(drawPts, 10, '#FFFFFF');        // 흰 케이싱
+    _addRouteLine(drawPts, 6, seg.core, 'solid'); // 본선
   });
   _routeWalks.forEach(w => {
     let a = w.a, b = w.b;
@@ -4129,7 +4129,7 @@ function _renderRouteLines() {
         a = off[0]; b = off[1];
       } catch (e) {}
     }
-    _addRouteLine([a, b], 6, '#27439C', 'shortdot');
+    _addRouteLine([a, b], 3, '#AAAAAA', 'shortdot');
   });
   _declutterPins();
 }
@@ -4202,10 +4202,7 @@ function _addRouteLine(path, weight, col, style) {
   _routePolylines.push(line);
 }
 
-// 4겹 선: 흰 외곽 → 루트색(목적지) → 흰 구분 → 옅은 수단색. 도보는 루트색 점선.
-// 개발용 가시화: 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
-//   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
-// 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
+// 네이버지도 스타일: 흰 케이싱 + 노선색. 도보는 ODsay 형상이 없어 회색 점선 직선으로 잇는다.
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
@@ -4228,12 +4225,11 @@ function drawRoutePolylines(options, color) {
     return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null, line: step.line, from: step.from, to: step.to };
   });
 
-  // 2) 교통 — 검은 테두리 + 루트색 본선. 수단 구분: 지하철=진한색 / 버스=연한색
-  const BUS_SHADE = { '#3B5BDB': '#91A7FF', '#0CA678': '#5BE0BA' };
+  // 2) 교통 — 흰 케이싱 + 노선색 본선
   const side = (color === '#3B5BDB') ? 1 : -1;   // W1=+ / W2=- 좌우 분리용
   parsed.forEach(s => {
     if (s.walk || !s.pts) return;
-    const core = (s.type === '버스') ? (BUS_SHADE[color] || color) : color;
+    const core = (s.type === '버스') ? '#0064FF' : (_subwayColor(s.line) || '#888888');
     _routeSegments.push({ pts: s.pts, core: core, side: side });
   });
 
@@ -4254,8 +4250,7 @@ function drawRoutePolylines(options, color) {
       kept[kept.length - 1] = e;   // 환승: 나중(승차) 정보로 교체
     } else { kept.push(e); }
   });
-  // 역명 라벨은 하단 패널(요약 바·타임라인)이 대체 → 지도엔 승·하차 점만 깔끔하게
-  kept.forEach(e => _addPin(e.ll, pinColor, '', '', side));
+  kept.forEach(e => _addPin(e.ll, pinColor, e.line, e.st, side));
 
   // 3) 도보 직선 수집(양 끝점 브리지)
   parsed.forEach((s, i) => {
