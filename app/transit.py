@@ -198,7 +198,11 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     cache_inserts, route_inserts = [], []
     now = time.strftime('%Y-%m-%d %H:%M:%S')
 
-    connector = aiohttp.TCPConnector(limit=30, ttl_dns_cache=300)
+    # 동시 연결 한도 = 키수 × 키당동시성(=ROUND_SIZE)에 자동 비례 + 약간의 여유.
+    # 고정 30이면 키를 늘려도(예: 15키×4=60) 30에서 큐잉돼 증설 효과가 반감된다.
+    # 키를 추가하면 코드 수정 없이 동시성이 따라 오른다. 하한 30 보장.
+    conn_limit = max(30, ROUND_SIZE + 4)
+    connector = aiohttp.TCPConnector(limit=conn_limit, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
         for ri in range(rounds):
             batch = cells_to_fetch[ri*ROUND_SIZE:(ri+1)*ROUND_SIZE]
