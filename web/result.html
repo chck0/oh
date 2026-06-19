@@ -5157,25 +5157,55 @@ async function showDetail(aptSeq, wpId){
   }
 
   clearRoutePolylines();   // 이전 경로선 제거
+  const wpId2 = window._lastWpId2 || null;
+  currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
+  window._routeAptLatLng = (currentDetailCard && currentDetailCard.lat) ? {lat: currentDetailCard.lat, lng: currentDetailCard.lng} : null;
+
+  // 캐시 적중 시 즉시 렌더 (재클릭 빠름)
+  const cacheKey = `${aptSeq}:${wpId}`;
+  const cached = _showDetailCache[cacheKey];
+  if(cached){
+    renderDetailPanel(cached.detail, cached.routes, wpId);
+    drawRoutePolylines(cached.routes, '#3B5BDB');
+    if(cached.routes2) drawRoutePolylines(cached.routes2, '#0CA678');
+    return;
+  }
+
   try{
-    const wpId2 = window._lastWpId2 || null;
-    const fetches = [
-      fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-      fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}}),
-    ];
-    if(wpId2) fetches.push(fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}));
-    const results = await Promise.all(fetches);
-    const detail = await results[0].json();
-    const routes = (await results[1].json()).options || [];
-    const routes2 = wpId2 ? ((await results[2].json()).options || []) : null;
-    currentDetailCard = resultData?.cards.find(c=>c.apt_seq===aptSeq) || {};
-    window._routeAptLatLng = (currentDetailCard && currentDetailCard.lat) ? {lat: currentDetailCard.lat, lng: currentDetailCard.lng} : null;
-    renderDetailPanel(detail, routes, wpId);
-    drawRoutePolylines(routes, '#3B5BDB');       // 지도에 경로선 (W1)
-    if(routes2) drawRoutePolylines(routes2, '#0CA678');  // W2
+    // detail·routes 동시 시작하되, 빠른 detail이 오면 패널 즉시 렌더.
+    // 느린 routes(대중교통 경로 계산)는 백그라운드로 통근 섹션만 채운다.
+    const detailP = fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
+    const routesP = fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
+    const routes2P = wpId2 ? fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}) : null;
+
+    const detail = await (await detailP).json();
+    if(_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
+    renderDetailPanel(detail, null, wpId);  // routes 로딩 표시로 즉시 렌더
+
+    // routes는 백그라운드에서 도착하면 통근 섹션 + 지도 경로선만 갱신
+    Promise.all([routesP, routes2P].filter(Boolean)).then(async (rs)=>{
+      const routes = (await rs[0].json()).options || [];
+      const routes2 = wpId2 && rs[1] ? ((await rs[1].json()).options || []) : null;
+      _showDetailCache[cacheKey] = {detail, routes, routes2};
+      if(_currentAptSeq !== aptSeq) return; // 다른 단지로 이동했으면 화면 갱신 안 함
+      _updateRoutesSection(routes);
+      drawRoutePolylines(routes, '#3B5BDB');       // 지도에 경로선 (W1)
+      if(routes2) drawRoutePolylines(routes2, '#0CA678');  // W2
+    }).catch(()=>{ if(_currentAptSeq===aptSeq) _updateRoutesSection([]); });
   } catch(e){
     document.getElementById('detail-body').innerHTML=`<div style="padding:20px;color:red;">오류: ${escHtml(e.message)}</div>`;
   }
+}
+
+// showDetail 진행형 렌더용: detail/routes 캐시 + 통근 섹션 갱신 헬퍼
+const _showDetailCache = {};
+function _updateRoutesSection(routes){
+  const prev = document.getElementById('dp-route-preview');
+  const body = document.getElementById('dp-route-body');
+  if(prev) prev.innerHTML = routes.length
+    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
+    : '경로 정보 없음';
+  if(body) body.innerHTML = renderRoutesHTML(routes);
 }
 
 function backToList(){
@@ -5188,7 +5218,12 @@ function backToList(){
   clearActiveAptPin();  // spec-38: 핀 강조 해제
   clearRoutePolylines();   // 경로선 제거
   unfocusApts();           // 아파트 핀 모두 다시 표시 + 버튼 숨김
-  if(resultData) renderCards(resultData);
+  // 닫을 때 정렬 상태 유지: 정렬 선택이 있으면 정렬된 리스트로 복원(칩 선택 배지도 보존),
+  // 없으면 기본 렌더. renderCards는 정렬칩을 재생성해 선택을 지우므로 정렬 시엔 호출 안 함.
+  if(resultData){
+    if(_sortChecked && _sortChecked.length) applySortOrder();
+    else renderCards(resultData);
+  }
 }
 
 function renderDetailPanel(d, routes, wpId){
@@ -5243,10 +5278,12 @@ function renderDetailPanel(d, routes, wpId){
     ? `<div class="dp__commute">${escHtml(cardRef.transit_summary)} · 총 <span class="num">${cardRef.total_time_min}</span>분</div>`
     : '';
 
-  // ── 섹션 프리뷰 한 줄 만들기
-  const routePreview = routes.length
-    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
-    : '경로 정보 없음';
+  // ── 섹션 프리뷰 한 줄 만들기 (routes===null = 아직 로딩 중)
+  const routePreview = routes === null
+    ? '<span class="spinner-mini"></span>경로 불러오는 중…'
+    : (routes.length
+      ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
+      : '경로 정보 없음');
 
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
@@ -5311,11 +5348,13 @@ function renderDetailPanel(d, routes, wpId){
         <div class="dp__section-icon ic-commute">${ICON_CLOCK}</div>
         <div class="dp__section-titlebox">
           <span class="dp__section-title">통근 경로</span>
-          <span class="dp__section-preview">${routePreview}</span>
+          <span class="dp__section-preview" id="dp-route-preview">${routePreview}</span>
         </div>
         <div class="dp__section-chev">${ICON_CHEV}</div>
       </div>
-      <div class="dp__section-body">${renderRoutesHTML(routes)}</div>
+      <div class="dp__section-body" id="dp-route-body">${routes === null
+        ? '<div style="padding:18px;text-align:center;color:var(--color-text-tertiary);font-size:12px"><span class="spinner-mini"></span>경로 계산 중…</div>'
+        : renderRoutesHTML(routes)}</div>
     </div>
 
     <!-- 시세 분석 -->
@@ -5686,14 +5725,7 @@ function initSortBar(cards) {
   const _stb = document.getElementById('sort-toggle-btn');
   let _open = true;
   try { _open = (localStorage.getItem('sortPanelOpen') ?? '1') === '1'; } catch (e) {}
-  // spec-12 #1: 모바일 첫 진입은 정렬패널 접힘(카드 공간 확보). 저장된 선호 있으면 존중.
-  // 가드로 데스크톱 경로는 무변경.
-  try {
-    if (window.matchMedia('(max-width: 767px)').matches &&
-        localStorage.getItem('sortPanelOpen') === null) {
-      _open = false;
-    }
-  } catch (e) {}
+  // 결과 진입 시 정렬 기준은 기본 펼침(모바일 포함). 저장된 사용자 선호만 존중.
   _sp.classList.toggle('open', _open);
   _stb.classList.toggle('open', _open);
   _stb.setAttribute('aria-expanded', String(_open));
