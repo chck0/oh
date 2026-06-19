@@ -2327,8 +2327,14 @@
       /* B. 친구 채팅 패널 → 전폭 (데스크톱 440px 사이드패널은 무손상) */
       .chat-panel {
         width: 100%; min-width: 0; max-width: none; border-radius: 0;
+        /* iOS Safari 100vh 이슈: 하단 툴바 영역 포함분만큼 입력창이 잘림 → dvh로 보이는 뷰포트 기준 */
+        height: calc(100dvh - 54px);
       }
       .chat-panel__resize { display: none; }   /* 모바일에선 가로 리사이즈 불필요 */
+      /* 홈 인디케이터(노치 폰) 안전영역만큼 입력창 하단 여백 확보 */
+      .chat-panel__input-row {
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      }
     }
   </style>
 </head>
