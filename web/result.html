@@ -3884,7 +3884,7 @@ async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
   const cache = (_poiResolveCache[aptSeq] = _poiResolveCache[aptSeq] || {});
 
   // renderPOIHTML과 동일한 표시 후보(allowedSubs 필터 + 상한)만 검증
-  const candidates = poi.slice(0, 30).filter(p => {
+  const candidates = poi.slice(0, 60).filter(p => {
     const allowed = POI_ALLOWED_SUBS[p.category];
     return !allowed || allowed.has(p.sub_category);
   });
@@ -3904,7 +3904,7 @@ async function _renderConfirmedPois(bodyEl, poi, aptSeq) {
       if (doc) confirmedSet.add(p);
     }
   };
-  await Promise.all([worker(), worker(), worker(), worker()]);
+  await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
   if (_currentAptSeq !== aptSeq) return;                 // 그새 다른 단지 → 폐기
 
   const confirmed = candidates.filter(p => confirmedSet.has(p));
@@ -5807,7 +5807,7 @@ const POI_SUB_LABEL = { D01: '지하철역', D02: '버스정류장' };
 function renderPOIHTML(poi){
   if(!poi||!poi.length) return '<p style="font-size:13px;color:var(--color-text-tertiary);">시설 데이터 없음</p>';
   const groups = {};
-  poi.slice(0,30).forEach(p=>{
+  poi.slice(0,60).forEach(p=>{
     // 카테고리별 서브카테고리 필터 (데이터 품질 이슈 제거)
     const allowedSubs = POI_ALLOWED_SUBS[p.category];
     if(allowedSubs && !allowedSubs.has(p.sub_category)) return;
