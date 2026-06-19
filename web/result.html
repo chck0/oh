@@ -1318,7 +1318,7 @@
     /* 지도 좌상단 범례 */
     #map-legend {
       position: absolute; top: 10px; left: 10px; z-index: 200;
-      background: rgba(21,18,26,0.94);
+      background: rgba(255,255,255,0.96);
       backdrop-filter: blur(8px);
       border: 1px solid var(--color-border-default);
       border-radius: 12px;
@@ -1595,7 +1595,7 @@
     }
     .chat-panel__apt-name { flex: 1; font-size: 14px; font-weight: 600; }
     .chat-panel__close {
-      background: none; border: none; color: rgba(255,255,255,0.6);
+      background: none; border: none; color: var(--color-text-secondary);
       font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
     }
     .chat-panel__messages {
@@ -1806,10 +1806,12 @@
       border-color: rgba(255, 255, 255, 0.5);
     }
     .dp__name {
-      font-size: 15px; font-weight: 700;
-      letter-spacing: -0.01em;
-      color: white;
-      flex: 1; min-width: 0;
+      font-size: 16px; font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--color-text-primary);
+      padding: 0 0 12px;
+      border-bottom: 1px solid var(--color-border-default);
+      margin-bottom: 12px;
     }
     .dp__badge {
       font-size: 10.5px; font-weight: 700;
@@ -2930,7 +2932,7 @@ function showResults(){
   if(document.getElementById('loading').classList.contains('hidden')) return;
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('main').style.display='flex';
-  try { vCurr?.pause?.(); vNext?.pause?.(); } catch(e) {}
+
   renderSummary(resultData);
   renderCards(resultData);
   initMap(resultData);
@@ -4363,8 +4365,8 @@ function _renderRouteLines() {
     } else {
       drawPts = smoothPath(seg.pts, 2);
     }
-    _addRouteLine(drawPts, 11, '#1A1A1A');      // 검은 테두리
-    _addRouteLine(drawPts, 8, seg.core, 'solid'); // 본선
+    _addRouteLine(drawPts, 10, '#FFFFFF');        // 흰 케이싱
+    _addRouteLine(drawPts, 6, seg.core, 'solid'); // 본선
   });
   _routeWalks.forEach(w => {
     let a = w.a, b = w.b;
@@ -4375,7 +4377,7 @@ function _renderRouteLines() {
         a = off[0]; b = off[1];
       } catch (e) {}
     }
-    _addRouteLine([a, b], 6, '#27439C', 'shortdot');
+    _addRouteLine([a, b], 3, '#AAAAAA', 'shortdot');
   });
   _declutterPins();
 }
@@ -4448,10 +4450,7 @@ function _addRouteLine(path, weight, col, style) {
   _routePolylines.push(line);
 }
 
-// 4겹 선: 흰 외곽 → 루트색(목적지) → 흰 구분 → 옅은 수단색. 도보는 루트색 점선.
-// 개발용 가시화: 목적지색(W1 와인/W2 에메랄드) + 수단별 선스타일
-//   지하철 = 실선(+흰 케이싱), 버스 = longdash, 도보 = 직선 점선(shortdash).
-// 도보는 ODsay 형상이 없어 앞 교통 끝 ~ 뒤 교통 시작(첫·끝은 apt/직장 좌표)을 직선으로 잇는다.
+// 네이버지도 스타일: 흰 케이싱 + 노선색. 도보는 ODsay 형상이 없어 회색 점선 직선으로 잇는다.
 function drawRoutePolylines(options, color) {
   if (!kakaoMap || !options || !options.length) return;
   const best = options[0]; // rank 1 경로만 표시
@@ -4474,12 +4473,11 @@ function drawRoutePolylines(options, color) {
     return { walk: pts.length < 2, type: step.type, pts: pts.length >= 2 ? pts : null, line: step.line, from: step.from, to: step.to };
   });
 
-  // 2) 교통 — 검은 테두리 + 루트색 본선. 수단 구분: 지하철=진한색 / 버스=연한색
-  const BUS_SHADE = { '#3B5BDB': '#91A7FF', '#0CA678': '#5BE0BA' };
+  // 2) 교통 — 흰 케이싱 + 노선색 본선
   const side = (color === '#3B5BDB') ? 1 : -1;   // W1=+ / W2=- 좌우 분리용
   parsed.forEach(s => {
     if (s.walk || !s.pts) return;
-    const core = (s.type === '버스') ? (BUS_SHADE[color] || color) : color;
+    const core = (s.type === '버스') ? '#0064FF' : (_subwayColor(s.line) || '#888888');
     _routeSegments.push({ pts: s.pts, core: core, side: side });
   });
 
@@ -4500,8 +4498,7 @@ function drawRoutePolylines(options, color) {
       kept[kept.length - 1] = e;   // 환승: 나중(승차) 정보로 교체
     } else { kept.push(e); }
   });
-  // 역명 라벨은 하단 패널(요약 바·타임라인)이 대체 → 지도엔 승·하차 점만 깔끔하게
-  kept.forEach(e => _addPin(e.ll, pinColor, '', '', side));
+  kept.forEach(e => _addPin(e.ll, pinColor, e.line, e.st, side));
 
   // 3) 도보 직선 수집(양 끝점 브리지)
   parsed.forEach((s, i) => {
@@ -5211,12 +5208,15 @@ let aptGroupMap = {};  // apt_seq → {apt_seq, apt_nm, lat, lng, umd_nm, kaptda
 
 async function initMap(data){
   await kakaoReady;
+  // flex 레이아웃이 브라우저에 의해 계산되도록 한 프레임 양보
+  await new Promise(r => requestAnimationFrame(r));
   const container = document.getElementById('map');
   const wp = data.workplace;
   kakaoMap = new kakao.maps.Map(container, {
     center: new kakao.maps.LatLng(wp.lat, wp.lng),
     level: zoomLevelFor(reqBody.max_minutes),
   });
+  kakaoMap.relayout();  // 컨테이너 실제 크기로 지도 재렌더링
   kakaoMap.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
   // 직장 핀 (W1)
@@ -5538,8 +5538,8 @@ function renderDetailPanel(d, routes, wpId){
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
     ? [
-        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#FF7E8A':ps.change_6m_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
-        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#FF7E8A':ps.vs_dong_pct<0?'#93C5FD':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
+        ps.change_6m_pct!=null ? `6개월 <strong style="color:${ps.change_6m_pct>0?'#FF7E8A':ps.change_6m_pct<0?'#2563EB':'inherit'}" class="num">${fmtPct(ps.change_6m_pct)}</strong>` : null,
+        ps.vs_dong_pct!=null ? `동평균 대비 <strong style="color:${ps.vs_dong_pct>0?'#FF7E8A':ps.vs_dong_pct<0?'#2563EB':'inherit'}" class="num">${fmtPct(ps.vs_dong_pct)}</strong>` : null,
       ].filter(Boolean).join(' · ')
     : '시세 데이터 없음';
 
@@ -5588,6 +5588,7 @@ function renderDetailPanel(d, routes, wpId){
 
     <!-- HERO (spec-42: 결론 우선 클린카드) -->
     <div class="dp__hero">
+      <div class="dp__name">${escHtml([d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean).join(' '))}</div>
       ${statHtml}
       ${friendHtml}
     </div>
@@ -5621,8 +5622,8 @@ function renderDetailPanel(d, routes, wpId){
         ${renderKPIHTML(d.price_summary, d.umd_nm)}
         <div class="dp-pyeong-tabs" id="dp-tabs">${renderTabsHTML(d.pyeong_tabs)}</div>
         <div class="dp-chart-legend" style="margin-top:6px">
-          <span><i class="dp-legend-dot" style="background:#FF6FB5"></i>${escHtml(d.apt_nm)}</span>
-          <span><i class="dp-legend-dot" style="background:#93C5FD;opacity:.9"></i>${escHtml(d.umd_nm)} 동평균</span>
+          <span><i class="dp-legend-dot" style="background:#E040A0"></i>${escHtml(d.apt_nm)}</span>
+          <span><i class="dp-legend-dot" style="background:#2563EB;opacity:.9"></i>${escHtml(d.umd_nm)} 동평균</span>
         </div>
         <div class="dp-chart-wrap"><canvas id="dp-chart"></canvas></div>
       </div>
@@ -5800,22 +5801,22 @@ function initDetailChart(key, aptNm, umdNm){
   // 데이터 포인트가 적으면 점만, 충분하면 선+점
   const nonNull = complexData.filter(v=>v!==null).length;
   const sparse = nonNull < 6;
-  const CHART_PINK   = '#FF6FB5';
-  const CHART_BLUE   = '#93C5FD';
-  const CHART_GRID   = 'rgba(255,255,255,0.08)';
-  const CHART_TICK   = 'rgba(255,255,255,0.55)';
+  const CHART_PINK   = '#E040A0';
+  const CHART_BLUE   = '#2563EB';
+  const CHART_GRID   = 'rgba(0,0,0,0.07)';
+  const CHART_TICK   = 'rgba(0,0,0,0.45)';
   detailChart = new Chart(canvas.getContext('2d'),{
     type:'line',
     data:{
       labels,
       datasets:[
         { label:aptNm, data:complexData,
-          borderColor: CHART_PINK, backgroundColor: 'rgba(255,111,181,0.15)',
+          borderColor: CHART_PINK, backgroundColor: 'rgba(224,64,160,0.08)',
           borderWidth: sparse?0:2.5, pointRadius: sparse?6:4,
-          pointBackgroundColor: CHART_PINK, pointBorderColor: '#1D1922', pointBorderWidth: 1.5,
+          pointBackgroundColor: CHART_PINK, pointBorderColor: '#FFFFFF', pointBorderWidth: 1.5,
           tension:0.35, fill:false, showLine:!sparse },
         { label:`${umdNm} 동평균`, data:dongData,
-          borderColor: CHART_BLUE, backgroundColor: 'rgba(147,197,253,0.08)',
+          borderColor: CHART_BLUE, backgroundColor: 'rgba(37,99,235,0.06)',
           borderWidth: 1.5, pointRadius:2, borderDash:[4,3],
           pointBackgroundColor: CHART_BLUE,
           tension:0.35, fill:false },
@@ -5827,9 +5828,9 @@ function initDetailChart(key, aptNm, umdNm){
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'rgba(28,25,34,0.92)',
-          borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
-          titleColor:'rgba(255,255,255,0.85)', bodyColor:'rgba(255,255,255,0.7)',
+          backgroundColor:'rgba(255,255,255,0.96)',
+          borderColor:'rgba(0,0,0,0.12)', borderWidth:1,
+          titleColor:'rgba(0,0,0,0.85)', bodyColor:'rgba(0,0,0,0.6)',
           padding:10,
           callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtPrice(ctx.parsed.y)}`}
         }
