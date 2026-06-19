@@ -87,6 +87,40 @@ def _approve_ym(use_apr_day) -> str | None:
     return None
 
 
+# transit_routes 형상 dedup 스키마 감지 (stepN_geom_id + route_geom). 1회 탐지 후 캐시.
+# dedup이면 route_geom JOIN으로 linestring 복원, 아니면(현 운영 구 스키마) 기존 컬럼 그대로.
+# 두 경우 컬럼 순서를 동일하게 맞춰 아래 파싱 로직(off=4+i*7)을 불변으로 유지.
+_DEDUP_SCHEMA = None
+
+
+def _routes_query(conn) -> str:
+    global _DEDUP_SCHEMA
+    if _DEDUP_SCHEMA is None:
+        try:
+            conn.execute("SELECT step1_geom_id FROM transit_routes LIMIT 0").fetchall()
+            _DEDUP_SCHEMA = True
+        except Exception:
+            _DEDUP_SCHEMA = False
+    if _DEDUP_SCHEMA:
+        step_sel = ", ".join(
+            f"tr.step{i}_type, tr.step{i}_time_min, tr.step{i}_dist_m, "
+            f"tr.step{i}_노선, tr.step{i}_출발, tr.step{i}_도착, "
+            f"COALESCE(g{i}.ls, tr.step{i}_linestring)"
+            for i in range(1, 6))
+        joins = " ".join(
+            f"LEFT JOIN route_geom g{i} ON g{i}.id = tr.step{i}_geom_id"
+            for i in range(1, 6))
+        return (f"SELECT tr.rank, tr.total_time_min, tr.bus_cnt, tr.subway_cnt, {step_sel} "
+                f"FROM transit_routes tr {joins} "
+                f"WHERE tr.origin_cell=? AND tr.wp_id=? ORDER BY tr.rank")
+    step_sel = ", ".join(
+        f"step{i}_type, step{i}_time_min, step{i}_dist_m, "
+        f"step{i}_노선, step{i}_출발, step{i}_도착, step{i}_linestring"
+        for i in range(1, 6))
+    return (f"SELECT rank, total_time_min, bus_cnt, subway_cnt, {step_sel} "
+            f"FROM transit_routes WHERE origin_cell=? AND wp_id=? ORDER BY rank")
+
+
 # ── GET /api/apt/{apt_seq}/routes ────────────────────────────
 @router.get("/apt/{apt_seq}/routes")
 def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
@@ -99,17 +133,9 @@ def apt_routes(apt_seq: str, wp_id: int, conn=Depends(get_db)):
     if not gk_row or not gk_row['grid_key']:
         return {'apt_seq': apt_seq, 'wp_id': wp_id, 'options': []}
 
-    rows = conn.execute("""
-        SELECT rank, total_time_min, bus_cnt, subway_cnt,
-               step1_type, step1_time_min, step1_dist_m, step1_노선, step1_출발, step1_도착, step1_linestring,
-               step2_type, step2_time_min, step2_dist_m, step2_노선, step2_출발, step2_도착, step2_linestring,
-               step3_type, step3_time_min, step3_dist_m, step3_노선, step3_출발, step3_도착, step3_linestring,
-               step4_type, step4_time_min, step4_dist_m, step4_노선, step4_출발, step4_도착, step4_linestring,
-               step5_type, step5_time_min, step5_dist_m, step5_노선, step5_출발, step5_도착, step5_linestring
-        FROM transit_routes
-        WHERE origin_cell=? AND wp_id=?
-        ORDER BY rank
-    """, [gk_row['grid_key'], wp_id]).fetchall()
+    rows = conn.execute(
+        _routes_query(conn), [gk_row['grid_key'], wp_id]
+    ).fetchall()
 
     options = []
     for r in rows:
