@@ -5746,6 +5746,15 @@ async function initMap(data){
       showDetail(pin.dataset.aptSeq, data.wp_id);
     }
   });
+
+  // initMap 재호출(transit refresh 등) 후 현재 필터 상태 재적용
+  if (window.filterMapPins) {
+    const shouldLimit = (typeof _isAdvFilterActive === 'function' && _isAdvFilterActive()) || _currentFavTab === 'fav';
+    if (shouldLimit) {
+      const filtered = typeof _cardsForCurrentList === 'function' ? _cardsForCurrentList() : null;
+      window.filterMapPins(filtered ? filtered.map(c => c.apt_seq) : null);
+    }
+  }
 }
 
 function zoomLevelFor(min){
