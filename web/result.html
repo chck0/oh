@@ -3225,6 +3225,10 @@ async function runSearch(){
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
     onSearchDone();
+    // 상세 콜드 스타트 완화: 검색 직후(함수가 아직 따뜻할 때) 대표 단지 상세를
+    // 백그라운드로 미리 호출 → 서버리스 함수·DB 커넥션 풀 예열 + 캐시 채움.
+    // 사용자가 로딩 영상·목록을 보는 동안 끝나, 첫 상세 클릭이 빨라진다.
+    setTimeout(_prewarmTopDetail, 600);
     // LLM 폴링 즉시 시작 — 사용자가 음악 보는 동안 백그라운드에서 코멘트 미리 받아둠
     // (백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음)
     if(resultData.llm_pending){
@@ -5758,6 +5762,43 @@ tooltip.addEventListener('mouseleave', ()=>scheduleHideTooltip());
 //  상세 패널
 // ═══════════════════════════════════════════════════════
 
+// 진단 모드: URL에 ?diag=1 이 있으면 상세 로딩 시간/응답정보를 화면에 표시 (DevTools 불필요)
+const _DIAG = new URLSearchParams(location.search).has('diag');
+let _diagClickN = 0;
+function _showDiag(res, clientFetchMs){
+  _diagClickN++;
+  let box = document.getElementById('diag-box');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'diag-box';
+    box.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:99999;background:rgba(10,8,12,.93);color:#fff;font:11px/1.55 ui-monospace,monospace;padding:11px 13px;border-radius:10px;max-width:300px;white-space:pre-wrap;box-shadow:0 6px 22px rgba(0,0,0,.45);cursor:pointer';
+    box.title = '탭하면 닫힘';
+    box.onclick = () => box.remove();
+    document.body.appendChild(box);
+  }
+  const h = (k) => res.headers.get(k) || '-';
+  // Server-Timing 파싱 → 큰 값부터
+  const parts = (res.headers.get('Server-Timing') || '').split(',').map(s => s.trim()).filter(Boolean)
+    .map(s => { const m = s.match(/^([^;]+);dur=([\d.]+)/); return m ? [m[1], Math.round(+m[2])] : null; })
+    .filter(Boolean).sort((a,b) => b[1] - a[1]);
+  const lines = [`⏱ 상세 진단 #${_diagClickN}  (탭하면 닫힘)`, '─────────────',
+    `대기(TTFB): ${clientFetchMs}ms`,
+    `HTTP: ${res.status} ${res.ok ? 'OK' : '오류'}`,
+    `vercel-cache: ${h('x-vercel-cache')}`,
+    `age: ${h('age')}`,
+    `vercel-id: ${h('x-vercel-id')}`];
+  if(parts.length){
+    lines.push('서버 구간(ms):');
+    parts.slice(0, 9).forEach(([k, v]) => lines.push(`  ${k}: ${v}`));
+  } else {
+    lines.push('Server-Timing: 없음');
+    // 헤더가 떨궈진 건지 확인용 — 응답 헤더 키 목록
+    const keys = [...res.headers.keys()];
+    lines.push('헤더키: ' + (keys.join(',') || '(없음)'));
+  }
+  box.textContent = lines.join('\n');
+}
+
 async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
@@ -5818,11 +5859,14 @@ async function showDetail(aptSeq, wpId){
   try{
     // detail·routes 동시 시작하되, 빠른 detail이 오면 패널 즉시 렌더.
     // 느린 routes(대중교통 경로 계산)는 백그라운드로 통근 섹션만 채운다.
+    const _diagT0 = _DIAG ? performance.now() : 0;
     const detailP = fetch(`/api/apt/${aptSeq}/detail?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
     const routesP = fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId}`,{headers:{'ngrok-skip-browser-warning':'1'}});
     const routes2P = wpId2 ? fetch(`/api/apt/${aptSeq}/routes?wp_id=${wpId2}`,{headers:{'ngrok-skip-browser-warning':'1'}}) : null;
 
-    const detail = await (await detailP).json();
+    const detailRes = await detailP;
+    if(_DIAG) _showDiag(detailRes, Math.round(performance.now() - _diagT0));
+    const detail = await detailRes.json();
     if(_currentAptSeq !== aptSeq) return;   // 그새 다른 단지 클릭 → 폐기
     renderDetailPanel(detail, null, wpId);  // routes 로딩 표시로 즉시 렌더
 
@@ -5843,6 +5887,26 @@ async function showDetail(aptSeq, wpId){
 
 // showDetail 진행형 렌더용: detail/routes 캐시 + 통근 섹션 갱신 헬퍼
 const _showDetailCache = {};
+
+// 콜드 스타트 예열: 검색 직후 대표 단지 상세를 백그라운드로 미리 받아
+// 서버리스 함수·DB 풀을 데우고 캐시까지 채운다. (한 번만, 실패는 무시)
+let _prewarmed = false;
+function _prewarmTopDetail(){
+  if(_prewarmed || !resultData || !resultData.cards || !resultData.cards.length) return;
+  _prewarmed = true;
+  const wpId = resultData.wp_id;
+  const top = resultData.cards.find(c => c.is_recommended) || resultData.cards[0];
+  if(!top || !top.apt_seq) return;
+  const key = `${top.apt_seq}:${wpId}`;
+  if(_showDetailCache[key]) return;
+  const H = {headers:{'ngrok-skip-browser-warning':'1'}};
+  Promise.all([
+    fetch(`/api/apt/${top.apt_seq}/detail?wp_id=${wpId}`, H).then(r => r.ok ? r.json() : null),
+    fetch(`/api/apt/${top.apt_seq}/routes?wp_id=${wpId}`, H).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]).then(([detail, routesJson]) => {
+    if(detail) _showDetailCache[key] = { detail, routes: (routesJson && routesJson.options) || [], routes2: null };
+  }).catch(() => {});
+}
 function _updateRoutesSection(routes){
   const prev = document.getElementById('dp-route-preview');
   const body = document.getElementById('dp-route-body');

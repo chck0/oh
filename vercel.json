@@ -3,6 +3,7 @@
   "version": 2,
   "buildCommand": null,
   "outputDirectory": "web",
+  "regions": ["icn1"],
   "functions": {
     "api/index.py": {
       "runtime": "@vercel/python@4.3.1",
