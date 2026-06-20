@@ -38,9 +38,12 @@
       display: flex; align-items: center; gap: 16px;
     }
     .top-nav h1 {
-      color: var(--color-brand-primary);
-      font-size: 20px; font-weight: 700;
+      font-size: 20px; font-weight: 800;
       letter-spacing: -0.01em;
+      background: var(--color-brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .top-nav__back {
       color: var(--color-text-secondary);
@@ -464,37 +467,6 @@
       color: var(--color-brand-primary);
     }
 
-    /* ─── spec-37: 상세조건 접이식 ──────────────────────── */
-    .adv-toggle {
-      display: flex; align-items: center; gap: 8px; width: 100%;
-      background: none; border: none; padding: 0; cursor: pointer; text-align: left;
-    }
-    .adv-toggle__title { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
-    .adv-toggle__opt { font-weight: 600; font-size: 13.5px; color: var(--color-text-secondary); margin-left: 4px; }
-    .adv-toggle__hint { font-size: 12px; color: var(--color-text-tertiary); }
-    .adv-chevron { margin-left: auto; font-size: 13px; color: var(--color-text-tertiary); transition: transform .2s; }
-    .adv-toggle[aria-expanded="true"] .adv-chevron { transform: rotate(180deg); }
-    .adv-body { margin-top: 18px; }
-    .adv-field { margin-bottom: 18px; }
-    .adv-field:last-child { margin-bottom: 0; }
-    .adv-field__label { font-size: 13px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 8px; }
-    .adv-field__sub { font-weight: 600; font-size: 12px; color: var(--color-text-tertiary); margin-left: 4px; }
-    /* 상세조건 칩: 한 줄에 들어가도록 컴팩트 (좁으면 가로 스크롤) */
-    .adv-section .check-chips {
-      flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 2px;
-      scrollbar-width: thin; -webkit-overflow-scrolling: touch;
-    }
-    .adv-section .check-chip {
-      flex: 0 0 auto; padding: 7px 12px; gap: 0;
-      font-size: 13px; white-space: nowrap;
-    }
-    .adv-section .check-chip__box { display: none; }
-    .adv-section .check-chip:has(input:checked) {
-      background: var(--color-brand-gradient);
-      border-color: transparent;
-      color: #ffffff;
-    }
-
     /* ─── spec-15: 최근 검색 히스토리 칩 ─────────────────── */
     .recent-searches {
       margin-top: 10px;
@@ -573,6 +545,160 @@
       transition: transform 200ms;
     }
     .submit-btn:hover .arrow { transform: translateX(3px); }
+
+    /* Compact search layout: keep the whole form visible in one screen. */
+    .top-nav { padding: 8px 18px; }
+    .top-nav__inner { max-width: 576px; gap: 12px; }
+    .top-nav h1 { font-size: 16px; }
+    .top-nav__back { font-size: 12px; }
+
+    .page {
+      max-width: 576px;
+      padding: 14px 18px 18px;
+    }
+    .page-head { margin-bottom: 14px; }
+    .page-head h2 {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    .page-head p {
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .section {
+      padding: 13px 16px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+    }
+    .section-head {
+      gap: 8px;
+      margin-bottom: 9px;
+    }
+    .section-num {
+      width: 21px;
+      height: 21px;
+      font-size: 10.5px;
+    }
+    .section-title { font-size: 14.5px; }
+    .info-btn {
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+    }
+    .info-popover {
+      width: 280px;
+      padding: 11px 13px;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    input[type=text],
+    input[type=number] {
+      font-size: 12.5px;
+      padding: 8px 11px;
+      border-radius: 7px;
+    }
+    .address-row { gap: 8px; }
+    .wp-label {
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    .btn-secondary {
+      padding: 8px 13px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+    .btn-add-wp2 {
+      margin-top: 8px;
+      padding: 6px 11px;
+      font-size: 11.5px;
+    }
+    .wp2-row { margin-top: 9px; }
+    .btn-remove-wp2 {
+      padding: 8px 11px;
+      font-size: 13px;
+    }
+    .recent-searches {
+      margin-top: 6px;
+      gap: 4px;
+    }
+    .recent-label {
+      font-size: 9.5px;
+      margin-bottom: 0;
+    }
+    .recent-chip {
+      padding: 4px 9px;
+      font-size: 10.5px;
+      max-width: 180px;
+    }
+
+    .price-slider-wrap { padding: 0 3px; }
+    .price-slider-labels { margin-bottom: 8px; }
+    .price-slider-labels .price-badge {
+      font-size: 11.5px;
+      padding: 3px 9px;
+    }
+    .price-slider-labels .price-badge span { font-size: 10px; }
+    .price-dual-range { height: 28px; }
+    .price-dual-range input[type=range]::-webkit-slider-thumb {
+      width: 18px;
+      height: 18px;
+      border-width: 2px;
+    }
+    .price-dual-range input[type=range]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-width: 2px;
+    }
+    .price-track {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .price-ticks {
+      margin-top: 4px;
+      padding: 0 1px;
+    }
+    .price-ticks span { font-size: 9.5px; }
+    .price-warn {
+      padding: 7px 10px;
+      font-size: 11px;
+      margin-top: 6px;
+      line-height: 1.45;
+    }
+
+    .chip-group { gap: 6px; }
+    .chip {
+      padding: 7px 14px;
+      font-size: 12px;
+    }
+    .hint {
+      font-size: 11px;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    .submit-zone { margin-top: 10px; }
+    .submit-note {
+      font-size: 11px;
+      margin-bottom: 7px;
+    }
+    .submit-btn {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .submit-btn .arrow { font-size: 15px; }
+
+    @media (max-height: 760px) {
+      .page { padding-top: 10px; padding-bottom: 12px; }
+      .page-head { margin-bottom: 10px; }
+      .page-head h2 { font-size: 21px; }
+      .section {
+        padding: 11px 14px;
+        margin-bottom: 7px;
+      }
+      .submit-zone { margin-top: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -699,47 +825,6 @@
       <div class="hint">선택한 시간 이하로 출근 가능한 매물만 보여드려요.</div>
     </section>
 
-    <!-- 상세조건 (선택, spec-37) — 기본 접힘 -->
-    <section class="section adv-section">
-      <button type="button" class="adv-toggle" id="adv-toggle" aria-expanded="false" aria-controls="adv-body">
-        <span class="adv-toggle__title">상세조건<span class="adv-toggle__opt">선택</span></span>
-        <span class="adv-toggle__hint">평형 · 준공연도 · 세대수</span>
-        <span class="adv-chevron" id="adv-chevron">▾</span>
-      </button>
-      <div class="adv-body" id="adv-body" hidden>
-        <div class="adv-field">
-          <div class="adv-field__label">평형 <span class="adv-field__sub">복수 선택</span></div>
-          <div class="check-chips">
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="10평미만" checked><span class="check-chip__box"></span>10평 미만</label>
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="10평대" checked><span class="check-chip__box"></span>10평대</label>
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="20평대" checked><span class="check-chip__box"></span>20평대</label>
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="30평대" checked><span class="check-chip__box"></span>30평대</label>
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="40평대" checked><span class="check-chip__box"></span>40평대</label>
-            <label class="check-chip"><input type="checkbox" name="pyeong" value="50평대+" checked><span class="check-chip__box"></span>50평대+</label>
-          </div>
-        </div>
-        <div class="adv-field">
-          <div class="adv-field__label">준공연도</div>
-          <div class="check-chips">
-            <label class="check-chip"><input type="radio" name="build_year_min" value="" checked><span class="check-chip__box"></span>제한없음</label>
-            <label class="check-chip"><input type="radio" name="build_year_min" value="2000"><span class="check-chip__box"></span>2000년 이후</label>
-            <label class="check-chip"><input type="radio" name="build_year_min" value="2010"><span class="check-chip__box"></span>2010년 이후</label>
-            <label class="check-chip"><input type="radio" name="build_year_min" value="2015"><span class="check-chip__box"></span>2015년 이후</label>
-            <label class="check-chip"><input type="radio" name="build_year_min" value="2020"><span class="check-chip__box"></span>2020년 이후</label>
-          </div>
-        </div>
-        <div class="adv-field">
-          <div class="adv-field__label">세대수</div>
-          <div class="check-chips">
-            <label class="check-chip"><input type="radio" name="mincnt" value="" checked><span class="check-chip__box"></span>제한없음</label>
-            <label class="check-chip"><input type="radio" name="mincnt" value="300"><span class="check-chip__box"></span>300세대+</label>
-            <label class="check-chip"><input type="radio" name="mincnt" value="500"><span class="check-chip__box"></span>500세대+</label>
-            <label class="check-chip"><input type="radio" name="mincnt" value="1000"><span class="check-chip__box"></span>1,000세대+</label>
-            <label class="check-chip"><input type="radio" name="mincnt" value="1500"><span class="check-chip__box"></span>1,500세대+</label>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <div class="submit-zone">
       <p class="submit-note">분석에 약 <strong style="color:var(--color-text-secondary);font-weight:600;" class="num">30초~1분</strong> 정도 걸려요</p>
@@ -761,14 +846,6 @@ document.querySelectorAll('#commute-chips .chip').forEach(chip => {
   });
 });
 
-// ── spec-37: 상세조건 펼침 토글 ───────────────────────────
-function setAdvOpen(open) {
-  document.getElementById('adv-body').hidden = !open;
-  document.getElementById('adv-toggle').setAttribute('aria-expanded', String(open));
-}
-document.getElementById('adv-toggle').addEventListener('click', () => {
-  setAdvOpen(document.getElementById('adv-body').hidden);
-});
 
 // ── spec-15 + 확장: 최근 검색 히스토리 칩 (W1/W2 공용) ──────
 function _buildChipsHtml(items, targetId) {
@@ -846,27 +923,7 @@ const PRICE_MAX_MAN = 200000;
     });
   }
 
-  // 평형 체크박스
-  const pyeongTypes = (p.get('pyeong_types') || '').split(',').filter(Boolean);
-  if (pyeongTypes.length) {
-    document.querySelectorAll('input[name=pyeong]').forEach(cb => {
-      cb.checked = pyeongTypes.includes(cb.value);
-    });
-  }
 
-  // 세대수 라디오
-  const mincnt = p.get('min_kaptdaCnt') || '';
-  const mincntEl = document.querySelector(`input[name=mincnt][value="${mincnt}"]`);
-  if (mincntEl) mincntEl.checked = true;
-
-  // 준공연도 라디오
-  const buildYear = p.get('build_year_min') || '';
-  const byEl = document.querySelector(`input[name=build_year_min][value="${buildYear}"]`);
-  if (byEl) byEl.checked = true;
-
-  // 상세조건이 기본값과 다르면 섹션 자동 펼침 (복원값이 보이도록)
-  const advUsed = buildYear || mincnt || (pyeongTypes.length && pyeongTypes.length < 6);
-  if (advUsed) setAdvOpen(true);
 })();
 
 // ── Daum Postcode ─────────────────────────────────────────
@@ -992,10 +1049,8 @@ document.getElementById('search-form').addEventListener('submit', (e) => {
     }
   }
 
-  // 상세조건(spec-37): 평형 실제 선택분 (0개면 전체 폴백)
   const ALL_PYEONG = ['10평미만', '10평대', '20평대', '30평대', '40평대', '50평대+'];
-  let pyeong = Array.from(document.querySelectorAll('input[name=pyeong]:checked')).map(c => c.value);
-  if (pyeong.length === 0) pyeong = ALL_PYEONG;
+  const pyeong = ALL_PYEONG;
 
   const params = new URLSearchParams({
     workplace_address: address,

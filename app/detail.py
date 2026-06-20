@@ -103,8 +103,11 @@ def _routes_query(conn) -> str:
     global _DEDUP_SCHEMA
     if _DEDUP_SCHEMA is None:
         try:
-            conn.execute("SELECT step1_geom_id FROM transit_routes LIMIT 0").fetchall()
-            _DEDUP_SCHEMA = True
+            # route_geom에 실제 형상이 있으면 dedup 스키마(JOIN 복원), 비어있으면 구 스키마로 폴백.
+            # 주의: step1은 보통 도보(geom_id NULL)라 step{i}_geom_id로는 감지 불가 →
+            # dedup 마커 테이블 route_geom 존재+데이터 유무로 판정한다.
+            row = conn.execute("SELECT 1 FROM route_geom LIMIT 1").fetchone()
+            _DEDUP_SCHEMA = row is not None
         except Exception:
             _DEDUP_SCHEMA = False
     if _DEDUP_SCHEMA:
