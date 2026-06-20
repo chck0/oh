@@ -11,7 +11,7 @@ conftest.py 의 _SCHEMA 는 trade_recent 가 집계 컬럼(price_low, deal_count
 """
 import sqlite3
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 # ── 검색 전용 스키마 ───────────────────────────────────────────
@@ -311,7 +311,6 @@ class TestSearchEndpointSuccess:
             payload.update(extra)
         with (
             patch('app.search.get_or_create', return_value=_FAKE_WP),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
         ):
             return client.post('/api/search', json=payload)
 
@@ -397,7 +396,6 @@ class TestSearchBuildYearFilter:
             payload.update(extra)
         with (
             patch('app.search.get_or_create', return_value=_FAKE_WP),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
         ):
             return client.post('/api/search', json=payload)
 
@@ -449,7 +447,6 @@ class TestMinPriceFilter:
             payload.update(extra)
         with (
             patch('app.search.get_or_create', return_value=_FAKE_WP),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
         ):
             return client.post('/api/search', json=payload)
 
@@ -515,7 +512,6 @@ class TestPoiTableMissingGraceful:
     def _post(self, client):
         with (
             patch('app.search.get_or_create', return_value=_FAKE_WP),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
         ):
             return client.post('/api/search', json={
                 'workplace_address': '강남역', 'max_minutes': 60,

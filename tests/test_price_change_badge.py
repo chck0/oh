@@ -12,7 +12,7 @@ tests/test_price_change_badge.py — spec-16 가격 변동률 배지
 import sqlite3
 import datetime
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 # ── Full schema (test_search_pipeline.py 와 동일 베이스) ─────────────────────
@@ -232,10 +232,9 @@ def _make_client(conn):
 
 
 def _post_search(client):
-    from unittest.mock import patch as mpatch, AsyncMock
+    from unittest.mock import patch as mpatch
     with (
         mpatch('app.search.get_or_create', return_value=_FAKE_WP),
-        mpatch('app.search._generate_comments_bg', new=AsyncMock()),
         mpatch('app.portable.USE_PG', False),
     ):
         return client.post('/api/search', json={
