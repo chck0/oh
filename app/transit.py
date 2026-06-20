@@ -21,10 +21,8 @@ log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
 ODSAY_URL           = "https://api.odsay.com/v1/api/searchPubTransPathT"
-# 동시성 2→4, 슬립 300→100 — Vercel 60s 한도 내 더 많은 셀 처리.
-# ODsay 키 4개 × 4 = 16 병렬, rate limit 측면에선 키당 4req/s 정도라 안전권.
-PER_KEY_CONCURRENCY = 4
-ROUND_SLEEP_MS      = 100
+PER_KEY_CONCURRENCY = 2
+ROUND_SLEEP_MS      = 300
 HTTP_TIMEOUT        = 15
 
 ALLOWED_COMBOS    = {(0,1),(0,2),(1,0),(2,0),(1,1)}
@@ -48,6 +46,63 @@ _ROUTE_INSERT_SQL = (
     f'INSERT INTO transit_routes ({", ".join(_ROUTE_ALL_COLS)}) '
     f'VALUES ({", ".join(["?"] * len(_ROUTE_ALL_COLS))})'
 )
+
+_CLASS_MAP = {'버스': 1, '지하철': 2}
+
+
+def _geom_near(poly, x, y):
+    best, bi = 1e18, 0
+    for i, (px, py) in enumerate(poly):
+        d = (px - x) ** 2 + (py - y) ** 2
+        if d < best:
+            best, bi = d, i
+    return bi
+
+
+def _geom_clip(whole, board, alight):
+    a = _geom_near(whole, *board)
+    b = _geom_near(whole, *alight)
+    lo, hi = (a, b) if a <= b else (b, a)
+    seg = whole[lo:hi + 1]
+    return seg[::-1] if a > b else seg
+
+
+def _geom_legs(path):
+    """ODsay path → 교통 leg [(lineID, class, board_xy, alight_xy)]."""
+    mo = path.get('info', {}).get('mapObj') or ''
+    segs = []
+    for s in mo.split('@'):
+        pr = s.split(':')
+        if len(pr) >= 2 and pr[1] in ('1', '2'):
+            segs.append((pr[0], int(pr[1])))
+    tsubs = [sp for sp in path.get('subPath', []) if sp.get('trafficType') in (1, 2)]
+    if len(segs) != len(tsubs):
+        return None
+    legs = []
+    for (lid, cls), sp in zip(segs, tsubs):
+        sts = (sp.get('passStopList') or {}).get('stations') or []
+        if len(sts) < 2:
+            board  = (float(sp['startX']), float(sp['startY']))
+            alight = (float(sp['endX']),   float(sp['endY']))
+        else:
+            board  = (float(sts[0]['x']),  float(sts[0]['y']))
+            alight = (float(sts[-1]['x']), float(sts[-1]['y']))
+        legs.append((lid, cls, board, alight))
+    return legs
+
+
+def _load_line_geom(conn):
+    """line_geom 테이블 전체 로드. SQLite에 없으면 빈 dict 반환."""
+    try:
+        rows = conn.execute(
+            "SELECT line_id, class, ls FROM line_geom WHERE status='ok' AND ls IS NOT NULL"
+        ).fetchall()
+        return {
+            (r[0], r[1]): [tuple(map(float, pt.split(','))) for pt in r[2].split()]
+            for r in rows
+        }
+    except Exception:
+        return {}
 
 
 # ── 좌표 유틸 ────────────────────────────────────────────────
@@ -135,6 +190,9 @@ def step_cols(steps, n):
 
 # ── ODsay 호출 ───────────────────────────────────────────────
 async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
+    """반환: (origin_cell, ranked_paths, raw, elapsed_ms, err_type)
+    err_type: None=성공, 'auth'=키인증실패, 'no_transit'=경로없음, 'http'=HTTP오류, 'exc'=예외
+    """
     async with sem:
         o_lat, o_lng = cell_center(origin_cell)
         params = {
@@ -143,20 +201,16 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
             'lang': 0, 'OPT': 0
         }
         headers = {'Referer': key_info['referer']}
+        t0 = time.monotonic()
         try:
             async with session.get(
                 ODSAY_URL, params=params, headers=headers,
                 timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
             ) as r:
+                elapsed = int((time.monotonic() - t0) * 1000)
                 raw  = await r.text()
                 data = json.loads(raw)
                 if 'result' not in data:
-                    log.warning(
-                        'ODsay no-result [%s] key=%s status=%d body=%s',
-                        origin_cell, key_info['owner'], r.status, raw[:300],
-                    )
-                    # ApiKey 인증 실패 → 캐시 절대 X. raw='' 반환 → 호출자가
-                    # response_size=0 으로 저장 → 다음 검색에서 다른 키로 재시도.
                     err = data.get('error')
                     err_msg = ''
                     if isinstance(err, list) and err:
@@ -164,12 +218,19 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
                     elif isinstance(err, dict):
                         err_msg = str(err.get('message', ''))
                     if 'ApiKeyAuthFailed' in err_msg or 'apikey' in err_msg.lower():
-                        return origin_cell, [], ''  # 캐시 X
-                    return origin_cell, [], raw    # 캐시 O (legit no-transit)
-                return origin_cell, rank_paths(data['result'].get('path', [])), raw
+                        log.warning('ODsay auth-fail [%s] key=%s %dms',
+                                    origin_cell, key_info['owner'], elapsed)
+                        return origin_cell, [], '', elapsed, 'auth'
+                    log.warning('ODsay no-result [%s] key=%s status=%d %dms body=%s',
+                                origin_cell, key_info['owner'], r.status, elapsed, raw[:200])
+                    return origin_cell, [], raw, elapsed, 'no_transit'
+                ranked = rank_paths(data['result'].get('path', []))
+                return origin_cell, ranked, raw, elapsed, None
         except Exception as e:
-            log.error('ODsay exception [%s] key=%s: %s', origin_cell, key_info['owner'], e)
-            return origin_cell, [], ''
+            elapsed = int((time.monotonic() - t0) * 1000)
+            log.error('ODsay exception [%s] key=%s %dms: %s',
+                      origin_cell, key_info['owner'], elapsed, e)
+            return origin_cell, [], '', elapsed, 'exc'
 
 
 async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
@@ -196,7 +257,11 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     t0 = time.time()
     ok_cnt = fail_cnt = 0
     cache_inserts, route_inserts = [], []
+    ranked_by_origin: dict[str, list] = {}   # linestring 백필용 raw path 보관
     now = time.strftime('%Y-%m-%d %H:%M:%S')
+    # 키별 통계: {owner: {'ok':0,'auth':0,'no_transit':0,'exc':0,'ms_total':0,'calls':0}}
+    key_stats: dict[str, dict] = {k['owner']: {'ok':0,'auth':0,'no_transit':0,'exc':0,'ms':0,'n':0}
+                                   for k in KEYS}
 
     # 동시 연결 한도 = 키수 × 키당동시성(=ROUND_SIZE)에 자동 비례 + 약간의 여유.
     # 고정 30이면 키를 늘려도(예: 15키×4=60) 30에서 큐잉돼 증설 효과가 반감된다.
@@ -212,7 +277,12 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
                 tasks.append(_call_one(session, k, sems[k['owner']], c, dest_lat, dest_lng))
             results = await asyncio.gather(*tasks)
 
-            for origin, ranked, raw in results:
+            for (origin, ranked, raw, elapsed_ms, err_type), task_k in zip(results, [KEYS[i % len(KEYS)] for i in range(len(batch))]):
+                ks = key_stats.get(task_k['owner'])
+                if ks is not None:
+                    ks['n'] += 1; ks['ms'] += elapsed_ms
+                    if err_type is None:   ks['ok'] += 1
+                    elif err_type in ks:   ks[err_type] += 1
                 rel = None
                 if cells_dir is not None and raw:
                     fpath = cells_dir / f'{origin}.json'
@@ -237,6 +307,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
                             info['totalTime'], info['busTransitCount'], info['subwayTransitCount'],
                             *(v for s in step_data for v in s),
                         ))
+                    ranked_by_origin[origin] = ranked
                     ok_cnt += 1
                 else:
                     cache_inserts.append((
@@ -272,6 +343,40 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
 
     conn.executemany(_ROUTE_INSERT_SQL, route_inserts)
 
+    # ── linestring 인라인 백필 (line_geom이 DB에 있을 때만) ──────
+    if ranked_by_origin:
+        line_geom = _load_line_geom(conn)
+        if line_geom:
+            ls_updates = []
+            setc = ', '.join(f'step{n}_linestring=?' for n in range(1, MAX_STEPS + 1))
+            for origin, ranked in ranked_by_origin.items():
+                for rank, p in ranked:
+                    legs = _geom_legs(p)
+                    if not legs:
+                        continue
+                    steps = to_steps(p['subPath'])
+                    linestrings = [None] * MAX_STEPS
+                    li = 0
+                    for k, s in enumerate(steps[:MAX_STEPS]):
+                        if _CLASS_MAP.get(s['type']) is None:
+                            continue
+                        if li >= len(legs):
+                            break
+                        lid, cls, board, alight = legs[li]; li += 1
+                        whole = line_geom.get((lid, cls))
+                        if whole:
+                            seg = _geom_clip(whole, board, alight)
+                            if len(seg) >= 2:
+                                linestrings[k] = ' '.join(f'{x},{y}' for x, y in seg)
+                    if any(ls for ls in linestrings):
+                        ls_updates.append((*linestrings, origin, wp_id, rank))
+            if ls_updates:
+                conn.executemany(
+                    f'UPDATE transit_routes SET {setc} WHERE origin_cell=? AND wp_id=? AND rank=?',
+                    ls_updates,
+                )
+                log.info('linestring 백필: %d행', len(ls_updates))
+
     # workplaces.cells_cached 갱신
     cached = conn.execute(
         'SELECT COUNT(*) FROM transit_cache WHERE wp_id=? AND passed_filter=1', (wp_id,)
@@ -279,9 +384,23 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     conn.execute('UPDATE workplaces SET cells_cached=? WHERE wp_id=?', (cached, wp_id))
     conn.commit()
 
+    total_ms = int((time.time() - t0) * 1000)
+    # 키별 요약 (auth/exc 있는 키만 상세 표시)
+    key_summary = []
+    for owner, s in key_stats.items():
+        if s['n'] == 0:
+            continue
+        avg = s['ms'] // s['n'] if s['n'] else 0
+        detail = f"ok={s['ok']} auth={s['auth']} exc={s['exc']} avg={avg}ms"
+        key_summary.append(f'{owner}[{detail}]')
+    log.info(
+        '[transit] wp=%s cells=%d ok=%d fail=%d elapsed=%dms | %s',
+        wp_id, len(cells_to_fetch), ok_cnt, fail_cnt, total_ms,
+        ' '.join(key_summary) or 'no-calls',
+    )
     return {
         'fetched': ok_cnt + fail_cnt,
         'passed':  ok_cnt,
         'failed':  fail_cnt,
-        'elapsed_ms': int((time.time()-t0)*1000),
+        'elapsed_ms': total_ms,
     }
