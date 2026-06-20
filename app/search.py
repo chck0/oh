@@ -285,27 +285,13 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     to_fetch_all_1 = [c for c in cells if c not in cached_1]
     to_fetch_all_2 = [c for c in cells if c not in cached_2] if dual else []
 
-    # ── 동적 분배: wp별 미스 수를 측정 후 적은 쪽이 먼저 할당량 차지 ──
-    TOTAL_LIMIT = MAX_FETCH_CELLS_PER_CALL  # 200
-    half = TOTAL_LIMIT // 2                  # 100
+    # 셀 제한 없음 — 미스 셀 전부 한 번에 fetch (Vercel 5분 타임아웃 내 처리).
+    # api당 동시 2개 + 라운드 300ms 딜레이로 429 안 터지는 게 벤치마크로 검증됨.
+    # 거리순 정렬은 유지: 만일 중단돼도 직장에서 가까운(=핵심) 셀부터 채워지도록.
     n1, n2 = len(to_fetch_all_1), len(to_fetch_all_2)
-
-    if not dual:
-        take_1, take_2 = min(n1, TOTAL_LIMIT), 0
-    elif n1 <= half and n2 <= half:
-        take_1, take_2 = n1, n2
-    elif n1 <= half:
-        take_1 = n1
-        take_2 = min(n2, TOTAL_LIMIT - n1)
-    elif n2 <= half:
-        take_2 = n2
-        take_1 = min(n1, TOTAL_LIMIT - n2)
-    else:
-        take_1, take_2 = half, half
-
-    to_fetch_1 = sorted(to_fetch_all_1, key=_cell_dist_to(dest_lat, dest_lng))[:take_1]
+    to_fetch_1 = sorted(to_fetch_all_1, key=_cell_dist_to(dest_lat, dest_lng))
     to_fetch_2 = (
-        sorted(to_fetch_all_2, key=_cell_dist_to(wp_2['lat'], wp_2['lng']))[:take_2]
+        sorted(to_fetch_all_2, key=_cell_dist_to(wp_2['lat'], wp_2['lng']))
         if dual else []
     )
     # ODsay: 캐시 미스 셀을 백그라운드에서 처리 (응답 블로킹 없음)
