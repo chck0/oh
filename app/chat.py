@@ -102,6 +102,155 @@ def _parse_reply(raw: str) -> "tuple[str, list[str]]":
     return raw[: chips_match.start()].strip(), suggestions
 
 
+def _row_get(row, key: str, default=None):
+    if not row:
+        return default
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return default
+
+
+def _int_or_zero(value) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _local_fact_suggestions() -> list[str]:
+    return [
+        "주차는 세대당 몇 대야?",
+        "엘리베이터는 몇 대야?",
+        "가까운 지하철역은 어디야?",
+    ]
+
+
+_KAPT_FACT_KEYWORDS = (
+    "난방", "복도", "계단", "홀", "엘리베이터", "엘베", "주차", "주차장",
+    "전기차", "충전", "최고층", "몇층", "몇동", "동수", "지하철", "역",
+    "시공", "건설", "건설사",
+)
+
+
+def _compact_text(text: str) -> str:
+    return re.sub(r"\s+", "", (text or "").lower())
+
+
+def _is_kapt_fact_question(message: str) -> bool:
+    compact = _compact_text(message)
+    return any(keyword in compact for keyword in _KAPT_FACT_KEYWORDS)
+
+
+def _fetch_kapt_complex(conn, kapt_code: str | None):
+    try:
+        return conn.execute(
+            "SELECT kaptTopFloor, kaptDongCnt, kaptdEcnt, kaptdCccnt, kaptdPcntu, "
+            "groundElChargerCnt, undergroundElChargerCnt, codeHeatNm, codeHallNm, "
+            "kaptBcompany, subwayLine, subwayStation, kaptdWtimesub "
+            "FROM kapt_complexes WHERE kaptCode = ? LIMIT 1",
+            [kapt_code],
+        ).fetchone() if kapt_code else None
+    except Exception:
+        return None
+
+
+def _local_fact_reply(message: str, apt, kc) -> "tuple[str, list[str]] | None":
+    """Answer common K-apt fact questions without paying Claude latency."""
+    if not _is_kapt_fact_question(message):
+        return None
+
+    compact = _compact_text(message)
+    apt_name = _row_get(apt, "apt_nm", "이 단지")
+    units = _int_or_zero(_row_get(apt, "kaptdaCnt"))
+    suggestions = _local_fact_suggestions()
+
+    if not kc:
+        return f"{apt_name}은 K-apt 건물 스펙 데이터가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "난방" in compact:
+        heat = _row_get(kc, "codeHeatNm")
+        if heat:
+            return f"{apt_name} 난방방식은 {heat}이야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 난방방식이 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "복도" in compact or "계단" in compact or "홀" in compact:
+        hall = _row_get(kc, "codeHallNm")
+        if hall:
+            return f"{apt_name} 복도유형은 {hall}로 잡혀 있어.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 복도유형이 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "엘리베이터" in compact or "엘베" in compact:
+        elevators = _int_or_zero(_row_get(kc, "kaptdEcnt"))
+        if elevators:
+            return f"{apt_name} 엘리베이터는 총 {elevators:,}대야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 엘리베이터 대수가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "전기차" in compact or "충전" in compact:
+        chargers = (
+            _int_or_zero(_row_get(kc, "groundElChargerCnt"))
+            + _int_or_zero(_row_get(kc, "undergroundElChargerCnt"))
+        )
+        if chargers:
+            return f"{apt_name} 전기차 충전기는 총 {chargers:,}대야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 전기차 충전기 수가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "주차" in compact or "주차장" in compact:
+        parking = _int_or_zero(_row_get(kc, "kaptdCccnt")) + _int_or_zero(_row_get(kc, "kaptdPcntu"))
+        if parking:
+            per_unit = f", 세대당 {parking / units:.2f}대 정도" if units else ""
+            return f"{apt_name} 총 주차대수는 {parking:,}대{per_unit}야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 주차대수가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "최고층" in compact or "몇층" in compact:
+        top_floor = _row_get(kc, "kaptTopFloor")
+        if top_floor:
+            return f"{apt_name} 최고층은 {top_floor}층이야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 최고층 정보가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "몇동" in compact or "동수" in compact:
+        dong_count = _row_get(kc, "kaptDongCnt")
+        if dong_count:
+            return f"{apt_name} 동 수는 {dong_count}개동이야.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 동 수가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    if "지하철" in compact or "역" in compact:
+        station = _row_get(kc, "subwayStation")
+        if station:
+            line = _row_get(kc, "subwayLine")
+            walk = _row_get(kc, "kaptdWtimesub")
+            station_text = f"{line} {station}" if line else str(station)
+            walk_text = f", K-apt 기준 도보 {walk}분" if walk else ""
+            return f"{apt_name} 인근 지하철역은 {station_text}{walk_text}로 잡혀 있어.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 인근 지하철역 정보가 비어 있어. 네이버지도나 현장 확인이 정확해.", suggestions
+
+    if "시공" in compact or "건설" in compact or "건설사" in compact:
+        builder = _row_get(kc, "kaptBcompany")
+        if builder:
+            return f"{apt_name} 시공사는 {builder}로 잡혀 있어.", suggestions
+        return f"{apt_name}은 K-apt 데이터에 시공사 정보가 비어 있어. 공식 확인이 필요해.", suggestions
+
+    return None
+
+
+def _should_enable_web_search(message: str, has_attachment: bool) -> bool:
+    if has_attachment:
+        return False
+    compact = _compact_text(message)
+    local_keywords = (
+        "난방", "복도", "계단", "홀", "엘리베이터", "엘베", "주차", "전기차", "충전",
+        "최고층", "몇층", "몇동", "동수", "지하철", "역", "시공", "건설사",
+        "실거래", "평당", "단가", "도보", "몇분", "시설",
+    )
+    if any(keyword in compact for keyword in local_keywords):
+        return False
+    web_keywords = (
+        "호재", "개발", "재건축", "재개발", "gtx", "뉴스", "기사", "최근소식",
+        "공식", "확인", "학교", "학군", "초등", "중학교", "고등", "상권",
+    )
+    return any(keyword in compact for keyword in web_keywords)
+
+
 # ── SSE (스트리밍) 헬퍼 ────────────────────────────────────────
 _CHIPS_MARK = "\nCHIPS:"
 
@@ -168,6 +317,23 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
 
             return StreamingResponse(
                 _cached_gen(), media_type='text/event-stream', headers=_SSE_HEADERS)
+
+    kc = None
+    if not has_attachment and _is_kapt_fact_question(req.message):
+        kc = _fetch_kapt_complex(conn, apt['kaptCode'])
+        local_fact = _local_fact_reply(req.message, apt, kc)
+        if local_fact:
+            reply, suggestions = local_fact
+            full = f"{reply}\nCHIPS: {' | '.join(suggestions)}"
+            if history_len <= 2:
+                _chat_cache_set(cache_key, full)
+
+            def _early_local_gen():
+                yield _sse({'type': 'delta', 'text': reply})
+                yield _sse({'type': 'done', 'suggestions': suggestions})
+
+            return StreamingResponse(
+                _early_local_gen(), media_type='text/event-stream', headers=_SSE_HEADERS)
 
     def _fmt(v: int) -> str:
         e, m = v // 10000, v % 10000
@@ -273,16 +439,8 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     # 건물 하드웨어 스펙 (주차·전기차 충전기·층수·난방 등) — K-apt 공공데이터(kapt_complexes).
     # detail.py와 동일한 계산식. 테이블/컬럼 누락 환경에서도 안전하도록 try-except로 감싼다.
     bld_lines: list[str] = []
-    try:
-        kc = conn.execute(
-            "SELECT kaptTopFloor, kaptDongCnt, kaptdEcnt, kaptdCccnt, kaptdPcntu, "
-            "groundElChargerCnt, undergroundElChargerCnt, codeHeatNm, codeHallNm, "
-            "kaptBcompany, subwayLine, subwayStation, kaptdWtimesub "
-            "FROM kapt_complexes WHERE kaptCode = ? LIMIT 1",
-            [apt['kaptCode']],
-        ).fetchone() if apt['kaptCode'] else None
-    except Exception:
-        kc = None
+    if kc is None:
+        kc = _fetch_kapt_complex(conn, apt['kaptCode'])
     if kc:
         def _ki(v):
             try:
@@ -315,6 +473,8 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
                 sta = f"{kc['subwayLine']} {sta}"
             walk = f" (도보 {kc['kaptdWtimesub']}분)" if kc['kaptdWtimesub'] else ""
             bld_lines.append(f"- 인근 지하철: {sta}{walk}")
+
+    use_web_tools = _should_enable_web_search(req.message, has_attachment)
 
     system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
 반말, 카톡 말투. 5줄 이내.
@@ -360,6 +520,12 @@ CHIPS: 질문1 | 질문2 | 질문3
 
 == 도보 10분 이내 주요 시설 ==
 {chr(10).join(poi_lines) or '시설 데이터 없음'}"""
+
+    if not use_web_tools:
+        system += (
+            "\n\n이번 질문은 위 컨텍스트만으로 답해. 웹검색 도구는 사용하지 말고, "
+            "컨텍스트에 없는 내용만 공식 확인이 필요하다고 말해."
+        )
 
     # spec-27: 첨부 파일 처리
     import base64 as _b64
@@ -417,13 +583,16 @@ CHIPS: 질문1 | 질문2 | 질문3
             MAX_TOOL_TURNS = 3
             final_msg = None
             for _ in range(MAX_TOOL_TURNS + 1):
-                with client.messages.stream(
-                    model=cfg.SONNET_MODEL,  # 채팅 응답: 저지연·빠른 Sonnet (기존 Opus에서 전환)
-                    max_tokens=700,
-                    system=system,
-                    messages=messages,
-                    tools=_SEARCH_TOOLS,
-                ) as stream:
+                stream_args = {
+                    "model": cfg.SONNET_MODEL,  # 채팅 응답: 저지연·빠른 Sonnet (기존 Opus에서 전환)
+                    "max_tokens": 700 if use_web_tools else 420,
+                    "system": system,
+                    "messages": messages,
+                }
+                if use_web_tools:
+                    stream_args["tools"] = _SEARCH_TOOLS
+
+                with client.messages.stream(**stream_args) as stream:
                     for delta in stream.text_stream:
                         full += delta
                         idx = full.find(_CHIPS_MARK)
@@ -434,7 +603,7 @@ CHIPS: 질문1 | 질문2 | 질문3
                             emitted = safe
                     final_msg = stream.get_final_message()
 
-                if final_msg.stop_reason != 'tool_use':
+                if not use_web_tools or final_msg.stop_reason != 'tool_use':
                     break
                 # 검색 도구 실행 후 다음 턴 진행
                 messages.append({'role': 'assistant', 'content': final_msg.content})
