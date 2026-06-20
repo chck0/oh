@@ -488,8 +488,8 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    /* 슬라이더 바: 연한 파스텔 그라데이션 (CTA용 진한 브랜드 그라데이션과 분리) */
-    .adv-year-bar.in-range { background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-color: transparent; }
+    /* 슬라이더 바: 배경 트랙과 대비되는 중간 채도 퍼플 (연한 파스텔→가독성 개선) */
+    .adv-year-bar.in-range { background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -497,7 +497,8 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-radius: 2px;
+      background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-radius: 2px;
+      transition: left 0.12s ease-out, width 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 */
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -505,6 +506,7 @@
       background: #fff; border: 2px solid var(--color-brand-primary);
       cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2);
       z-index: 2;
+      transition: left 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 이동 */
     }
     .adv-year-thumb:active { cursor: grabbing; }
     .adv-year-tick-row { display: flex; justify-content: space-between; }
@@ -5304,6 +5306,14 @@ function toggleCompareCard(id, el) {
     }
     compareSet.set(id, card);
     el.classList.add('cmp-selected');
+    // 지도에서 해당 단지 핀 통통 튀기 (좌측 선택 ↔ 지도 시각 연동)
+    document.querySelectorAll('.pin[data-apt-seq]').forEach(p => {
+      if (p.dataset.aptSeq !== String(card.apt_seq)) return;
+      p.classList.remove('pin-bounce');
+      void p.offsetWidth;  // reflow — 재선택 시 애니메이션 재시작
+      p.classList.add('pin-bounce');
+      p.addEventListener('animationend', () => p.classList.remove('pin-bounce'), { once: true });
+    });
   }
   _updateCompareBar();
 }
