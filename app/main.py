@@ -362,7 +362,7 @@ def workplaces_recent(limit: int = 5):
             'SELECT address_input, address_norm, search_count, last_used '
             'FROM workplaces '
             'WHERE address_norm IS NOT NULL AND address_input IS NOT NULL '
-            'ORDER BY search_count DESC, last_used DESC '
+            'ORDER BY last_used DESC, search_count DESC '
             'LIMIT ?',
             (limit,),
         ).fetchall()
