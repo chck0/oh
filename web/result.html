@@ -1596,7 +1596,6 @@
     }
     /* 오피스 마커 — 원형 위치핀 SVG 픽토그램, 집핀과 완전히 다른 형태 */
     .pin-workplace-wrap, .pin-workplace-2-wrap {
-      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.55));
       cursor: pointer;
     }
     /* 지도 좌상단 범례 */
@@ -2792,27 +2791,25 @@
 <!-- ── 로딩 오버레이 ── -->
 <div class="loading-overlay" id="loading">
   <div class="loading-head">
-    <h2 id="loading-title">맞춤 매물 찾는 중…</h2>
-    <p id="loading-subtitle">통근시간 분석 + AI 코멘트가 끝나는 동안 잠깐 음악 한 곡 어떠세요</p>
-    <!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) -->
-    <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--color-text-tertiary);">개발용으로 만든 타이머입니다 (최종때는 삭제)</div>
-    <div id="analysis-timer" style="margin-top:6px;display:inline-block;font-size:15px;font-weight:700;color:var(--color-brand-primary);background:var(--color-brand-bg-subtle);border:1px solid var(--color-brand-primary);border-radius:8px;padding:6px 14px;font-feature-settings:'tnum';font-variant-numeric:tabular-nums;">⏱ 0.0초</div>
+    <h2 id="loading-title">맞춤 아파트 찾는 중…</h2>
+    <p id="loading-subtitle"></p>
+  <div id="analysis-timer" style="margin-top:10px;display:inline-block;font-size:15px;font-weight:700;color:var(--color-brand-primary);background:var(--color-brand-bg-subtle);border:1px solid var(--color-brand-primary);border-radius:8px;padding:6px 14px;font-feature-settings:'tnum';font-variant-numeric:tabular-nums;">⏱ 0.0초</div>
   </div>
 
   <div class="progress-steps" id="progress-steps">
     <div class="progress-step done" data-step="search">
       <div class="progress-step__dot"><span class="pn">1</span></div>
-      <div class="progress-step__label">매물 수집</div>
+      <div class="progress-step__label">아파트 찾기</div>
     </div>
     <div class="progress-connector in-progress" data-conn="1"></div>
     <div class="progress-step active" data-step="commute">
       <div class="progress-step__dot"><span class="pn">2</span></div>
-      <div class="progress-step__label">통근 분석</div>
+      <div class="progress-step__label">출퇴근 시간 계산</div>
     </div>
     <div class="progress-connector" data-conn="2"></div>
     <div class="progress-step" data-step="ai">
       <div class="progress-step__dot"><span class="pn">3</span></div>
-      <div class="progress-step__label">AI 코멘트</div>
+      <div class="progress-step__label">AI 추천</div>
     </div>
   </div>
 
@@ -2825,11 +2822,11 @@
   </div>
 
   <button class="done-btn" id="done-btn" onclick="showResults()">
-    결과 보기 <span class="arrow">→</span>
+    결과 보러가기 <span class="arrow">→</span>
   </button>
 </div>
 
-<!-- ⏱ 개발용 분석 타이머 (배포 전 제거 예정) — 페이지 로드 시점부터 카운트 -->
+
 <script>
   window._analysisTimerInterval = setInterval(function(){
     var el = document.getElementById('analysis-timer');
@@ -3241,9 +3238,9 @@ async function runSearch(){
     if(resultData.llm_pending){
       setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
     }
-    // ODsay 백그라운드 처리 중이면 20초 후 silent 재검색으로 경로 데이터 반영
+    // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
     if(resultData.meta?.transit_pending){
-      _scheduleTransitRefresh(20000);
+      _scheduleTransitRefresh(8000);
     }
   } catch(err){
     clearTimeout(_tid);
@@ -3322,8 +3319,8 @@ function _scheduleTransitRefresh(delayMs) {
         initMap(resultData);
         if(fresh.llm_pending) setTimeout(pollComments, 500);
       }
-      // 아직 pending이면 다시 스케줄 (점진적 증가: 20→30→45s)
-      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(30000);
+      // 아직 pending이면 다시 스케줄 (점진적 증가: 8→15→30s)
+      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(15000);
     } catch(e) { console.warn('[transit refresh]', e); }
   }, delayMs);
 }
@@ -3340,13 +3337,12 @@ function onSearchDone(){
     else c.classList.add('in-progress');  // 2번째 커넥터는 진행 중 애니메이션 유지
   });
 
-  document.getElementById('loading-title').textContent = '분석 완료';
+  document.getElementById('loading-title').textContent = '맞춤 아파트를 찾았어요';
   document.getElementById('loading-title').classList.add('done');
   const cnt = resultData.cards.length;
   document.getElementById('loading-subtitle').innerHTML =
-    `<strong class="num">${cnt.toLocaleString()}개</strong> 매물을 찾았어요.`;
+    `<strong class="num">${cnt.toLocaleString()}개</strong> 아파트를 찾았어요.`;
   document.getElementById('done-btn').classList.add('show');
-  // ⏱ 개발용 타이머 정지 + 최종 시간 표시 (배포 전 제거 예정)
   if(window._analysisTimerInterval){ clearInterval(window._analysisTimerInterval); window._analysisTimerInterval=null; }
   const _tEl = document.getElementById('analysis-timer');
   if(_tEl) _tEl.textContent = '⏱ 분석 완료 — ' + (performance.now()/1000).toFixed(1) + '초';
@@ -5671,16 +5667,16 @@ async function initMap(data){
   // 직장 핀 (W1)
   new kakao.maps.CustomOverlay({
     position: new kakao.maps.LatLng(wp.lat, wp.lng),
-    content: `<div class="pin-workplace-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="22" height="18" rx="1" fill="white"/><rect x="21" y="15" width="14" height="8" rx="1" fill="white"/><rect x="25" y="11" width="6" height="6" rx="1" fill="white"/><rect x="19" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="23" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="19" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="26" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="33" y="30" width="4" height="4" rx="0.5" fill="#0f172a"/><rect x="23" y="34" width="10" height="5" rx="0.5" fill="#0f172a"/>${dualMode ? '<circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">1</text>' : ''}</svg></div>`,
-    yAnchor: 1, zIndex: 100,
+    content: `<div style="width:52px;height:52px;background:#1B0EC6;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);position:relative;"><img src="/img/wp1.png" style="width:36px;height:36px;object-fit:contain;">${dualMode ? '<div style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;background:#f43f5e;border-radius:50%;border:1.5px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:Arial,sans-serif;color:white;">1</div>' : ''}</div>`,
+    yAnchor: 0.5, zIndex: 100,
   }).setMap(kakaoMap);
 
   // spec-13: W2 직장 핀
   if(dualMode && data.workplace_2 && data.workplace_2.lat){
     new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng),
-      content: '<div class="pin-workplace-2-wrap"><svg width="56" height="70" viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="26" fill="#0f172a" stroke="white" stroke-width="2"/><path d="M22 52 L28 68 L34 52 Z" fill="#0f172a"/><path d="M22 53 L28 68 L34 53" stroke="white" stroke-width="2" stroke-linejoin="round"/><rect x="20" y="22" width="16" height="20" rx="1" fill="white"/><rect x="15" y="28" width="26" height="14" rx="1" fill="white"/><rect x="25" y="14" width="6" height="10" rx="1" fill="white"/><rect x="22" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="30" y="24" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="30" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="17" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="23" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="29" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><rect x="35" y="36" width="4" height="3" rx="0.4" fill="#0f172a"/><circle cx="46" cy="10" r="10" fill="#f43f5e" stroke="white" stroke-width="1.5"/><text x="46" y="15" text-anchor="middle" font-size="13" font-weight="900" font-family="Arial,sans-serif" fill="white">2</text></svg></div>',
-      yAnchor: 1, zIndex: 100,
+      content: '<div style="width:52px;height:52px;background:#28C66E;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);position:relative;"><img src=\"/img/wp2.png\" style=\"width:36px;height:36px;object-fit:contain;\"><div style=\"position:absolute;top:-6px;right:-6px;width:18px;height:18px;background:#f43f5e;border-radius:50%;border:1.5px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:Arial,sans-serif;color:white;\">2</div></div>',
+      yAnchor: 0.5, zIndex: 100,
     }).setMap(kakaoMap);
   }
 
@@ -5747,6 +5743,15 @@ async function initMap(data){
       showDetail(pin.dataset.aptSeq, data.wp_id);
     }
   });
+
+  // initMap 재호출(transit refresh 등) 후 현재 필터 상태 재적용
+  if (window.filterMapPins) {
+    const shouldLimit = (typeof _isAdvFilterActive === 'function' && _isAdvFilterActive()) || _currentFavTab === 'fav';
+    if (shouldLimit) {
+      const filtered = typeof _cardsForCurrentList === 'function' ? _cardsForCurrentList() : null;
+      window.filterMapPins(filtered ? filtered.map(c => c.apt_seq) : null);
+    }
+  }
 }
 
 function zoomLevelFor(min){

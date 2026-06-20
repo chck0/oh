@@ -439,8 +439,16 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     # 건물 하드웨어 스펙 (주차·전기차 충전기·층수·난방 등) — K-apt 공공데이터(kapt_complexes).
     # detail.py와 동일한 계산식. 테이블/컬럼 누락 환경에서도 안전하도록 try-except로 감싼다.
     bld_lines: list[str] = []
-    if kc is None:
-        kc = _fetch_kapt_complex(conn, apt['kaptCode'])
+    try:
+        kc = conn.execute(
+            "SELECT kaptTopFloor, kaptDongCnt, kaptdEcnt, kaptdCccnt, kaptdPcntu, "
+            "groundElChargerCnt, undergroundElChargerCnt, codeHeatNm, codeHallNm, "
+            "kaptBcompany, subwayLine, subwayStation, kaptdWtimesub "
+            "FROM kapt_complexes WHERE kaptCode = ? LIMIT 1",
+            [apt['kaptCode']],
+        ).fetchone() if apt['kaptCode'] else None
+    except Exception:
+        kc = None
     if kc:
         def _ki(v):
             try:
@@ -475,6 +483,7 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
             bld_lines.append(f"- 인근 지하철: {sta}{walk}")
 
     use_web_tools = _should_enable_web_search(req.message, has_attachment)
+
 
     system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
 반말, 카톡 말투. 5줄 이내.
@@ -584,7 +593,7 @@ CHIPS: 질문1 | 질문2 | 질문3
             final_msg = None
             for _ in range(MAX_TOOL_TURNS + 1):
                 stream_args = {
-                    "model": cfg.SONNET_MODEL,  # 채팅 응답: 저지연·빠른 Sonnet (기존 Opus에서 전환)
+                    "model": cfg.SONNET_MODEL,
                     "max_tokens": 700 if use_web_tools else 420,
                     "system": system,
                     "messages": messages,
