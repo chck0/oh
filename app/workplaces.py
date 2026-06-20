@@ -80,7 +80,14 @@ def get_or_create(conn, addr_input: str) -> dict | None:
 
     # ── 1순위: 인메모리 캐시 → DB/Kakao 완전 생략 ───────────────
     if addr_input in _wp_mem_cache:
-        return _wp_mem_cache[addr_input]
+        cached = _wp_mem_cache[addr_input]
+        now = time.strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            'UPDATE workplaces SET last_used=?, search_count=search_count+1 WHERE wp_id=?',
+            (now, cached['wp_id'])
+        )
+        conn.commit()
+        return cached
 
     # ── 2순위: DB 조회 → Kakao API 호출 생략 ────────────────────
     cols = list_columns(conn, 'workplaces')
