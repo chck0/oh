@@ -3244,9 +3244,11 @@ async function runSearch(){
       _scheduleTransitRefresh(4000);  // 콜드는 더 빨리 첫 폴링
     } else {
       onSearchDone();
-      // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
+      // 친구 한마디 LLM 생성 트리거 + 폴링 시작
+      // (검색 응답은 생성을 시작하지 않음 → 프론트가 /api/comments/generate를 호출해야 함)
       if(resultData.llm_pending){
-        setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
+        startCommentGeneration();        // ← 생성 트리거 (이게 빠져서 영원히 "생성 중"이던 버그 수정)
+        setTimeout(pollComments, 500);   // 첫 폴링까지 0.5초
       }
       // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
       if(resultData.meta?.transit_pending){
@@ -3352,7 +3354,7 @@ function _scheduleTransitRefresh(delayMs) {
           _coldStartPending = false;
           resultData = fresh;
           onSearchDone();
-          if(fresh.llm_pending) setTimeout(pollComments, 500);
+          if(fresh.llm_pending){ startCommentGeneration(); setTimeout(pollComments, 500); }
           if(fresh.meta?.transit_pending) _scheduleTransitRefresh(8000);
         } else if(fresh.meta?.transit_pending && Date.now() < _coldStartDeadline){
           // 아직 계산 중 → 계속 대기 (콜드는 4초 간격)
@@ -3373,7 +3375,7 @@ function _scheduleTransitRefresh(delayMs) {
         renderSummary(resultData);
         renderCards(resultData);
         initMap(resultData);
-        if(fresh.llm_pending) setTimeout(pollComments, 500);
+        if(fresh.llm_pending){ startCommentGeneration(); setTimeout(pollComments, 500); }
       }
       // 아직 pending이면 다시 스케줄 (점진적 증가: 8→15→30s)
       if(fresh.meta?.transit_pending) _scheduleTransitRefresh(15000);
