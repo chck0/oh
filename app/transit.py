@@ -190,6 +190,9 @@ def step_cols(steps, n):
 
 # ── ODsay 호출 ───────────────────────────────────────────────
 async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
+    """반환: (origin_cell, ranked_paths, raw, elapsed_ms, err_type)
+    err_type: None=성공, 'auth'=키인증실패, 'no_transit'=경로없음, 'http'=HTTP오류, 'exc'=예외
+    """
     async with sem:
         o_lat, o_lng = cell_center(origin_cell)
         params = {
@@ -198,20 +201,16 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
             'lang': 0, 'OPT': 0
         }
         headers = {'Referer': key_info['referer']}
+        t0 = time.monotonic()
         try:
             async with session.get(
                 ODSAY_URL, params=params, headers=headers,
                 timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
             ) as r:
+                elapsed = int((time.monotonic() - t0) * 1000)
                 raw  = await r.text()
                 data = json.loads(raw)
                 if 'result' not in data:
-                    log.warning(
-                        'ODsay no-result [%s] key=%s status=%d body=%s',
-                        origin_cell, key_info['owner'], r.status, raw[:300],
-                    )
-                    # ApiKey 인증 실패 → 캐시 절대 X. raw='' 반환 → 호출자가
-                    # response_size=0 으로 저장 → 다음 검색에서 다른 키로 재시도.
                     err = data.get('error')
                     err_msg = ''
                     if isinstance(err, list) and err:
@@ -219,12 +218,19 @@ async def _call_one(session, key_info, sem, origin_cell, dest_lat, dest_lng):
                     elif isinstance(err, dict):
                         err_msg = str(err.get('message', ''))
                     if 'ApiKeyAuthFailed' in err_msg or 'apikey' in err_msg.lower():
-                        return origin_cell, [], ''  # 캐시 X
-                    return origin_cell, [], raw    # 캐시 O (legit no-transit)
-                return origin_cell, rank_paths(data['result'].get('path', [])), raw
+                        log.warning('ODsay auth-fail [%s] key=%s %dms',
+                                    origin_cell, key_info['owner'], elapsed)
+                        return origin_cell, [], '', elapsed, 'auth'
+                    log.warning('ODsay no-result [%s] key=%s status=%d %dms body=%s',
+                                origin_cell, key_info['owner'], r.status, elapsed, raw[:200])
+                    return origin_cell, [], raw, elapsed, 'no_transit'
+                ranked = rank_paths(data['result'].get('path', []))
+                return origin_cell, ranked, raw, elapsed, None
         except Exception as e:
-            log.error('ODsay exception [%s] key=%s: %s', origin_cell, key_info['owner'], e)
-            return origin_cell, [], ''
+            elapsed = int((time.monotonic() - t0) * 1000)
+            log.error('ODsay exception [%s] key=%s %dms: %s',
+                      origin_cell, key_info['owner'], elapsed, e)
+            return origin_cell, [], '', elapsed, 'exc'
 
 
 async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
@@ -253,6 +259,9 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     cache_inserts, route_inserts = [], []
     ranked_by_origin: dict[str, list] = {}   # linestring 백필용 raw path 보관
     now = time.strftime('%Y-%m-%d %H:%M:%S')
+    # 키별 통계: {owner: {'ok':0,'auth':0,'no_transit':0,'exc':0,'ms_total':0,'calls':0}}
+    key_stats: dict[str, dict] = {k['owner']: {'ok':0,'auth':0,'no_transit':0,'exc':0,'ms':0,'n':0}
+                                   for k in KEYS}
 
     # 동시 연결 한도 = 키수 × 키당동시성(=ROUND_SIZE)에 자동 비례 + 약간의 여유.
     # 고정 30이면 키를 늘려도(예: 15키×4=60) 30에서 큐잉돼 증설 효과가 반감된다.
@@ -268,7 +277,12 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
                 tasks.append(_call_one(session, k, sems[k['owner']], c, dest_lat, dest_lng))
             results = await asyncio.gather(*tasks)
 
-            for origin, ranked, raw in results:
+            for (origin, ranked, raw, elapsed_ms, err_type), task_k in zip(results, [KEYS[i % len(KEYS)] for i in range(len(batch))]):
+                ks = key_stats.get(task_k['owner'])
+                if ks is not None:
+                    ks['n'] += 1; ks['ms'] += elapsed_ms
+                    if err_type is None:   ks['ok'] += 1
+                    elif err_type in ks:   ks[err_type] += 1
                 rel = None
                 if cells_dir is not None and raw:
                     fpath = cells_dir / f'{origin}.json'
@@ -370,9 +384,23 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     conn.execute('UPDATE workplaces SET cells_cached=? WHERE wp_id=?', (cached, wp_id))
     conn.commit()
 
+    total_ms = int((time.time() - t0) * 1000)
+    # 키별 요약 (auth/exc 있는 키만 상세 표시)
+    key_summary = []
+    for owner, s in key_stats.items():
+        if s['n'] == 0:
+            continue
+        avg = s['ms'] // s['n'] if s['n'] else 0
+        detail = f"ok={s['ok']} auth={s['auth']} exc={s['exc']} avg={avg}ms"
+        key_summary.append(f'{owner}[{detail}]')
+    log.info(
+        '[transit] wp=%s cells=%d ok=%d fail=%d elapsed=%dms | %s',
+        wp_id, len(cells_to_fetch), ok_cnt, fail_cnt, total_ms,
+        ' '.join(key_summary) or 'no-calls',
+    )
     return {
         'fetched': ok_cnt + fail_cnt,
         'passed':  ok_cnt,
         'failed':  fail_cnt,
-        'elapsed_ms': int((time.time()-t0)*1000),
+        'elapsed_ms': total_ms,
     }
