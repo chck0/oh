@@ -147,7 +147,7 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
     import datetime as _dt
 
     apt = conn.execute(
-        "SELECT apt_nm, umd_nm, kaptdaCnt, build_year FROM apartments WHERE apt_seq=? LIMIT 1",
+        "SELECT apt_nm, umd_nm, kaptdaCnt, build_year, kaptCode FROM apartments WHERE apt_seq=? LIMIT 1",
         [apt_seq],
     ).fetchone()
     if not apt:
@@ -270,8 +270,55 @@ def apt_chat(apt_seq: str, req: AptChatRequest, conn=Depends(get_db)):
         for r in poi_rows
     ]
 
+    # 건물 하드웨어 스펙 (주차·전기차 충전기·층수·난방 등) — K-apt 공공데이터(kapt_complexes).
+    # detail.py와 동일한 계산식. 테이블/컬럼 누락 환경에서도 안전하도록 try-except로 감싼다.
+    bld_lines: list[str] = []
+    try:
+        kc = conn.execute(
+            "SELECT kaptTopFloor, kaptDongCnt, kaptdEcnt, kaptdCccnt, kaptdPcntu, "
+            "groundElChargerCnt, undergroundElChargerCnt, codeHeatNm, codeHallNm, "
+            "kaptBcompany, subwayLine, subwayStation, kaptdWtimesub "
+            "FROM kapt_complexes WHERE kaptCode = ? LIMIT 1",
+            [apt['kaptCode']],
+        ).fetchone() if apt['kaptCode'] else None
+    except Exception:
+        kc = None
+    if kc:
+        def _ki(v):
+            try:
+                return int(v or 0)
+            except (ValueError, TypeError):
+                return 0
+        units = apt['kaptdaCnt'] or 0
+        parking = _ki(kc['kaptdCccnt']) + _ki(kc['kaptdPcntu'])   # 지하 + 지상
+        ev = _ki(kc['groundElChargerCnt']) + _ki(kc['undergroundElChargerCnt'])
+        if parking:
+            per = f" (세대당 {parking / units:.2f}대)" if units else ""
+            bld_lines.append(f"- 총 주차대수: {parking:,}대{per}")
+        if ev:
+            bld_lines.append(f"- 전기차 충전기: {ev}대")
+        if kc['kaptTopFloor']:
+            bld_lines.append(f"- 최고층: {kc['kaptTopFloor']}층")
+        if kc['kaptDongCnt']:
+            bld_lines.append(f"- 동 수: {kc['kaptDongCnt']}개동")
+        if _ki(kc['kaptdEcnt']):
+            bld_lines.append(f"- 엘리베이터: {_ki(kc['kaptdEcnt'])}대")
+        if kc['codeHeatNm']:
+            bld_lines.append(f"- 난방방식: {kc['codeHeatNm']}")
+        if kc['codeHallNm']:
+            bld_lines.append(f"- 복도유형: {kc['codeHallNm']}")
+        if kc['kaptBcompany']:
+            bld_lines.append(f"- 시공사: {kc['kaptBcompany']}")
+        if kc['subwayStation']:
+            sta = kc['subwayStation']
+            if kc['subwayLine']:
+                sta = f"{kc['subwayLine']} {sta}"
+            walk = f" (도보 {kc['kaptdWtimesub']}분)" if kc['kaptdWtimesub'] else ""
+            bld_lines.append(f"- 인근 지하철: {sta}{walk}")
+
     system = f"""너는 부동산을 잘 아는 친한 친구야. 아래 아파트 정보를 바탕으로 친구처럼 솔직하게 답해줘.
 반말, 카톡 말투. 5줄 이내.
+아래 컨텍스트를 먼저 적극적으로 탐색해서 답해. 특히 '건물 정보' 섹션의 수치(총 주차대수·세대당 주차·전기차 충전기 대수·최고층·동 수·엘리베이터·난방방식·복도유형·시공사·지하철)는 K-apt 공공데이터로 확인된 사실이니, 사용자가 물으면 그 값을 그대로 정확히 답해줘. 컨텍스트에 값이 분명히 있는데 "데이터가 없다/검색 결과가 없다"고 답하는 건 절대 금지. 컨텍스트에 없는 항목만 모른다고 하거나 search_web으로 찾아.
 모르는 건 search_web 도구로 검색해서 답해. 검색 결과가 없거나 제한적이면 "공식 확인이 필요해" 라고 표현해 ("검색이 잘 안 나와" 같은 말은 절대 쓰지 마).
 실시간 호가·전세 정보는 없으니 추정할 때 반드시 "확인 필요"를 붙여.
 교통 호재·재개발·정부 정책을 언급할 땐 반드시 출처를 명시해. 예: [출처: 기사제목 또는 URL]
@@ -295,6 +342,9 @@ CHIPS: 질문1 | 질문2 | 질문3
 
 == 단지 ==
 {apt['apt_nm']} · {apt['umd_nm']} · {(apt['kaptdaCnt'] or 0):,}세대 · 준공 {apt['build_year'] or '미상'}년
+
+== 건물 정보 (K-apt 공공데이터) ==
+{chr(10).join(bld_lines) or '건물 상세 데이터 없음'}
 
 == 시세 통계 (1년 기준) ==
 {chr(10).join(stat_lines) or '데이터 없음'}
@@ -368,7 +418,7 @@ CHIPS: 질문1 | 질문2 | 질문3
             final_msg = None
             for _ in range(MAX_TOOL_TURNS + 1):
                 with client.messages.stream(
-                    model=cfg.OPUS_MODEL,
+                    model=cfg.SONNET_MODEL,  # 채팅 응답: 저지연·빠른 Sonnet (기존 Opus에서 전환)
                     max_tokens=700,
                     system=system,
                     messages=messages,
