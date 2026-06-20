@@ -3285,6 +3285,8 @@ function startCommentGeneration(){
 // LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
 // 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
 let _pollCount = 0;
+let _lastCommentCount = -1;  // 직전 폴링 시점의 코멘트 보유 카드 수 (진행 정체 감지용)
+let _noProgressPolls = 0;    // 코멘트가 더 안 늘어난 연속 폴링 횟수
 const MAX_POLL = 72; // 최대 ~6분 후 자동 종료
 async function pollComments(){
   if(!resultData || _pollCount >= MAX_POLL) return;
@@ -3317,6 +3319,18 @@ async function pollComments(){
 
     // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
     const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
+    // 진행 정체 감지 → 다음 배치 재호출.
+    // 백엔드는 1회당 16개(추천8+일반8)만 생성하므로, 코멘트 수가 더 안 늘면
+    // 직전 배치가 끝난 것 → startCommentGeneration()을 다시 불러 다음 16개를 생성시킴.
+    // 캐시된 건 백엔드가 알아서 제외하므로 중복 호출도 안전함.
+    const haveCount = resultData.cards.length - remaining;
+    if(haveCount > _lastCommentCount){ _noProgressPolls = 0; }
+    else { _noProgressPolls++; }
+    _lastCommentCount = haveCount;
+    if(remaining && _noProgressPolls >= 2){
+      _noProgressPolls = 0;
+      startCommentGeneration();  // 다음 미생성 16개 배치 트리거
+    }
     if(remaining) setTimeout(pollComments, _pollCount <= 5 ? 2000 : 5000);
   } catch(e){
     console.warn('댓글 폴링 실패', e);
