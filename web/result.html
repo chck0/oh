@@ -3240,9 +3240,9 @@ async function runSearch(){
     if(resultData.llm_pending){
       setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
     }
-    // ODsay 백그라운드 처리 중이면 20초 후 silent 재검색으로 경로 데이터 반영
+    // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
     if(resultData.meta?.transit_pending){
-      _scheduleTransitRefresh(20000);
+      _scheduleTransitRefresh(8000);
     }
   } catch(err){
     clearTimeout(_tid);
@@ -3321,8 +3321,8 @@ function _scheduleTransitRefresh(delayMs) {
         initMap(resultData);
         if(fresh.llm_pending) setTimeout(pollComments, 500);
       }
-      // 아직 pending이면 다시 스케줄 (점진적 증가: 20→30→45s)
-      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(30000);
+      // 아직 pending이면 다시 스케줄 (점진적 증가: 8→15→30s)
+      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(15000);
     } catch(e) { console.warn('[transit refresh]', e); }
   }, delayMs);
 }

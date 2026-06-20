@@ -21,10 +21,8 @@ log = logging.getLogger('app.transit')
 
 GRID                = 0.0045
 ODSAY_URL           = "https://api.odsay.com/v1/api/searchPubTransPathT"
-# 동시성 2→4, 슬립 300→100 — Vercel 60s 한도 내 더 많은 셀 처리.
-# ODsay 키 4개 × 4 = 16 병렬, rate limit 측면에선 키당 4req/s 정도라 안전권.
-PER_KEY_CONCURRENCY = 4
-ROUND_SLEEP_MS      = 100
+PER_KEY_CONCURRENCY = 2
+ROUND_SLEEP_MS      = 300
 HTTP_TIMEOUT        = 15
 
 ALLOWED_COMBOS    = {(0,1),(0,2),(1,0),(2,0),(1,1)}
@@ -48,6 +46,63 @@ _ROUTE_INSERT_SQL = (
     f'INSERT INTO transit_routes ({", ".join(_ROUTE_ALL_COLS)}) '
     f'VALUES ({", ".join(["?"] * len(_ROUTE_ALL_COLS))})'
 )
+
+_CLASS_MAP = {'버스': 1, '지하철': 2}
+
+
+def _geom_near(poly, x, y):
+    best, bi = 1e18, 0
+    for i, (px, py) in enumerate(poly):
+        d = (px - x) ** 2 + (py - y) ** 2
+        if d < best:
+            best, bi = d, i
+    return bi
+
+
+def _geom_clip(whole, board, alight):
+    a = _geom_near(whole, *board)
+    b = _geom_near(whole, *alight)
+    lo, hi = (a, b) if a <= b else (b, a)
+    seg = whole[lo:hi + 1]
+    return seg[::-1] if a > b else seg
+
+
+def _geom_legs(path):
+    """ODsay path → 교통 leg [(lineID, class, board_xy, alight_xy)]."""
+    mo = path.get('info', {}).get('mapObj') or ''
+    segs = []
+    for s in mo.split('@'):
+        pr = s.split(':')
+        if len(pr) >= 2 and pr[1] in ('1', '2'):
+            segs.append((pr[0], int(pr[1])))
+    tsubs = [sp for sp in path.get('subPath', []) if sp.get('trafficType') in (1, 2)]
+    if len(segs) != len(tsubs):
+        return None
+    legs = []
+    for (lid, cls), sp in zip(segs, tsubs):
+        sts = (sp.get('passStopList') or {}).get('stations') or []
+        if len(sts) < 2:
+            board  = (float(sp['startX']), float(sp['startY']))
+            alight = (float(sp['endX']),   float(sp['endY']))
+        else:
+            board  = (float(sts[0]['x']),  float(sts[0]['y']))
+            alight = (float(sts[-1]['x']), float(sts[-1]['y']))
+        legs.append((lid, cls, board, alight))
+    return legs
+
+
+def _load_line_geom(conn):
+    """line_geom 테이블 전체 로드. SQLite에 없으면 빈 dict 반환."""
+    try:
+        rows = conn.execute(
+            "SELECT line_id, class, ls FROM line_geom WHERE status='ok' AND ls IS NOT NULL"
+        ).fetchall()
+        return {
+            (r[0], r[1]): [tuple(map(float, pt.split(','))) for pt in r[2].split()]
+            for r in rows
+        }
+    except Exception:
+        return {}
 
 
 # ── 좌표 유틸 ────────────────────────────────────────────────
@@ -196,6 +251,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     t0 = time.time()
     ok_cnt = fail_cnt = 0
     cache_inserts, route_inserts = [], []
+    ranked_by_origin: dict[str, list] = {}   # linestring 백필용 raw path 보관
     now = time.strftime('%Y-%m-%d %H:%M:%S')
 
     # 동시 연결 한도 = 키수 × 키당동시성(=ROUND_SIZE)에 자동 비례 + 약간의 여유.
@@ -237,6 +293,7 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
                             info['totalTime'], info['busTransitCount'], info['subwayTransitCount'],
                             *(v for s in step_data for v in s),
                         ))
+                    ranked_by_origin[origin] = ranked
                     ok_cnt += 1
                 else:
                     cache_inserts.append((
@@ -271,6 +328,40 @@ async def fetch_cells(conn, wp_row, cells_to_fetch: list[str]) -> dict:
     )
 
     conn.executemany(_ROUTE_INSERT_SQL, route_inserts)
+
+    # ── linestring 인라인 백필 (line_geom이 DB에 있을 때만) ──────
+    if ranked_by_origin:
+        line_geom = _load_line_geom(conn)
+        if line_geom:
+            ls_updates = []
+            setc = ', '.join(f'step{n}_linestring=?' for n in range(1, MAX_STEPS + 1))
+            for origin, ranked in ranked_by_origin.items():
+                for rank, p in ranked:
+                    legs = _geom_legs(p)
+                    if not legs:
+                        continue
+                    steps = to_steps(p['subPath'])
+                    linestrings = [None] * MAX_STEPS
+                    li = 0
+                    for k, s in enumerate(steps[:MAX_STEPS]):
+                        if _CLASS_MAP.get(s['type']) is None:
+                            continue
+                        if li >= len(legs):
+                            break
+                        lid, cls, board, alight = legs[li]; li += 1
+                        whole = line_geom.get((lid, cls))
+                        if whole:
+                            seg = _geom_clip(whole, board, alight)
+                            if len(seg) >= 2:
+                                linestrings[k] = ' '.join(f'{x},{y}' for x, y in seg)
+                    if any(ls for ls in linestrings):
+                        ls_updates.append((*linestrings, origin, wp_id, rank))
+            if ls_updates:
+                conn.executemany(
+                    f'UPDATE transit_routes SET {setc} WHERE origin_cell=? AND wp_id=? AND rank=?',
+                    ls_updates,
+                )
+                log.info('linestring 백필: %d행', len(ls_updates))
 
     # workplaces.cells_cached 갱신
     cached = conn.execute(
