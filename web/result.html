@@ -1110,6 +1110,15 @@
       0%, 100% { transform: translateY(-5px) scale(1.18); }
       50%      { transform: translateY(-7px) scale(1.26); }
     }
+    @keyframes pinBounce {
+      0%   { transform: translateY(0); }
+      25%  { transform: translateY(-10px); }
+      50%  { transform: translateY(-2px); }
+      70%  { transform: translateY(-6px); }
+      85%  { transform: translateY(-1px); }
+      100% { transform: translateY(0); }
+    }
+    .pin-bounce { animation: pinBounce 0.65s cubic-bezier(.36,.07,.19,.97); }
     /* 지붕 (삼각형) */
     .pin-roof {
       width: 0; height: 0;
@@ -2597,10 +2606,13 @@ async function runSearch(){
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
     onSearchDone();
-    // LLM 폴링 즉시 시작 — 사용자가 음악 보는 동안 백그라운드에서 코멘트 미리 받아둠
-    // (백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음)
+    // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
     if(resultData.llm_pending){
-      setTimeout(pollComments, 2000);  // 첫 폴링까지 2초 (백그라운드 시작 시간 여유)
+      setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
+    }
+    // ODsay 백그라운드 처리 중이면 20초 후 silent 재검색으로 경로 데이터 반영
+    if(resultData.meta?.transit_pending){
+      _scheduleTransitRefresh(20000);
     }
   } catch(err){
     clearTimeout(_tid);
@@ -2647,13 +2659,42 @@ async function pollComments(){
     });
     if(updated && panelMode==='list') renderCards(resultData);
 
-    // 남은 게 있으면 또 폴링 (5초 간격으로 빠르게)
+    // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
     const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
-    if(remaining) setTimeout(pollComments, 5000);
+    if(remaining) setTimeout(pollComments, _pollCount <= 5 ? 2000 : 5000);
   } catch(e){
     console.warn('댓글 폴링 실패', e);
     setTimeout(pollComments, 10000);
   }
+}
+
+// ODsay 백그라운드 완료 후 silent 재검색 — 로딩 오버레이 없이 경로 데이터만 갱신
+let _transitRefreshTimer = null;
+function _scheduleTransitRefresh(delayMs) {
+  if(_transitRefreshTimer) clearTimeout(_transitRefreshTimer);
+  _transitRefreshTimer = setTimeout(async () => {
+    _transitRefreshTimer = null;
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1'},
+        body: JSON.stringify(reqBody),
+      });
+      if(!res.ok) return;
+      const fresh = await res.json();
+      // 카드 수가 늘었거나 transit 데이터가 생겼으면 화면 갱신
+      const hadMore = fresh.cards && fresh.cards.length > 0;
+      if(hadMore) {
+        resultData = fresh;
+        renderSummary(resultData);
+        renderCards(resultData);
+        initMap(resultData);
+        if(fresh.llm_pending) setTimeout(pollComments, 500);
+      }
+      // 아직 pending이면 다시 스케줄 (점진적 증가: 20→30→45s)
+      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(30000);
+    } catch(e) { console.warn('[transit refresh]', e); }
+  }, delayMs);
 }
 
 function onSearchDone(){
@@ -2717,11 +2758,11 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#FF6FB5'; // ≤30분 → 핑크
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#F550AA'; // ≤30분 → 핑크
     const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#C45ED6'; // 31~45분 → 퍼플
-    if (start <= 45) return '#7C3FE6'; // 46~60분 → 바이올렛
-    return '#7C3FE6';
+    if (start <= 31) return '#B84FCE'; // 31~45분 → 퍼플
+    if (start <= 45) return '#7438E2'; // 46~60분 → 바이올렛
+    return '#7438E2';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
@@ -3119,9 +3160,12 @@ function _renderDetail(d) {
   let poiHtml = '';
   if (pois.length) {
     const poiGroups = {};
+    const seenPoiNames = new Set();
     pois.forEach(p => {
       const allowedSubs = POI_ALLOWED_SUBS[p.category];
       if (allowedSubs && !allowedSubs.has(p.sub_category)) return;
+      if (seenPoiNames.has(p.name)) return;  // 중복 시설명 제거
+      seenPoiNames.add(p.name);
       const key = POI_ORDER.includes(p.category) ? p.category : '기타';
       if (!poiGroups[key]) poiGroups[key] = [];
       if (poiGroups[key].length < 5) poiGroups[key].push(p);
@@ -4559,6 +4603,13 @@ function toggleCompare(id, cb) {
   if (cb.checked) {
     if (compareSet.size >= COMPARE_MAX) { cb.checked = false; return; }
     compareSet.set(id, card);
+    // 선택된 단지 지도 핀 통통 튀기
+    document.querySelectorAll(`.pin[data-apt-seq="${card.apt_seq}"]`).forEach(p => {
+      p.classList.remove('pin-bounce');
+      void p.offsetWidth;  // reflow — 애니메이션 재시작
+      p.classList.add('pin-bounce');
+      p.addEventListener('animationend', () => p.classList.remove('pin-bounce'), {once: true});
+    });
   } else {
     compareSet.delete(id);
   }
@@ -4757,10 +4808,11 @@ function reasonChip3Text(c){
 function splitPrice(manwon){
   if(!manwon) return '<span class="unit">-</span>';
   const e = Math.floor(manwon/10000);
-  const m = manwon%10000;
-  if(e && m) return `<span class="num">${e}</span><span class="unit">억</span> <span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
-  if(e) return `<span class="num">${e}</span><span class="unit">억</span>`;
-  return `<span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
+  const rem = manwon % 10000;
+  const chon = Math.round(rem / 1000);
+  if(chon === 0) return `<span class="num">${e}</span><span class="unit">억</span>`;
+  if(chon === 10) return `<span class="num">${e+1}</span><span class="unit">억</span>`;
+  return `<span class="num">${e}</span><span class="unit">억</span><span class="num">${chon}</span><span class="unit">천만</span>`;
 }
 
 // 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
@@ -4841,7 +4893,9 @@ function renderCards(data){
   const totalRest = rest.length || 1;
 
   // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
-  const partialBanner = data.meta?.partial
+  const partialBanner = data.meta?.transit_pending
+    ? `<div class="partial-banner">🚇 통근 경로 계산 중... 약 20초 후 자동으로 업데이트됩니다.</div>`
+    : data.meta?.partial
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
@@ -5061,13 +5115,14 @@ function showTooltip(pinEl, group, wpId){
   // 최근 거래 금액
   const lt = (c.recent_trades||[])[0];
   const pyeongNum = (c.pyeong_type||'').match(/\d+/)?.[0] || '';
+  const pyeongLabel = pyeongNum ? `${pyeongNum}평대` : '';
   if(lt){
     document.getElementById('tt-price-val').textContent = shortPrice(lt.amount) + '원';
-    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-pyeong').textContent = pyeongLabel;
     document.getElementById('tt-date').textContent = `${lt.date} · ${lt.floor}층 거래 기준`;
   } else {
     document.getElementById('tt-price-val').textContent = shortPrice(c.price_low) + '~';
-    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-pyeong').textContent = pyeongLabel;
     document.getElementById('tt-date').textContent = '거래 정보 없음';
   }
 
