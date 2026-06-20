@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>BADUGI — AI Native</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-system,sans-serif;background:#fff;color:#0A0A0E;}
+#scrollwrap{width:100%;height:100vh;overflow:hidden;}
+#slidetrack{transition:transform .85s cubic-bezier(.77,0,.175,1);will-change:transform;}
+
+/* Close button */
+#close-btn{
+  position:fixed;top:24px;right:32px;z-index:9999;
+  background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  color:#fff;border:1.5px solid rgba(255,255,255,0.4);border-radius:12px;
+  padding:11px 26px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;
+  transition:background .2s;letter-spacing:-.01em;
+}
+#close-btn:hover{background:rgba(255,255,255,0.28);}
+
+/* Sections */
+.sec{
+  width:100%;height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 120px;position:relative;overflow:hidden;
+}
+.sec.s-grad{background:linear-gradient(135deg,#d63fac 0%,#7C3FE6 100%);color:#fff;}
+.sec.s-white{background:#fff;color:#0A0A0E;}
+.sec.s-dark{background:linear-gradient(160deg,#120820 0%,#0d0818 100%);color:#fff;}
+
+/* Animate helpers */
+.ai{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease;}
+.ai.show{opacity:1;transform:none;}
+.d1{transition-delay:.1s}.d2{transition-delay:.25s}.d3{transition-delay:.4s}
+.d4{transition-delay:.55s}.d5{transition-delay:.7s}.d6{transition-delay:.85s}
+.d7{transition-delay:1s}
+
+/* Gradient text */
+.g{background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.g-inv{background:linear-gradient(135deg,#ffadd6,#c4a0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* Divider */
+.divider{width:56px;height:3px;background:linear-gradient(135deg,#FF6FB5,#7C3FE6);border-radius:2px;margin:0 auto;}
+
+/* --- PAGE 1 --- */
+.team-photo{
+  width:100%;max-width:820px;border-radius:22px;overflow:hidden;
+  box-shadow:0 20px 80px rgba(0,0,0,.35);
+  border:2px solid rgba(255,255,255,.25);
+}
+.team-photo img{width:100%;display:block;}
+.member{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.member-role{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:2px;text-transform:uppercase;}
+.member-name{font-size:16px;font-weight:800;color:#fff;}
+
+/* --- PAGE 2 --- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:900px;}
+.pcard{
+  border:1.5px solid rgba(124,63,230,.2);border-radius:18px;padding:28px 30px;
+  background:rgba(124,63,230,.04);
+  transition:border-color .25s,box-shadow .25s;
+}
+.pcard:hover{border-color:#C45ED6;box-shadow:0 0 28px rgba(196,94,214,.15);}
+.pcard-icon{font-size:30px;margin-bottom:14px;}
+.pcard-title{font-size:17px;font-weight:800;margin-bottom:8px;color:#0A0A0E;}
+.pcard-body{font-size:13.5px;color:#555;line-height:1.65;}
+.pcard-body em{color:#7C3FE6;font-style:normal;font-weight:600;}
+
+/* --- PAGE 3 --- */
+.hrow{
+  display:flex;align-items:flex-start;gap:18px;
+  padding:18px 22px;border-radius:14px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+  transition:background .2s,border-color .2s;
+}
+.hrow:hover{background:rgba(255,255,255,.08);border-color:rgba(255,111,181,.3);}
+.hrow-icon{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(255,111,181,.25),rgba(124,63,230,.25));
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+}
+.hrow-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px;}
+.hrow-body{font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.6;}
+.hrow-body code{color:#FF6FB5;font-size:11.5px;font-family:'Courier New',monospace;}
+
+/* Page nav dots */
+#dots{
+  position:fixed;right:18px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:8px;z-index:9998;
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,.25);cursor:pointer;
+  transition:all .3s;border:1.5px solid rgba(255,255,255,.4);
+}
+.dot.active{background:#fff;transform:scale(1.4);border-color:#fff;}
+.s-white-page .dot{background:rgba(0,0,0,.15);border-color:rgba(0,0,0,.3);}
+.s-white-page .dot.active{background:#7C3FE6;border-color:#7C3FE6;}
+
+/* Glow orbs */
+.orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(80px);opacity:.35;}
+</style>
+</head>
+<body>
+
+<button id="close-btn" onclick="history.back()">← 결과로 돌아가기</button>
+
+<div id="dots">
+  <div class="dot active" onclick="goTo(0)"></div>
+  <div class="dot" onclick="goTo(1)"></div>
+  <div class="dot" onclick="goTo(2)"></div>
+</div>
+
+<div id="scrollwrap"><div id="slidetrack">
+
+<!-- ════ PAGE 1 · TEAM ════ -->
+<section class="sec s-grad" id="s1">
+  <!-- bg orbs -->
+  <div class="orb" style="width:400px;height:400px;background:#FF6FB5;top:-120px;left:-80px;"></div>
+  <div class="orb" style="width:500px;height:500px;background:#7C3FE6;bottom:-180px;right:-100px;"></div>
+
+  <div class="ai" style="font-size:11px;letter-spacing:3px;font-weight:600;color:rgba(255,255,255,.6);margin-bottom:16px;">KAIST · AI 기반 비즈니스 진화 _ 전략 및 실습</div>
+
+  <div class="ai d2" style="text-align:center;margin-bottom:28px;">
+    <h1 style="font-size:68px;font-weight:900;letter-spacing:-4px;color:#fff;line-height:1;">BADUGI · AI Native</h1>
+  </div>
+
+  <!-- Team photo -->
+  <div class="ai d3 team-photo">
+    <img src="/img/pic35.png" alt="팀 사진">
+  </div>
+
+  <!-- Member labels -->
+  <div class="ai d5" style="display:flex;gap:48px;justify-content:center;margin-top:24px;">
+    <div class="member"><div class="member-role">네트워크 엔지니어</div><div class="member-name">강희준</div></div>
+    <div class="member"><div class="member-role">사업기획</div><div class="member-name">최현철</div></div>
+    <div class="member"><div class="member-role">재무담당</div><div class="member-name">Emma Hwang</div></div>
+    <div class="member"><div class="member-role">광고기획</div><div class="member-name">Sunny Lee</div></div>
+  </div>
+
+  <div class="ai d6" style="margin-top:32px;font-size:34px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:-1px;">하드케리 by 이지수 교수님's AI 기반 비즈니스 진화 _ 전략 및 실습</div>
+</section>
+
+<!-- ════ PAGE 2 · AI NATIVE 실천 ════ -->
+<section class="sec s-white" id="s2">
+  <div class="ai" style="font-size:11px;letter-spacing:4px;font-weight:700;color:#C45ED6;margin-bottom:14px;text-transform:uppercase;">AI Native</div>
+  <h2 class="ai d2" style="font-size:58px;font-weight:900;letter-spacing:-3px;text-align:center;margin-bottom:10px;line-height:1.1;">
+    <span class="g">AI Native</span>하게 일한 방식
+  </h2>
+  <div class="ai d3 divider" style="margin-bottom:44px;"></div>
+
+  <div class="ai d3 grid2">
+    <div class="pcard">
+      <div class="pcard-icon">📋</div>
+      <div class="pcard-title">Spec 선 작성</div>
+      <div class="pcard-body">큰 작업 전 반드시 Spec 먼저 작성<br><em>Why / Scope / 설계 / 완료 조건</em><br>44개 Spec 파일 · git 버전 관리</div>
+    </div>
+    <div class="pcard">
+      <div class="pcard-icon">📝</div>
+      <div class="pcard-title">Worklog — 모든 커밋에 의사결정 기록</div>
+      <div class="pcard-body">왜 그 선택을 했는지, 버린 대안은 무엇인지<br>AI가 읽고 다음 작업에 반영할 수 있도록<br><em>구조화된 기억 레이어</em>로 동작</div>
+    </div>
+    <div class="pcard">
+      <div class="pcard-icon">⚡</div>
+      <div class="pcard-title">ODsay API 호출 최적화</div>
+      <div class="pcard-body">실측 기반 동시 호출 한도 결정<br>429 에러 → 키 로테이션 + 세마포어<br><em>추측 없이 데이터로 판단</em></div>
+    </div>
+    <div class="pcard">
+      <div class="pcard-icon">✅</div>
+      <div class="pcard-title">테스트를 루프 종료 기준으로 활용</div>
+      <div class="pcard-body">409+ 자동화 테스트 · AI 루프 안전망<br>완료 조건 = 테스트 전체 통과<br><em>14개 팀 중 11개 팀이 테스트 0개일 때</em></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ PAGE 3 · HARNESS ENGINEERING ════ -->
+<section class="sec s-dark" id="s3">
+  <!-- bg orbs -->
+  <div class="orb" style="width:480px;height:480px;background:#7C3FE6;top:-150px;right:-120px;opacity:.2;"></div>
+  <div class="orb" style="width:360px;height:360px;background:#FF6FB5;bottom:-100px;left:-80px;opacity:.15;"></div>
+
+  <h2 class="ai" style="font-size:58px;font-weight:900;letter-spacing:-3px;color:#fff;margin-bottom:10px;line-height:1;">Harness Engineering</h2>
+  <div class="ai d2" style="font-size:18px;font-weight:500;color:rgba(255,255,255,.55);margin-bottom:14px;">AI를 제어하는 틀</div>
+  <div class="ai d3 divider" style="margin-bottom:40px;"></div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:800px;">
+    <div class="hrow ai d3">
+      <div class="hrow-icon">🔁</div>
+      <div>
+        <div class="hrow-title">Loop</div>
+        <div class="hrow-body">CLAUDE.md에 ralph 루프 조건 명시 — <code>/oh-my-claudecode:ralph</code> 트리거로 자율 루프 실행</div>
+      </div>
+    </div>
+    <div class="hrow ai d4">
+      <div class="hrow-icon">🔧</div>
+      <div>
+        <div class="hrow-title">Tools</div>
+        <div class="hrow-body"><code>python -m pytest</code> · <code>/api/_debug</code> · <code>/api/_test_odsay</code> 등 검증 도구</div>
+      </div>
+    </div>
+    <div class="hrow ai d5">
+      <div class="hrow-icon">💾</div>
+      <div>
+        <div class="hrow-title">File system / State</div>
+        <div class="hrow-body"><code>docs/worklog/</code> · <code>docs/specs/</code> · <code>.author</code> 파일로 세션 간 상태 유지</div>
+      </div>
+    </div>
+    <div class="hrow ai d5" style="transition-delay:.65s;">
+      <div class="hrow-icon">🧠</div>
+      <div>
+        <div class="hrow-title">Context</div>
+        <div class="hrow-body">CLAUDE.md가 매 세션마다 AI에게 주입되는 시스템 프롬프트 역할</div>
+      </div>
+    </div>
+    <div class="hrow ai d6">
+      <div class="hrow-icon">🛡️</div>
+      <div>
+        <div class="hrow-title">Guardrails</div>
+        <div class="hrow-body"><code>os.getenv()</code> 금지 · f-string SQL 금지 · <code>conn.rollback()</code> 필수 — 코딩 규칙으로 AI 행동 제약</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div></div><!-- /slidetrack /scrollwrap -->
+
+<script>
+const SECS = ['s1','s2','s3'];
+const BGTYPES = ['grad','white','dark'];
+let cur = 0, busy = false;
+const animDone = [false, false, false];
+const track = document.getElementById('slidetrack');
+const dots  = document.querySelectorAll('.dot');
+const dotsWrap = document.getElementById('dots');
+
+function goTo(idx) {
+  if (busy || idx < 0 || idx >= SECS.length) return;
+  if (idx > cur && !animDone[cur]) return; // 현재 페이지 애니 완료 전 앞으로 이동 금지
+  busy = true;
+  cur = idx;
+  track.style.transform = `translateY(-${cur * 100}vh)`;
+  dots.forEach((d,i) => d.classList.toggle('active', i === cur));
+  // Dot color: white on dark/grad pages, purple on white page
+  dotsWrap.style.setProperty('--dot-active', BGTYPES[cur]==='white' ? '#7C3FE6' : '#fff');
+  dots.forEach(d => {
+    d.style.background = d.classList.contains('active')
+      ? (BGTYPES[cur]==='white' ? '#7C3FE6' : '#fff')
+      : (BGTYPES[cur]==='white' ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.25)');
+    d.style.borderColor = d.classList.contains('active')
+      ? (BGTYPES[cur]==='white' ? '#7C3FE6' : '#fff')
+      : (BGTYPES[cur]==='white' ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.4)');
+  });
+  // Close button color
+  const cb = document.getElementById('close-btn');
+  if (BGTYPES[cur] === 'white') {
+    cb.style.color = '#555';
+    cb.style.background = 'rgba(0,0,0,.06)';
+    cb.style.borderColor = 'rgba(0,0,0,.15)';
+  } else {
+    cb.style.color = '#fff';
+    cb.style.background = 'rgba(255,255,255,.18)';
+    cb.style.borderColor = 'rgba(255,255,255,.4)';
+  }
+  setTimeout(() => {
+    busy = false;
+    enterSection(cur);
+  }, 900);
+}
+
+function enterSection(i) {
+  document.querySelectorAll(`#${SECS[i]} .ai`).forEach(el => el.classList.add('show'));
+  // 페이지별 최대 애니 완료 시점 후 이동 허용 (delay + duration)
+  const wait = [1600, 1400, 1800];
+  setTimeout(() => { animDone[i] = true; }, wait[i]);
+}
+
+window.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.deltaY > 0) goTo(cur + 1); else goTo(cur - 1);
+}, { passive: false });
+
+window.addEventListener('keydown', e => {
+  if (e.key==='ArrowDown'||e.key===' ') { e.preventDefault(); goTo(cur+1); }
+  if (e.key==='ArrowUp') { e.preventDefault(); goTo(cur-1); }
+  if (e.key==='Escape') history.back();
+});
+
+let touchY = 0;
+window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, {passive:true});
+window.addEventListener('touchend', e => {
+  const dy = touchY - e.changedTouches[0].clientY;
+  if (Math.abs(dy) > 40) goTo(dy > 0 ? cur+1 : cur-1);
+}, {passive:true});
+
+// Start s1 immediately
+enterSection(0);
+</script>
+</body>
+</html>
