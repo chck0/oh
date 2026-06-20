@@ -3233,14 +3233,24 @@ async function runSearch(){
     clearTimeout(_tid);
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
-    onSearchDone();
-    // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
-    if(resultData.llm_pending){
-      setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
-    }
-    // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
-    if(resultData.meta?.transit_pending){
-      _scheduleTransitRefresh(8000);
+    // 콜드 스타트: 통근 경로 계산 전이라 카드 0개 → "완료(0개)" 대신 로딩 유지하며 폴링.
+    // (transit_pending인데 카드가 0개일 때만. 카드가 일부라도 있으면 기존대로 즉시 공개)
+    const _coldEmpty = resultData.meta?.transit_pending && (resultData.cards?.length || 0) === 0;
+    if(_coldEmpty){
+      _coldStartPending = true;
+      _coldStartDeadline = Date.now() + 75000;  // 안전장치: 75초 지나면 결과 그대로 공개
+      _showColdPendingMsg();
+      _scheduleTransitRefresh(4000);  // 콜드는 더 빨리 첫 폴링
+    } else {
+      onSearchDone();
+      // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
+      if(resultData.llm_pending){
+        setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
+      }
+      // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
+      if(resultData.meta?.transit_pending){
+        _scheduleTransitRefresh(8000);
+      }
     }
   } catch(err){
     clearTimeout(_tid);
@@ -3298,6 +3308,13 @@ async function pollComments(){
 
 // ODsay 백그라운드 완료 후 silent 재검색 — 로딩 오버레이 없이 경로 데이터만 갱신
 let _transitRefreshTimer = null;
+// 콜드 스타트(첫 검색, transit 계산 전 카드 0개) 대기 상태
+let _coldStartPending = false;
+let _coldStartDeadline = 0;
+function _showColdPendingMsg(){
+  const sub = document.getElementById('loading-subtitle');
+  if(sub) sub.innerHTML = '통근 경로를 계산하고 있어요…';
+}
 function _scheduleTransitRefresh(delayMs) {
   if(_transitRefreshTimer) clearTimeout(_transitRefreshTimer);
   _transitRefreshTimer = setTimeout(async () => {
@@ -3308,10 +3325,33 @@ function _scheduleTransitRefresh(delayMs) {
         headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1'},
         body: JSON.stringify(reqBody),
       });
-      if(!res.ok) return;
+      if(!res.ok){ if(_coldStartPending) _scheduleTransitRefresh(4000); return; }
       const fresh = await res.json();
-      // 카드 수가 늘었거나 transit 데이터가 생겼으면 화면 갱신
-      const hadMore = fresh.cards && fresh.cards.length > 0;
+      const cardCnt = fresh.cards ? fresh.cards.length : 0;
+
+      // ── 콜드 스타트 대기 중: 카드가 생기면 그때 완료 화면 공개 ──
+      if(_coldStartPending){
+        if(cardCnt > 0){
+          // 통근 경로 계산되어 매물 등장 → 완료 화면 전환
+          _coldStartPending = false;
+          resultData = fresh;
+          onSearchDone();
+          if(fresh.llm_pending) setTimeout(pollComments, 500);
+          if(fresh.meta?.transit_pending) _scheduleTransitRefresh(8000);
+        } else if(fresh.meta?.transit_pending && Date.now() < _coldStartDeadline){
+          // 아직 계산 중 → 계속 대기 (콜드는 4초 간격)
+          _scheduleTransitRefresh(4000);
+        } else {
+          // pending 풀렸는데도 0개(진짜 결과 없음) 또는 안전장치 기한 초과 → 결과 그대로 공개
+          _coldStartPending = false;
+          resultData = fresh;
+          onSearchDone();
+        }
+        return;
+      }
+
+      // ── 일반 폴링: 카드 수가 늘었거나 transit 데이터가 생겼으면 화면 갱신 ──
+      const hadMore = cardCnt > 0;
       if(hadMore) {
         resultData = fresh;
         renderSummary(resultData);
@@ -3321,7 +3361,10 @@ function _scheduleTransitRefresh(delayMs) {
       }
       // 아직 pending이면 다시 스케줄 (점진적 증가: 8→15→30s)
       if(fresh.meta?.transit_pending) _scheduleTransitRefresh(15000);
-    } catch(e) { console.warn('[transit refresh]', e); }
+    } catch(e) {
+      console.warn('[transit refresh]', e);
+      if(_coldStartPending) _scheduleTransitRefresh(4000);
+    }
   }, delayMs);
 }
 
