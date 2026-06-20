@@ -5567,6 +5567,8 @@ function renderCards(data){
   window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
+  window._lastWp1Label   = data.workplace?.address_norm ? `W1 ${data.workplace.address_norm}` : 'W1 직장';
+  window._lastWp2Label   = data.workplace_2?.address_norm ? `W2 ${data.workplace_2.address_norm}` : 'W2 직장';
 
   // 탭 패널 표시 + 카운트 초기화
   const tabsEl = document.getElementById('fav-tabs');
@@ -5929,7 +5931,7 @@ async function showDetail(aptSeq, wpId){
   const cacheKey = `${aptSeq}:${wpId}`;
   const cached = _showDetailCache[cacheKey];
   if(cached){
-    renderDetailPanel(cached.detail, cached.routes, wpId);
+    renderDetailPanel(cached.detail, cached.routes, wpId, cached.routes2);
     drawRoutePolylines(cached.routes, '#3B5BDB');
     if(cached.routes2) drawRoutePolylines(cached.routes2, '#0CA678');
     return;
@@ -5955,7 +5957,7 @@ async function showDetail(aptSeq, wpId){
       const routes2 = wpId2 && rs[1] ? ((await rs[1].json()).options || []) : null;
       _showDetailCache[cacheKey] = {detail, routes, routes2};
       if(_currentAptSeq !== aptSeq) return; // 다른 단지로 이동했으면 화면 갱신 안 함
-      _updateRoutesSection(routes);
+      _updateRoutesSection(routes, routes2);
       drawRoutePolylines(routes, '#3B5BDB');       // 지도에 경로선 (W1)
       if(routes2) drawRoutePolylines(routes2, '#0CA678');  // W2
     }).catch(()=>{ if(_currentAptSeq===aptSeq) _updateRoutesSection([]); });
@@ -5986,13 +5988,35 @@ function _prewarmTopDetail(){
     if(detail) _showDetailCache[key] = { detail, routes: (routesJson && routesJson.options) || [], routes2: null };
   }).catch(() => {});
 }
-function _updateRoutesSection(routes){
+function _updateRoutesSection(routes, routes2){
   const prev = document.getElementById('dp-route-preview');
   const body = document.getElementById('dp-route-body');
-  if(prev) prev.innerHTML = routes.length
-    ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
-    : '경로 정보 없음';
-  if(body) body.innerHTML = renderRoutesHTML(routes);
+  const hasDual = dualMode && routes2 && routes2.length > 0;
+  if(prev) prev.innerHTML = hasDual
+    ? `W1 최단 <span class="num">${routes.length ? routes[0].total_time_min : '-'}</span>분 · W2 최단 <span class="num">${routes2[0].total_time_min}</span>분`
+    : (routes.length ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분` : '경로 정보 없음');
+  if(body) body.innerHTML = _routesDualHTML(routes, routes2);
+}
+
+function _routesDualHTML(routes, routes2){
+  const hasDual = dualMode && routes2 && routes2.length > 0;
+  if(!hasDual) return renderRoutesHTML(routes);
+  const wp1Label = window._lastWp1Label || 'W1 직장';
+  const wp2Label = window._lastWp2Label || 'W2 직장';
+  return `<div class="route-panel__wp-tabs" style="margin-bottom:12px;">
+    <button class="route-panel__wp-tab active" id="dp-wp1-tab" onclick="switchDpRouteWp(1)">${wp1Label}</button>
+    <button class="route-panel__wp-tab" id="dp-wp2-tab" onclick="switchDpRouteWp(2)">${wp2Label}</button>
+  </div>
+  <div id="dp-wp1-pane">${renderRoutesHTML(routes)}</div>
+  <div id="dp-wp2-pane" style="display:none">${renderRoutesHTML(routes2, '#0CA678')}</div>`;
+}
+
+function switchDpRouteWp(wp){
+  document.getElementById('dp-wp1-tab')?.classList.toggle('active', wp===1);
+  document.getElementById('dp-wp2-tab')?.classList.toggle('active', wp===2);
+  const p1=document.getElementById('dp-wp1-pane'), p2=document.getElementById('dp-wp2-pane');
+  if(p1) p1.style.display = wp===1 ? '' : 'none';
+  if(p2) p2.style.display = wp===2 ? '' : 'none';
 }
 
 function backToList(){
@@ -6009,7 +6033,7 @@ function backToList(){
   }
 }
 
-function renderDetailPanel(d, routes, wpId){
+function renderDetailPanel(d, routes, wpId, routes2){
   const titleParts = [d.gu_nm, d.umd_nm, d.apt_nm].filter(Boolean);
   document.getElementById('detail-title').textContent = titleParts.join(' ');
   const panel = document.getElementById('detail-body');
@@ -6062,11 +6086,12 @@ function renderDetailPanel(d, routes, wpId){
     : '';
 
   // ── 섹션 프리뷰 한 줄 만들기 (routes===null = 아직 로딩 중)
+  const hasDualRoutes = dualMode && routes2 && routes2.length > 0;
   const routePreview = routes === null
-    ? '<span class="spinner-mini"></span>경로 불러오는 중…'
-    : (routes.length
-      ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분`
-      : '경로 정보 없음');
+    ? '<span class="spinner-mini"></span>경로 계산 중…'
+    : hasDualRoutes
+      ? `W1 최단 <span class="num">${routes.length ? routes[0].total_time_min : '-'}</span>분 · W2 최단 <span class="num">${routes2[0].total_time_min}</span>분`
+      : (routes.length ? `${routes.length}개 옵션 · 최단 <span class="num">${routes[0].total_time_min}</span>분` : '경로 정보 없음');
 
   const ps = d.price_summary || {};
   const pricePreview = (ps.change_6m_pct!=null || ps.vs_dong_pct!=null)
@@ -6137,7 +6162,7 @@ function renderDetailPanel(d, routes, wpId){
       </div>
       <div class="dp__section-body" id="dp-route-body">${routes === null
         ? '<div style="padding:18px;text-align:center;color:var(--color-text-tertiary);font-size:12px"><span class="spinner-mini"></span>경로 계산 중…</div>'
-        : renderRoutesHTML(routes)}</div>
+        : _routesDualHTML(routes, routes2)}</div>
     </div>
 
     <!-- 시세 분석 -->
