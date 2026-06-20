@@ -488,8 +488,8 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    /* 슬라이더 바: 연한 파스텔 그라데이션 (CTA용 진한 브랜드 그라데이션과 분리) */
-    .adv-year-bar.in-range { background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-color: transparent; }
+    /* 슬라이더 바: 배경 트랙과 대비되는 중간 채도 퍼플 (연한 파스텔→가독성 개선) */
+    .adv-year-bar.in-range { background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -497,7 +497,8 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-radius: 2px;
+      background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-radius: 2px;
+      transition: left 0.12s ease-out, width 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 */
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -505,6 +506,7 @@
       background: #fff; border: 2px solid var(--color-brand-primary);
       cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2);
       z-index: 2;
+      transition: left 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 이동 */
     }
     .adv-year-thumb:active { cursor: grabbing; }
     .adv-year-tick-row { display: flex; justify-content: space-between; }
@@ -1511,6 +1513,18 @@
     @keyframes pinSelPulse {
       0%, 100% { transform: translateY(-5px) scale(1.18); }
       50%      { transform: translateY(-7px) scale(1.26); }
+    }
+    /* 관심 목록에서 비교 선택 시 해당 핀이 통통 튀는 효과 (지도 연동) */
+    .pin.pin-bounce { animation: pinBounce 1s ease-out; }
+    @keyframes pinBounce {
+      0%   { transform: translateY(0); }
+      15%  { transform: translateY(-18px); }
+      30%  { transform: translateY(0); }
+      45%  { transform: translateY(-11px); }
+      60%  { transform: translateY(0); }
+      75%  { transform: translateY(-5px); }
+      88%  { transform: translateY(0); }
+      100% { transform: translateY(0); }
     }
     /* 지붕 (삼각형) */
     .pin-roof {
@@ -3511,6 +3525,18 @@ function setActiveAptPin(aptSeq){
 }
 function clearActiveAptPin(){ setActiveAptPin(null); }
 
+// 지도에서 해당 단지 핀을 통통 튀게 함 (관심 비교 선택 시 시각 연동)
+function bounceAptPin(aptSeq){
+  if(!aptSeq) return;
+  document.querySelectorAll('.pin[data-apt-seq]').forEach(p => {
+    if(p.dataset.aptSeq !== String(aptSeq)) return;
+    p.classList.remove('pin-bounce');
+    void p.offsetWidth;            // 리플로우 강제 → 재클릭 시 애니메이션 재시작
+    p.classList.add('pin-bounce');
+    setTimeout(() => p.classList.remove('pin-bounce'), 1050);
+  });
+}
+
 // 카드 클릭: 지도 pan + 단지 상세 모달 열기 (spec-17)
 function panToCard(aptSeq){ showDetail(aptSeq, window._lastWpId || 0); }
 
@@ -5245,6 +5271,7 @@ function toggleCompareCard(id, el) {
     }
     compareSet.set(id, card);
     el.classList.add('cmp-selected');
+    bounceAptPin(card.apt_seq);   // 지도에서 해당 핀 통통 튀기 (시각 연동)
   }
   _updateCompareBar();
 }
