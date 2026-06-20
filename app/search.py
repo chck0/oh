@@ -308,55 +308,27 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
         sorted(to_fetch_all_2, key=_cell_dist_to(wp_2['lat'], wp_2['lng']))[:take_2]
         if dual else []
     )
-    deferred_cells_1 = n1 - len(to_fetch_1)
-    deferred_cells_2 = n2 - len(to_fetch_2) if dual else 0
-
-    # 하드 타임아웃: Vercel 60s 제약 안에 반드시 응답 반환.
-    try:
-        if dual:
-            odsay_results = await asyncio.wait_for(
-                asyncio.gather(
-                    fetch_cells(conn, wp, to_fetch_1),
-                    fetch_cells(conn, wp_2, to_fetch_2),
-                ),
-                timeout=ODSAY_HARD_TIMEOUT_S,
+    # ODsay: 캐시 미스 셀을 백그라운드에서 처리 (응답 블로킹 없음)
+    # 캐시된 transit_routes만 이번 응답에 포함하고, 미스 셀은 bg 완료 후 재검색 시 반영.
+    if to_fetch_1 or to_fetch_2:
+        if cfg.IS_SERVERLESS:
+            background_tasks.add_task(
+                _fetch_transit_bg, wp, to_fetch_1,
+                wp_2 if dual else None, to_fetch_2 if dual else []
             )
-            odsay_stats_1, odsay_stats_2 = odsay_results
         else:
-            odsay_stats_1 = await asyncio.wait_for(
-                fetch_cells(conn, wp, to_fetch_1),
-                timeout=ODSAY_HARD_TIMEOUT_S,
+            task = asyncio.create_task(
+                _fetch_transit_bg(wp, to_fetch_1, wp_2 if dual else None, to_fetch_2 if dual else [])
             )
-            odsay_stats_2 = None
-    except asyncio.TimeoutError:
-        print(f'[search] ODsay {ODSAY_HARD_TIMEOUT_S}s 타임아웃 — 캐시 결과로만 응답')
-        odsay_stats_1 = {'fetched': 0, 'passed': 0, 'failed': 0,
-                         'elapsed_ms': ODSAY_HARD_TIMEOUT_S * 1000}
-        odsay_stats_2 = None
-        deferred_cells_1 += len(to_fetch_1)
-        deferred_cells_2 += len(to_fetch_2)
+            _bg_tasks.add(task)
+            task.add_done_callback(_bg_tasks.discard)
 
-    # 기존 변수명 호환 (단일 모드 하위 호환)
+    deferred_cells_1 = n1  # 모든 미스 셀은 bg에서 처리 → 이번 응답엔 캐시 결과만
+    deferred_cells_2 = n2 if dual else 0
+    odsay_stats_1 = {'fetched': 0, 'passed': 0, 'failed': 0, 'elapsed_ms': 0}
+    odsay_stats_2 = None
     odsay_stats = odsay_stats_1
     deferred_cells = deferred_cells_1 + deferred_cells_2
-
-    # ── 벽시계 잔여 예산 체크 ────────────────────────────────────
-    # ODsay 이후 cards 쿼리·추천 로직에 최소 10s 필요.
-    # 예산 초과 시 cards 쿼리 없이 즉시 partial 반환 → 504 방지.
-    _elapsed = _time.monotonic() - _t0
-    if _elapsed > WALL_CLOCK_BUDGET_S - 10:
-        print(f'[search] 벽시계 예산 초과 ({_elapsed:.1f}s) — cards 쿼리 생략, partial 반환')
-        return {
-            'wp_id': wp_id, 'llm_pending': False,
-            'workplace': {'address_input': wp['address_input'],
-                          'address_norm': wp['address_norm'],
-                          'lat': wp['lat'], 'lng': wp['lng']},
-            'stats': {'total': 0}, 'buckets': [], 'cards': [],
-            'meta': {'partial': True,
-                     'deferred_cells': deferred_cells + len(cells),
-                     'total_cells': len(cells),
-                     'odsay_elapsed_ms': int(_elapsed * 1000)},
-        }
 
     # ─ 4. 카드 쿼리 ─
     min_cnt_clause        = ' AND a.kaptdaCnt >= ?' if req.min_kaptdaCnt is not None else ''
@@ -674,6 +646,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
             'llm_pending_recommend': sum(1 for c in miss_cards if c.get('is_recommended')),
             'llm_pending_regular':   sum(1 for c in miss_cards if not c.get('is_recommended')),
             'partial':          deferred_cells > 0,
+            'transit_pending':  deferred_cells > 0,
             'deferred_cells':   deferred_cells,
             'deferred_cells_1': deferred_cells_1,
             'deferred_cells_2': deferred_cells_2,
@@ -735,6 +708,25 @@ async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, w
     except Exception as e:
         print(f'[bg_comments] DB 저장 실패: {type(e).__name__}: {e}')
         print(traceback.format_exc())
+
+
+# ── 백그라운드: ODsay 통근 경로 계산 (응답 블로킹 없음) ─────────
+async def _fetch_transit_bg(wp, cells_1: list, wp_2=None, cells_2: list = []):
+    """BackgroundTask — 미스 셀의 ODsay 경로를 계산하고 DB에 저장.
+    응답 후 실행되므로 별도 DB 커넥션을 생성해 사용."""
+    from app.db import connect
+    conn = connect()
+    try:
+        if cells_1:
+            await fetch_cells(conn, wp, cells_1)
+        if wp_2 and cells_2:
+            await fetch_cells(conn, wp_2, cells_2)
+        n = len(cells_1) + len(cells_2 or [])
+        print(f'[bg_transit] 완료 — wp={wp["wp_id"]}, 셀={n}개')
+    except Exception as e:
+        print(f'[bg_transit] 실패: {type(e).__name__}: {e}')
+    finally:
+        conn.close()
 
 
 # ── GET /api/comments — 생성된 댓글 폴링용 ──────────────────

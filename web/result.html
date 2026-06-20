@@ -488,8 +488,8 @@
       background: var(--color-brand-bg-subtle); transition: background 0.15s;
       min-height: 2px; border: 1px solid rgba(168,46,27,.15);
     }
-    /* 슬라이더 바: 연한 파스텔 그라데이션 (CTA용 진한 브랜드 그라데이션과 분리) */
-    .adv-year-bar.in-range { background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-color: transparent; }
+    /* 슬라이더 바: 배경 트랙과 대비되는 중간 채도 퍼플 (연한 파스텔→가독성 개선) */
+    .adv-year-bar.in-range { background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-color: transparent; }
     .adv-year-track {
       position: relative; height: 4px;
       background: var(--color-border-strong); border-radius: 2px;
@@ -497,7 +497,8 @@
     }
     .adv-year-fill {
       position: absolute; height: 100%;
-      background: linear-gradient(120deg, #F0B8EC 0%, #D6BBF4 50%, #BFAEF0 100%); border-radius: 2px;
+      background: linear-gradient(120deg, #B24CD0 0%, #9350DC 50%, #7A4CDE 100%); border-radius: 2px;
+      transition: left 0.12s ease-out, width 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 */
     }
     .adv-year-thumb {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -505,10 +506,12 @@
       background: #fff; border: 2px solid var(--color-brand-primary);
       cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2);
       z-index: 2;
+      transition: left 0.12s ease-out;  /* 버킷 스냅 사이 부드럽게 이동 */
     }
     .adv-year-thumb:active { cursor: grabbing; }
-    .adv-year-tick-row { display: flex; justify-content: space-between; }
-    .adv-year-tick { font-size: 10px; color: var(--color-text-secondary); }
+    /* 틱(X축 라벨): 핸들과 동일한 인덱스 좌표에 절대 배치 → 핸들·바·라벨 정렬 동기화 */
+    .adv-year-tick-row { position: relative; height: 17px; }
+    .adv-year-tick { position: absolute; top: 0; font-size: 10px; color: var(--color-text-secondary); white-space: nowrap; }
 
     /* 정렬 기준 드롭다운 트리거 바 */
     .sort-panel {
@@ -1512,17 +1515,26 @@
       0%, 100% { transform: translateY(-5px) scale(1.18); }
       50%      { transform: translateY(-7px) scale(1.26); }
     }
+    @keyframes pinBounce {
+      0%   { transform: translateY(0); }
+      25%  { transform: translateY(-10px); }
+      50%  { transform: translateY(-2px); }
+      70%  { transform: translateY(-6px); }
+      85%  { transform: translateY(-1px); }
+      100% { transform: translateY(0); }
+    }
+    .pin-bounce { animation: pinBounce 0.65s cubic-bezier(.36,.07,.19,.97); }
     /* 지붕 (삼각형) */
     .pin-roof {
       width: 0; height: 0;
       border-left: 24px solid transparent;
       border-right: 24px solid transparent;
-      border-bottom: 16px solid #3b82f6;
+      border-bottom: 16px solid #FF6FB5;
     }
     /* 몸체 (직사각형 + 아래 화살표) */
     .pin-body {
       width: 48px; min-height: 36px;
-      background: #3b82f6;
+      background: #FF6FB5;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 4px 4px 10px;
@@ -1534,7 +1546,7 @@
       position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-top: 9px solid #3b82f6;
+      border-top: 9px solid #FF6FB5;
     }
     .pin-time {
       font-size: 13px; font-weight: 800; color: #fff;
@@ -1549,18 +1561,18 @@
       font-size: 14px; line-height: 1; margin-bottom: 1px;
     }
     /* 통근시간 색상 */
-    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
-    .pin-t1 .pin-body { background:#16a34a; }
-    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
-    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
-    .pin-t2 .pin-body { background:#3b82f6; }
-    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
-    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
-    .pin-t3 .pin-body { background:#f97316; }
-    .pin-t3 .pin-body::after { border-top-color:#f97316; }
-    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
-    .pin-t4 .pin-body { background:#ef4444; }
-    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
+    .pin-t1 .pin-roof { border-bottom-color:#FF6FB5; }
+    .pin-t1 .pin-body { background:#FF6FB5; }
+    .pin-t1 .pin-body::after { border-top-color:#FF6FB5; }
+    .pin-t2 .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-t2 .pin-body { background:#C45ED6; }
+    .pin-t2 .pin-body::after { border-top-color:#C45ED6; }
+    .pin-t3 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t3 .pin-body { background:#7C3FE6; }
+    .pin-t3 .pin-body::after { border-top-color:#7C3FE6; }
+    .pin-t4 .pin-roof { border-bottom-color:#5B28C8; }
+    .pin-t4 .pin-body { background:#5B28C8; }
+    .pin-t4 .pin-body::after { border-top-color:#5B28C8; }
     /* 추천 핀 — 틸 */
     .pin-best .pin-roof { border-bottom-color:#00C9A7; }
     .pin-best .pin-body { background:#00C9A7; }
@@ -2995,7 +3007,7 @@
         </div>
         <div id="fav-tabs" class="fav-tabs" style="display:none">
           <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
-          <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+          <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>관심 단지 ♥ <span id="fav-tab-cnt">0</span></button>
         </div>
         <div class="cards-panel" id="cards-panel"></div>
         <div class="compare-bar hidden" id="compare-bar">
@@ -3087,9 +3099,9 @@
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근 시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>45분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>60분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#FF6FB5"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>45분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#7C3FE6"></div><span>60분 이하</span></div>
         <hr class="lg-divider">
         <div class="lg-row"><div class="lg-dot" style="background:#00C9A7"></div><span>BADUGI 추천</span></div>
       </div>
@@ -3225,14 +3237,13 @@ async function runSearch(){
     if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
     resultData = await res.json();
     onSearchDone();
-    // 상세 콜드 스타트 완화: 검색 직후(함수가 아직 따뜻할 때) 대표 단지 상세를
-    // 백그라운드로 미리 호출 → 서버리스 함수·DB 커넥션 풀 예열 + 캐시 채움.
-    // 사용자가 로딩 영상·목록을 보는 동안 끝나, 첫 상세 클릭이 빨라진다.
-    setTimeout(_prewarmTopDetail, 600);
-    // LLM 폴링 즉시 시작 — 사용자가 음악 보는 동안 백그라운드에서 코멘트 미리 받아둠
-    // (백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음)
+    // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
     if(resultData.llm_pending){
-      setTimeout(pollComments, 2000);  // 첫 폴링까지 2초 (백그라운드 시작 시간 여유)
+      setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
+    }
+    // ODsay 백그라운드 처리 중이면 20초 후 silent 재검색으로 경로 데이터 반영
+    if(resultData.meta?.transit_pending){
+      _scheduleTransitRefresh(20000);
     }
   } catch(err){
     clearTimeout(_tid);
@@ -3279,13 +3290,42 @@ async function pollComments(){
     });
     if(updated && panelMode==='list') renderCards(resultData);
 
-    // 남은 게 있으면 또 폴링 (5초 간격으로 빠르게)
+    // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
     const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
-    if(remaining) setTimeout(pollComments, 5000);
+    if(remaining) setTimeout(pollComments, _pollCount <= 5 ? 2000 : 5000);
   } catch(e){
     console.warn('댓글 폴링 실패', e);
     setTimeout(pollComments, 10000);
   }
+}
+
+// ODsay 백그라운드 완료 후 silent 재검색 — 로딩 오버레이 없이 경로 데이터만 갱신
+let _transitRefreshTimer = null;
+function _scheduleTransitRefresh(delayMs) {
+  if(_transitRefreshTimer) clearTimeout(_transitRefreshTimer);
+  _transitRefreshTimer = setTimeout(async () => {
+    _transitRefreshTimer = null;
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1'},
+        body: JSON.stringify(reqBody),
+      });
+      if(!res.ok) return;
+      const fresh = await res.json();
+      // 카드 수가 늘었거나 transit 데이터가 생겼으면 화면 갱신
+      const hadMore = fresh.cards && fresh.cards.length > 0;
+      if(hadMore) {
+        resultData = fresh;
+        renderSummary(resultData);
+        renderCards(resultData);
+        initMap(resultData);
+        if(fresh.llm_pending) setTimeout(pollComments, 500);
+      }
+      // 아직 pending이면 다시 스케줄 (점진적 증가: 20→30→45s)
+      if(fresh.meta?.transit_pending) _scheduleTransitRefresh(30000);
+    } catch(e) { console.warn('[transit refresh]', e); }
+  }, delayMs);
 }
 
 function onSearchDone(){
@@ -3347,11 +3387,11 @@ function renderStatsPanel(data){
   // 통근 × 평균가 — 범례와 동일한 색상 적용
   // 라벨 포맷에 무관하게 시작 숫자로 색상 결정
   const bucketColor = lbl => {
-    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#16a34a'; // ≤30분 → 초록
+    if (!lbl || /이내|이하|^≤/.test(lbl)) return '#F550AA'; // ≤30분 → 핑크
     const start = parseInt((lbl.match(/^(\d+)/) || [])[1] || '99');
-    if (start <= 31) return '#3b82f6'; // 31~45분 → 파랑
-    if (start <= 45) return '#f97316'; // 46~60분 → 주황
-    return '#ef4444';
+    if (start <= 31) return '#B84FCE'; // 31~45분 → 퍼플
+    if (start <= 45) return '#7438E2'; // 46~60분 → 바이올렛
+    return '#7438E2';
   };
   // 라벨을 범례 텍스트로 정규화
   const bucketLabel = lbl => {
@@ -3761,9 +3801,12 @@ function _renderDetail(d) {
   let poiHtml = '';
   if (pois.length) {
     const poiGroups = {};
+    const seenPoiNames = new Set();
     pois.forEach(p => {
       const allowedSubs = POI_ALLOWED_SUBS[p.category];
       if (allowedSubs && !allowedSubs.has(p.sub_category)) return;
+      if (seenPoiNames.has(p.name)) return;  // 중복 시설명 제거
+      seenPoiNames.add(p.name);
       const key = POI_ORDER.includes(p.category) ? p.category : '기타';
       if (!poiGroups[key]) poiGroups[key] = [];
       if (poiGroups[key].length < 5) poiGroups[key].push(p);
@@ -5218,6 +5261,25 @@ function switchFavTab(tab) {
 const compareSet = new Map();  // id → card
 const COMPARE_MAX = 3;
 
+function toggleCompare(id, cb) {
+  const card = (window._lastCards || []).find(c => favId(c.apt_seq, c.pyeong_type) === id);
+  if (!card) return;
+  if (cb.checked) {
+    if (compareSet.size >= COMPARE_MAX) { cb.checked = false; return; }
+    compareSet.set(id, card);
+    // 선택된 단지 지도 핀 통통 튀기
+    document.querySelectorAll(`.pin[data-apt-seq="${card.apt_seq}"]`).forEach(p => {
+      p.classList.remove('pin-bounce');
+      void p.offsetWidth;  // reflow — 애니메이션 재시작
+      p.classList.add('pin-bounce');
+      p.addEventListener('animationend', () => p.classList.remove('pin-bounce'), {once: true});
+    });
+  } else {
+    compareSet.delete(id);
+  }
+  _updateCompareBar();
+}
+
 function _updateCompareBar() {
   const bar   = document.getElementById('compare-bar');
   const cntEl = document.getElementById('compare-bar-count');
@@ -5245,6 +5307,14 @@ function toggleCompareCard(id, el) {
     }
     compareSet.set(id, card);
     el.classList.add('cmp-selected');
+    // 지도에서 해당 단지 핀 통통 튀기 (좌측 선택 ↔ 지도 시각 연동)
+    document.querySelectorAll('.pin[data-apt-seq]').forEach(p => {
+      if (p.dataset.aptSeq !== String(card.apt_seq)) return;
+      p.classList.remove('pin-bounce');
+      void p.offsetWidth;  // reflow — 재선택 시 애니메이션 재시작
+      p.classList.add('pin-bounce');
+      p.addEventListener('animationend', () => p.classList.remove('pin-bounce'), { once: true });
+    });
   }
   _updateCompareBar();
 }
@@ -5288,7 +5358,7 @@ function _renderCompareTable(cards) {
         const best = c.total_time_min === minTime;
         return `<span class="${best?'compare-best':''}">${c.total_time_min}분</span>`;
       }},
-    { label: '최저 실거래가',
+    { label: '평균 실거래가',
       fn: c => {
         const e = Math.floor((c.price_low||0)/10000);
         const m = (c.price_low||0) % 10000;
@@ -5429,10 +5499,11 @@ function reasonChip3Text(c){
 function splitPrice(manwon){
   if(!manwon) return '<span class="unit">-</span>';
   const e = Math.floor(manwon/10000);
-  const m = manwon%10000;
-  if(e && m) return `<span class="num">${e}</span><span class="unit">억</span> <span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
-  if(e) return `<span class="num">${e}</span><span class="unit">억</span>`;
-  return `<span class="num">${m.toLocaleString()}</span><span class="unit">만</span>`;
+  const rem = manwon % 10000;
+  const chon = Math.round(rem / 1000);
+  if(chon === 0) return `<span class="num">${e}</span><span class="unit">억</span>`;
+  if(chon === 10) return `<span class="num">${e+1}</span><span class="unit">억</span>`;
+  return `<span class="num">${e}</span><span class="unit">억</span><span class="num">${chon}</span><span class="unit">천만</span>`;
 }
 
 // 일반 카드 (버킷 안, 짧은 형태) + Haiku 한 줄 코멘트
@@ -5542,7 +5613,9 @@ function renderCards(data){
   const wpId = data.wp_id;
 
   // 부분 결과 안내 배너 (신규 직장 첫 검색 시 일부 경로 미수집)
-  const partialBanner = data.meta?.partial
+  const partialBanner = data.meta?.transit_pending
+    ? `<div class="partial-banner">🚇 통근 경로 계산 중... 약 20초 후 자동으로 업데이트됩니다.</div>`
+    : data.meta?.partial
     ? `<div class="partial-banner">⏳ 일부 경로 데이터가 아직 수집 중이에요. 잠시 후 다시 검색하면 더 많은 결과를 볼 수 있어요.</div>`
     : '';
 
@@ -5713,13 +5786,14 @@ function showTooltip(pinEl, group, wpId){
   // 최근 거래 금액
   const lt = (c.recent_trades||[])[0];
   const pyeongNum = (c.pyeong_type||'').match(/\d+/)?.[0] || '';
+  const pyeongLabel = pyeongNum ? `${pyeongNum}평대` : '';
   if(lt){
     document.getElementById('tt-price-val').textContent = shortPrice(lt.amount) + '원';
-    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-pyeong').textContent = pyeongLabel;
     document.getElementById('tt-date').textContent = `${lt.date} · ${lt.floor}층 거래 기준`;
   } else {
     document.getElementById('tt-price-val').textContent = shortPrice(c.price_low) + '~';
-    document.getElementById('tt-pyeong').textContent = pyeongNum;
+    document.getElementById('tt-pyeong').textContent = pyeongLabel;
     document.getElementById('tt-date').textContent = '거래 정보 없음';
   }
 
@@ -6628,6 +6702,46 @@ function _initPyeongSlider(cards) {
   _initPyeongSliderDrag();
 }
 
+// 틱으로 쓸 인덱스를 [0, n-1] 구간에 균등 분포(linspace)로 선택 → 겹침 없이 양끝 포함.
+function _tickIndices(n, m) {
+  if (n <= 1) return [0];
+  m = Math.min(m, n);
+  const out = [];
+  for (let j = 0; j < m; j++) out.push(Math.round(j * (n - 1) / (m - 1)));
+  return [...new Set(out)];
+}
+
+// 틱(X축 라벨)을 핸들과 동일한 인덱스 좌표(idx/(n-1))에 절대 배치 → 정렬 동기화.
+// ticks: [{idx, label}], n: 전체 버킷 수. 양끝 틱은 가장자리에 맞춰 정렬.
+function _sliderTicksHTML(ticks, n) {
+  return ticks.map(t => {
+    const p = n > 1 ? (t.idx / (n - 1)) * 100 : 0;
+    const tx = t.idx <= 0 ? '0' : t.idx >= n - 1 ? '-100%' : '-50%';
+    return `<span class="adv-year-tick" style="left:${p}%;transform:translateX(${tx})">${t.label}</span>`;
+  }).join('');
+}
+
+// 드래그 중인 thumb을 커서 위치로 연속 이동(끊김 없는 느낌). 값(idx)은 별도로 스냅됨.
+function _sliderDragFollow(prefix, which, rawPct, minIdx, maxIdx, n) {
+  if (n < 2) return;
+  const minP = minIdx / (n - 1) * 100, maxP = maxIdx / (n - 1) * 100;
+  const cont = Math.max(0, Math.min(100, rawPct * 100));
+  const pos = which === 'min' ? Math.min(cont, maxP) : Math.max(cont, minP);
+  const thumb = document.getElementById(`adv-${prefix}-thumb-${which}`);
+  const fill = document.getElementById(`adv-${prefix}-fill`);
+  if (thumb) { thumb.style.transition = 'none'; thumb.style.left = pos + '%'; }
+  if (fill) {
+    fill.style.transition = 'none';
+    const l = which === 'min' ? pos : minP, r = which === 'min' ? maxP : pos;
+    fill.style.left = l + '%'; fill.style.width = (r - l) + '%';
+  }
+}
+// 드래그 종료: transition 복구 (이후 render가 버킷 위치로 부드럽게 스냅)
+function _sliderDragRelease(prefix) {
+  ['min', 'max'].forEach(w => { const t = document.getElementById(`adv-${prefix}-thumb-${w}`); if (t) t.style.transition = ''; });
+  const f = document.getElementById(`adv-${prefix}-fill`); if (f) f.style.transition = '';
+}
+
 function _renderPyeongSlider() {
   const { buckets, counts, minIdx, maxIdx } = _pyeongSlider;
   if (!buckets.length) return;
@@ -6654,10 +6768,8 @@ function _renderPyeongSlider() {
 
   const tickRow = document.getElementById('adv-pyeong-tick-row');
   if (tickRow) {
-    tickRow.innerHTML = buckets.map(b => {
-      const lbl = b === 0 ? '0' : b === 50 ? '50+' : b + '평';
-      return `<span class="adv-year-tick">${lbl}</span>`;
-    }).join('');
+    const ticks = buckets.map((b, i) => ({ idx: i, label: b === 0 ? '0' : b === 50 ? '50+' : b + '평' }));
+    tickRow.innerHTML = _sliderTicksHTML(ticks, buckets.length);
   }
 
   const label = document.getElementById('adv-pyeong-range-label');
@@ -6682,8 +6794,9 @@ function _initPyeongSliderDrag() {
         if (which === 'min') _pyeongSlider.minIdx = Math.min(idx, _pyeongSlider.maxIdx);
         else _pyeongSlider.maxIdx = Math.max(idx, _pyeongSlider.minIdx);
         _renderPyeongSlider(); _applyAdvFilter();
+        _sliderDragFollow('pyeong', which, pct, _pyeongSlider.minIdx, _pyeongSlider.maxIdx, _pyeongSlider.buckets.length);
       };
-      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+      const up = () => { _sliderDragRelease('pyeong'); _renderPyeongSlider(); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
       document.addEventListener('mousemove', move);
       document.addEventListener('mouseup', up);
     });
@@ -6697,8 +6810,9 @@ function _initPyeongSliderDrag() {
         if (which === 'min') _pyeongSlider.minIdx = Math.min(idx, _pyeongSlider.maxIdx);
         else _pyeongSlider.maxIdx = Math.max(idx, _pyeongSlider.minIdx);
         _renderPyeongSlider(); _applyAdvFilter();
+        _sliderDragFollow('pyeong', which, pct, _pyeongSlider.minIdx, _pyeongSlider.maxIdx, _pyeongSlider.buckets.length);
       };
-      const up = () => { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+      const up = () => { _sliderDragRelease('pyeong'); _renderPyeongSlider(); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
       document.addEventListener('touchmove', move, { passive: false });
       document.addEventListener('touchend', up);
     }, { passive: false });
@@ -6746,11 +6860,8 @@ function _renderYearSlider() {
 
   const tickRow = document.getElementById('adv-year-tick-row');
   if (tickRow) {
-    const step = Math.ceil(years.length / 5);
-    const ticks = [];
-    for (let i = 0; i < years.length; i += step) ticks.push(years[i]);
-    if (ticks[ticks.length-1] !== years[years.length-1]) ticks.push(years[years.length-1]);
-    tickRow.innerHTML = ticks.map(y => `<span class="adv-year-tick">${y}</span>`).join('');
+    const ticks = _tickIndices(years.length, 6).map(i => ({ idx: i, label: `${years[i]}` }));
+    tickRow.innerHTML = _sliderTicksHTML(ticks, years.length);
   }
 
   const label = document.getElementById('adv-year-range-label');
@@ -6845,14 +6956,9 @@ function _renderUnitsSlider() {
 
   const tickRow = document.getElementById('adv-units-tick-row');
   if (tickRow) {
-    const step = Math.ceil(buckets.length / 4);
-    const ticks = [];
-    for (let i = 0; i < buckets.length; i += step) ticks.push(buckets[i]);
-    if (ticks[ticks.length-1] !== buckets[buckets.length-1]) ticks.push(buckets[buckets.length-1]);
-    tickRow.innerHTML = ticks.map(b => {
-      const label = b >= 1000 ? (b/1000).toFixed(b%1000===0?0:1)+'천' : b+'';
-      return `<span class="adv-year-tick">${label}</span>`;
-    }).join('');
+    const fmt = b => b >= 1000 ? (b/1000).toFixed(b%1000===0?0:1)+'천' : b+'';
+    const ticks = _tickIndices(buckets.length, 5).map(i => ({ idx: i, label: fmt(buckets[i]) }));
+    tickRow.innerHTML = _sliderTicksHTML(ticks, buckets.length);
   }
 
   const label = document.getElementById('adv-units-range-label');
@@ -6941,11 +7047,8 @@ function _renderWalkSlider(key, slider) {
 
   const tickRow = document.getElementById(`adv-${key}-tick-row`);
   if (tickRow) {
-    const step = Math.ceil(mins.length / 5);
-    const ticks = [];
-    for (let i = 0; i < mins.length; i += step) ticks.push(mins[i]);
-    if (ticks[ticks.length - 1] !== mins[mins.length - 1]) ticks.push(mins[mins.length - 1]);
-    tickRow.innerHTML = ticks.map(m => `<span class="adv-year-tick">${m}분</span>`).join('');
+    const ticks = _tickIndices(mins.length, 6).map(i => ({ idx: i, label: `${mins[i]}분` }));
+    tickRow.innerHTML = _sliderTicksHTML(ticks, mins.length);
   }
 
   const isAll = minIdx === 0 && maxIdx === mins.length - 1;
