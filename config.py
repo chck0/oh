@@ -120,6 +120,10 @@ class _Config:
     APT_CACHE_TTL_S:  int = _optional_int('APT_CACHE_TTL_S',  300)
     CHAT_CACHE_TTL_S: int = _optional_int('CHAT_CACHE_TTL_S', 3600)
 
+    # bg_comments: 검색 1회당 LLM 호출 상한 (추천 우선 배정, 나머지 다음 검색 때)
+    BG_COMMENTS_MAX_REC: int = _optional_int('BG_COMMENTS_MAX_REC', 8)
+    BG_COMMENTS_MAX_REG: int = _optional_int('BG_COMMENTS_MAX_REG', 8)
+
     @property
     def USE_PG(self) -> bool:
         """DATABASE_URL이 PostgreSQL URL일 때만 True.

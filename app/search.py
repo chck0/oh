@@ -1,7 +1,8 @@
 """
 검색 API 라우터
 
-POST /api/search        : 직장 + 조건 → 카드 리스트 (LLM 친구 한 마디 포함)
+POST /api/search        : 직장 + 조건 → 카드 리스트 (캐시된 친구 한 마디만 포함)
+POST /api/comments/generate : 검색 결과 카드의 친구 한 마디 생성 트리거
 GET  /api/apt/{seq}/routes : 단지 상세 경로 옵션 (rank 1~N)
 """
 import asyncio
@@ -98,6 +99,12 @@ class SearchRequest(BaseModel):
         if invalid:
             raise ValueError(f'허용되지 않는 평형: {invalid}')
         return v
+
+
+class CommentGenerateRequest(BaseModel):
+    wp_id: int = Field(..., ge=1)
+    wp_label: str | None = Field(None, max_length=200)
+    cards: list[dict] = Field(default_factory=list, max_length=200)
 
 
 # 검색 정책 상수 — config.py(cfg)에서 중앙 관리, 여기선 로컬 alias만 유지
@@ -588,7 +595,7 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     # ─ 6. 통계 계산 ─
     stats = build_stats(all_cards, buckets)
 
-    # ─ 7. LLM 친구 한 마디 — 전체 카드 (추천=Sonnet 긴 코멘트 / 일반=Haiku 한 줄) ─
+    # ─ 7. 친구 한 마디 — 캐시된 것만 즉시 표시, 생성은 /api/comments/generate가 담당 ─
     cached_comments: dict[str, str] = {}  # card_key → comment
     if all_cards:
         for row in comment_rows:
@@ -596,20 +603,6 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
 
     miss_cards = [c for c in all_cards if card_key(c) not in cached_comments]
     llm_pending = len(miss_cards) > 0
-    if miss_cards:
-        wp_label = wp.get('address_norm') or wp.get('address_input', '')
-        if cfg.IS_SERVERLESS:
-            # Vercel: 함수 생존 보장 위해 BackgroundTasks 사용 (응답 후 maxDuration까지 실행).
-            background_tasks.add_task(_generate_comments_bg, miss_cards, all_cards, wp_id, wp_label)
-        else:
-            # 로컬: FastAPI BackgroundTasks는 Starlette이 응답 사이클 안에서 await하여
-            # 클라이언트가 LLM 완료까지 대기하게 됨. create_task로 완전 분리 →
-            # 응답 즉시 반환, LLM은 이벤트 루프에서 독립 실행 (프론트가 /api/comments 폴링).
-            task = asyncio.create_task(
-                _generate_comments_bg(miss_cards, all_cards, wp_id, wp_label)
-            )
-            _bg_tasks.add(task)
-            task.add_done_callback(_bg_tasks.discard)
 
     # 카드에 코멘트 병합 (캐시된 것만 즉시 표시)
     for c in all_cards:
@@ -655,6 +648,17 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     }
 
 
+def _start_comment_generation(background_tasks: BackgroundTasks, miss_cards: list, all_cards: list, wp_id: int, wp_label: str):
+    if cfg.IS_SERVERLESS:
+        background_tasks.add_task(_generate_comments_bg, miss_cards, all_cards, wp_id, wp_label)
+        return 'background_tasks'
+
+    task = asyncio.create_task(_generate_comments_bg(miss_cards, all_cards, wp_id, wp_label))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    return 'asyncio_task'
+
+
 # ── 백그라운드: LLM 코멘트 생성 + DB 캐싱 ───────────────────
 async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, wp_label: str):
     """BackgroundTask — 응답 후 실행. 별도 DB 커넥션 사용.
@@ -665,9 +669,17 @@ async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, w
     import time
     import traceback
     t0 = time.time()
-    rec_n = sum(1 for c in miss_cards if c.get('is_recommended'))
-    reg_n = len(miss_cards) - rec_n
-    print(f'[bg_comments] 시작 — 추천 {rec_n}개, 일반 {reg_n}개')
+
+    # Vercel 타임아웃 방지: 추천 우선으로 상한만큼만 처리, 나머지는 다음 검색 때 캐시
+    rec_cards = [c for c in miss_cards if c.get('is_recommended')]
+    reg_cards = [c for c in miss_cards if not c.get('is_recommended')]
+    rec_cards = rec_cards[:cfg.BG_COMMENTS_MAX_REC]
+    reg_cards = reg_cards[:cfg.BG_COMMENTS_MAX_REG]
+    miss_cards = rec_cards + reg_cards
+
+    rec_n = len(rec_cards)
+    reg_n = len(reg_cards)
+    print(f'[bg_comments] 시작 — 추천 {rec_n}개, 일반 {reg_n}개 (상한 {cfg.BG_COMMENTS_MAX_REC}/{cfg.BG_COMMENTS_MAX_REG})')
     try:
         new_comments = await build_comments(miss_cards, all_cards, wp_label)
         ok_n = sum(1 for v in new_comments.values()
@@ -727,6 +739,33 @@ async def _fetch_transit_bg(wp, cells_1: list, wp_2=None, cells_2: list = []):
         print(f'[bg_transit] 실패: {type(e).__name__}: {e}')
     finally:
         conn.close()
+
+
+@router.post("/comments/generate")
+async def generate_comments(req: CommentGenerateRequest, background_tasks: BackgroundTasks, conn=Depends(get_db)):
+    """검색 결과 렌더 후 프론트가 호출하는 LLM 코멘트 생성 트리거."""
+    cards = [c for c in req.cards if c.get('apt_seq') and c.get('pyeong_type')]
+    if not cards:
+        return {'started': 0, 'cached': 0, 'mode': 'none'}
+
+    pairs = [(str(c['apt_seq']), str(c['pyeong_type'])) for c in cards]
+    conds = ' OR '.join(['(apt_seq=? AND pyeong_type=?)'] * len(pairs))
+    params: list = [req.wp_id]
+    for seq, pt in pairs:
+        params.extend([seq, pt])
+    rows = conn.execute(
+        f'SELECT apt_seq, pyeong_type FROM apt_pt_friend_comment '
+        f"WHERE wp_id=? AND ({conds}) AND comment != ''",
+        params,
+    ).fetchall()
+    cached = {f"{r['apt_seq']}:{r['pyeong_type']}" for r in rows}
+    miss_cards = [c for c in cards if card_key(c) not in cached]
+    if not miss_cards:
+        return {'started': 0, 'cached': len(cached), 'mode': 'none'}
+
+    wp_label = req.wp_label or ''
+    mode = _start_comment_generation(background_tasks, miss_cards, cards, req.wp_id, wp_label)
+    return {'started': len(miss_cards), 'cached': len(cached), 'mode': mode}
 
 
 # ── GET /api/comments — 생성된 댓글 폴링용 ──────────────────

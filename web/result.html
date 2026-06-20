@@ -675,8 +675,8 @@
     }
     #lp-tab-detail .dp-stat { padding: 0 4px; }
     #lp-tab-detail .dp-stat + .dp-stat::before { height: 30px; }
-    #lp-tab-detail .dp-stat-num { font-size: 20px; letter-spacing: -0.01em; }
-    #lp-tab-detail .dp-stat-unit { font-size: 12px; }
+    #lp-tab-detail .dp-stat-num { font-size: 14px; letter-spacing: 0; }
+    #lp-tab-detail .dp-stat-unit { font-size: 10px; }
     #lp-tab-detail .dp-stat-label {
       font-size: 11.5px;
       line-height: 1.3;
@@ -684,7 +684,7 @@
       white-space: normal;
     }
     /* (평형)을 라벨 아랫줄로 — 가독성 */
-    #lp-tab-detail .dp-stat-py { display: block; font-size: 10px; margin-top: 1px; opacity: 0.8; }
+    #lp-tab-detail .dp-stat-py { display: block; font-size: 8px; margin-top: 1px; opacity: 0.8; }
     #lp-tab-detail .dp-chips { gap: 4px; margin-bottom: 8px; }
     #lp-tab-detail .dp-chip { font-size: 10.5px; padding: 3px 8px; }
     #lp-tab-detail .dp-verdict {
@@ -3264,6 +3264,21 @@ async function runSearch(){
   }
 }
 
+function startCommentGeneration(){
+  if(!resultData || !resultData.cards || !resultData.cards.length) return;
+  const pendingCards = resultData.cards.filter(c=>c.friend_comment == null || c.friend_comment === '');
+  if(!pendingCards.length) return;
+  fetch('/api/comments/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
+    body: JSON.stringify({
+      wp_id: resultData.wp_id,
+      wp_label: (resultData.workplace && (resultData.workplace.address_norm || resultData.workplace.address_input)) || '',
+      cards: pendingCards,
+    }),
+  }).catch(e => console.warn('댓글 생성 시작 실패', e));
+}
+
 // LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
 // 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
 let _pollCount = 0;
@@ -5769,6 +5784,8 @@ async function initMap(data){
     aptOverlayMap[group.apt_seq] = overlay;  // 핀 필터링용
   });
 
+  fitMapToVisibleListings(data);
+
   // ── 핀 이벤트 ───────────────────────────────────────
   //  호버 = 툴팁만 (미리보기)
   //  클릭 = 상세 패널 열기 (showDetail)
@@ -5801,6 +5818,32 @@ async function initMap(data){
 
 function zoomLevelFor(min){
   if(min<=20) return 6; if(min<=30) return 7; if(min<=45) return 7; return 8;
+}
+
+function fitMapToVisibleListings(data){
+  if(!kakaoMap || !window.kakao || !kakao.maps) return;
+
+  const allGroups = Object.values(aptGroupMap || {}).filter(g => g.lat && g.lng);
+  if(!allGroups.length) return;
+
+  const bounds = new kakao.maps.LatLngBounds();
+  if(data.workplace && data.workplace.lat && data.workplace.lng){
+    bounds.extend(new kakao.maps.LatLng(data.workplace.lat, data.workplace.lng));
+  }
+  if(data.workplace_2 && data.workplace_2.lat && data.workplace_2.lng){
+    bounds.extend(new kakao.maps.LatLng(data.workplace_2.lat, data.workplace_2.lng));
+  }
+
+  const recommended = allGroups.filter(g => g.any_recommended);
+  const targetGroups = recommended.length ? recommended : allGroups.slice(0, 12);
+  targetGroups.forEach(g => bounds.extend(new kakao.maps.LatLng(g.lat, g.lng)));
+
+  kakaoMap.setBounds(bounds, 80, 90, 90, 230);
+  setTimeout(() => {
+    if(kakaoMap && kakaoMap.getLevel && kakaoMap.getLevel() > 7){
+      kakaoMap.setLevel(7);
+    }
+  }, 0);
 }
 
 // ═══════════════════════════════════════════════════════
