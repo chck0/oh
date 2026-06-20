@@ -1526,12 +1526,12 @@
       width: 0; height: 0;
       border-left: 24px solid transparent;
       border-right: 24px solid transparent;
-      border-bottom: 16px solid #3b82f6;
+      border-bottom: 16px solid #FF6FB5;
     }
     /* 몸체 (직사각형 + 아래 화살표) */
     .pin-body {
       width: 48px; min-height: 36px;
-      background: #3b82f6;
+      background: #FF6FB5;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 4px 4px 10px;
@@ -1543,7 +1543,7 @@
       position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-top: 9px solid #3b82f6;
+      border-top: 9px solid #FF6FB5;
     }
     .pin-time {
       font-size: 13px; font-weight: 800; color: #fff;
@@ -1558,18 +1558,18 @@
       font-size: 14px; line-height: 1; margin-bottom: 1px;
     }
     /* 통근시간 색상 */
-    .pin-t1 .pin-roof { border-bottom-color:#16a34a; }
-    .pin-t1 .pin-body { background:#16a34a; }
-    .pin-t1 .pin-body::after { border-top-color:#16a34a; }
-    .pin-t2 .pin-roof { border-bottom-color:#3b82f6; }
-    .pin-t2 .pin-body { background:#3b82f6; }
-    .pin-t2 .pin-body::after { border-top-color:#3b82f6; }
-    .pin-t3 .pin-roof { border-bottom-color:#f97316; }
-    .pin-t3 .pin-body { background:#f97316; }
-    .pin-t3 .pin-body::after { border-top-color:#f97316; }
-    .pin-t4 .pin-roof { border-bottom-color:#ef4444; }
-    .pin-t4 .pin-body { background:#ef4444; }
-    .pin-t4 .pin-body::after { border-top-color:#ef4444; }
+    .pin-t1 .pin-roof { border-bottom-color:#FF6FB5; }
+    .pin-t1 .pin-body { background:#FF6FB5; }
+    .pin-t1 .pin-body::after { border-top-color:#FF6FB5; }
+    .pin-t2 .pin-roof { border-bottom-color:#C45ED6; }
+    .pin-t2 .pin-body { background:#C45ED6; }
+    .pin-t2 .pin-body::after { border-top-color:#C45ED6; }
+    .pin-t3 .pin-roof { border-bottom-color:#7C3FE6; }
+    .pin-t3 .pin-body { background:#7C3FE6; }
+    .pin-t3 .pin-body::after { border-top-color:#7C3FE6; }
+    .pin-t4 .pin-roof { border-bottom-color:#5B28C8; }
+    .pin-t4 .pin-body { background:#5B28C8; }
+    .pin-t4 .pin-body::after { border-top-color:#5B28C8; }
     /* 추천 핀 — 틸 */
     .pin-best .pin-roof { border-bottom-color:#00C9A7; }
     .pin-best .pin-body { background:#00C9A7; }
@@ -3004,7 +3004,7 @@
         </div>
         <div id="fav-tabs" class="fav-tabs" style="display:none">
           <button class="fav-tab-btn active" id="fav-tab-all" onclick="switchFavTab('all')">전체 <span id="fav-tab-all-cnt"></span></button>
-          <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>♥ <span id="fav-tab-cnt">0</span></button>
+          <button class="fav-tab-btn" id="fav-tab-fav" onclick="switchFavTab('fav')" disabled>관심 단지 ♥ <span id="fav-tab-cnt">0</span></button>
         </div>
         <div class="cards-panel" id="cards-panel"></div>
         <div class="compare-bar hidden" id="compare-bar">
@@ -3096,9 +3096,9 @@
       <div id="map"></div>
       <div id="map-legend">
         <div class="lg-title">통근 시간</div>
-        <div class="lg-row"><div class="lg-dot" style="background:#16a34a"></div><span>30분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#3b82f6"></div><span>45분 이하</span></div>
-        <div class="lg-row"><div class="lg-dot" style="background:#f97316"></div><span>60분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#FF6FB5"></div><span>30분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#C45ED6"></div><span>45분 이하</span></div>
+        <div class="lg-row"><div class="lg-dot" style="background:#7C3FE6"></div><span>60분 이하</span></div>
         <hr class="lg-divider">
         <div class="lg-row"><div class="lg-dot" style="background:#00C9A7"></div><span>BADUGI 추천</span></div>
       </div>
@@ -5347,7 +5347,7 @@ function _renderCompareTable(cards) {
         const best = c.total_time_min === minTime;
         return `<span class="${best?'compare-best':''}">${c.total_time_min}분</span>`;
       }},
-    { label: '최저 실거래가',
+    { label: '평균 실거래가',
       fn: c => {
         const e = Math.floor((c.price_low||0)/10000);
         const m = (c.price_low||0) % 10000;
