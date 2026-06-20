@@ -5567,8 +5567,8 @@ function renderCards(data){
   window._lastCards.forEach(c => { c.transfer_count = (c.bus_cnt || 0) + (c.subway_cnt || 0); });
   window._lastWpId       = data.wp_id;
   window._lastWpId2      = data.workplace_2?.wp_id || null;
-  window._lastWp1Label   = data.workplace?.address_norm ? `W1 ${data.workplace.address_norm}` : 'W1 직장';
-  window._lastWp2Label   = data.workplace_2?.address_norm ? `W2 ${data.workplace_2.address_norm}` : 'W2 직장';
+  window._lastWp1Label   = data.workplace?.address_norm ? `회사1 ${data.workplace.address_norm}` : '회사1';
+  window._lastWp2Label   = data.workplace_2?.address_norm ? `회사2 ${data.workplace_2.address_norm}` : '회사2';
 
   // 탭 패널 표시 + 카운트 초기화
   const tabsEl = document.getElementById('fav-tabs');
