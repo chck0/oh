@@ -14,7 +14,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
 /* Fixed CTA */
 #cta-fixed{
   position:fixed;top:24px;right:32px;z-index:9999;
-  background:#CC2222;color:#fff;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#FF6FB5,#7C3FE6);color:#fff;border:none;border-radius:12px;
   padding:14px 32px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
   box-shadow:0 4px 24px rgba(204,34,34,.35);
   transition:background .2s,opacity .4s,transform .4s;
@@ -48,8 +48,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
 }
 .jb-name{font-size:16px;font-weight:700;color:#0A0A0E;margin-bottom:8px;line-height:1.3;}
 .jb-sub{font-size:12px;color:#888;line-height:1.5;}
-.jb.badugi-box{background:#FFF5F2;border-color:#CC2222;border-width:2px;padding:40px 20px;min-height:200px;}
-.jb.badugi-box .jb-name{color:#CC2222;font-size:24px;font-weight:900;}
+.jb.badugi-box{background:#F5F0FF;border-color:#C45ED6;border-width:2px;padding:40px 20px;min-height:200px;}
+.jb.badugi-box .jb-name{background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:24px;font-weight:900;}
 .jb.badugi-box .jb-sub{color:#991111;font-size:14px;}
 .j-arr{font-size:20px;color:#CCC;padding:0 8px;flex-shrink:0;transition:opacity .4s;}
 
@@ -65,17 +65,17 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
   opacity:0;transform:translateY(16px);
 }
 .loop-card.appear{opacity:1;transform:none;}
-.loop-card.lit{border-color:#CC2222;box-shadow:0 0 36px rgba(204,34,34,.2);}
+.loop-card.lit{border-color:#C45ED6;box-shadow:0 0 36px rgba(196,94,214,.2);}
 .lc-label{font-size:11px;color:#aaa;letter-spacing:2px;font-weight:700;margin-bottom:12px;text-transform:uppercase;}
 
 /* hogangnono */
 .hogn-wrap{display:flex;border-radius:18px;overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,.12);height:460px;width:520px;flex-shrink:0;}
 .hogn-side{width:190px;background:#fff;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;font-size:12px;overflow:hidden;flex-shrink:0;}
 .hfr{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #f2f2f2;}
-.hfr-hl{background:#FFF7F5;border-left:3px solid #CC2222;padding-left:7px;}
+.hfr-hl{background:#F9F0FF;border-left:3px solid #C45ED6;padding-left:7px;}
 .hfr-name{font-weight:600;color:#333;font-size:12px;}
 .hfr-val{color:#aaa;font-size:10px;}
-.hfr-hl .hfr-val{color:#CC2222;font-weight:600;}
+.hfr-hl .hfr-val{background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:600;}
 
 @keyframes dash{to{stroke-dashoffset:-32}}
 </style>
@@ -90,7 +90,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
   <div style="text-align:center;">
     <div class="ai" id="s1a" style="font-size:72px;font-weight:900;letter-spacing:-3px;color:#bbb;margin-bottom:12px;">출퇴근 소요 시간</div>
     <h1 class="ai d3" id="s1b" style="font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1.1;white-space:nowrap;">
-      얼마나 <span style="color:#CC2222;">길에서</span> 허비하고 계세요?
+      얼마나 <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">길에서</span> 허비하고 계세요?
     </h1>
   </div>
 </section>
@@ -98,15 +98,16 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
 <!-- ════ PAGE 2 ════ -->
 <section class="sec" id="s2">
   <div style="text-align:center;width:100%;">
+    <div style="font-size:26px;font-weight:500;color:#555;margin-bottom:12px;">출퇴근 시간 왕복</div>
     <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:24px;">
-      <span id="s2num" style="font-size:200px;font-weight:900;color:#CC2222;letter-spacing:-10px;line-height:1;font-variant-numeric:tabular-nums;transition:color .3s;">90.4</span>
+      <span id="s2num" style="font-size:200px;font-weight:900;background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;letter-spacing:-10px;line-height:1;font-variant-numeric:tabular-nums;transition:color .3s;">90.4</span>
       <span style="font-size:60px;font-weight:700;color:#ccc;padding-bottom:18px;">분</span>
     </div>
     <div id="s2bridge" style="font-size:26px;color:#555;margin-bottom:44px;opacity:0;transition:opacity .6s;">
       하루 20분씩 절약한 시간이 1년 동안 쌓인다면
     </div>
     <div style="font-size:52px;font-weight:900;letter-spacing:-2px;min-height:68px;">
-      <span id="fp1" style="opacity:0;transition:opacity .5s;">20분</span><span id="fp2" style="opacity:0;transition:opacity .5s;"> &times; 240일</span><span id="fp3" style="opacity:0;transition:opacity .5s;"> = <span style="color:#CC2222;">4,800분</span></span><span id="fp4" style="opacity:0;transition:opacity .5s;"> = 80시간 = <span style="color:#CC2222;">3일 8시간</span></span>
+      <span id="fp1" style="opacity:0;transition:opacity .5s;">20분</span><span id="fp2" style="opacity:0;transition:opacity .5s;"> &times; 240일</span><span id="fp3" style="opacity:0;transition:opacity .5s;"> = <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">4,800분</span></span><span id="fp4" style="opacity:0;transition:opacity .5s;"> = 80시간 = <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">3일 8시간</span></span>
     </div>
   </div>
 </section>
@@ -121,11 +122,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
       <span style="background:#eee;border-radius:24px;padding:10px 22px;font-size:18px;font-weight:600;">다방</span>
     </div>
     <h2 class="ai d2" style="font-size:58px;font-weight:900;letter-spacing:-3px;line-height:1.1;margin-bottom:20px;">
-      직주근접은<br>수많은 필터 중<br><span style="color:#CC2222;">단 하나</span>
+      직주근접은<br>수많은 필터 중<br><span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">단 하나</span>
     </h2>
-    <div class="ai d3" style="width:56px;height:3px;background:#CC2222;border-radius:2px;margin-bottom:20px;"></div>
+    <div class="ai d3" style="width:56px;height:3px;background:linear-gradient(135deg,#FF6FB5,#7C3FE6);border-radius:2px;margin-bottom:20px;"></div>
     <p class="ai d4" style="font-size:18px;color:#666;margin-bottom:14px;">지하철 역 근접성 ≠ 실제 통근시간</p>
-    <p class="ai d5" style="font-size:16px;color:#991111;font-weight:600;line-height:1.65;background:#FFF5F2;border-radius:12px;padding:16px 18px;">
+    <p class="ai d5" style="font-size:16px;color:#555;font-weight:600;line-height:1.65;background:#F5F0FF;border-radius:12px;padding:16px 18px;">
       "강남역이 회사라면,<br>강남역까지 자차 42분인<br>지역을 보여줄 뿐"
     </p>
   </div>
@@ -138,7 +139,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
 <!-- ════ PAGE 4 ════ -->
 <section class="sec" id="s4">
   <div class="ai" style="font-size:13px;color:#bbb;letter-spacing:3px;font-weight:700;margin-bottom:10px;">집 하나 볼 때마다</div>
-  <h2 class="ai d2" style="font-size:72px;font-weight:900;letter-spacing:-4px;margin-bottom:40px;">반복되는 <span style="color:#CC2222;">수동 노동</span></h2>
+  <h2 class="ai d2" style="font-size:72px;font-weight:900;letter-spacing:-4px;margin-bottom:40px;">반복되는 <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">수동 노동</span></h2>
 
   <!-- Triangle loop layout -->
   <div style="position:relative;width:860px;height:340px;flex-shrink:0;">
@@ -146,15 +147,15 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
     <svg id="s4arrows" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 860 340">
       <defs>
         <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#CC2222"/>
+          <polygon points="0 0, 8 3, 0 6" fill="#C45ED6"/>
         </marker>
       </defs>
       <!-- 1→2: 호갱노노 right → 주소복사 top-left -->
-      <path id="p12" d="M 590,95 C 660,95 660,190 640,190" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+      <path id="p12" d="M 590,95 C 660,95 660,190 640,190" stroke="#C45ED6" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
       <!-- 2→3: 주소복사 bottom → 네이버지도 bottom -->
-      <path id="p23" d="M 580,290 C 580,330 280,330 280,290" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+      <path id="p23" d="M 580,290 C 580,330 280,330 280,290" stroke="#C45ED6" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
       <!-- 3→1: 네이버지도 right → 호갱노노 left -->
-      <path id="p31" d="M 270,170 C 210,170 210,95 270,95" stroke="#CC2222" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
+      <path id="p31" d="M 270,170 C 210,170 210,95 270,95" stroke="#C45ED6" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0" style="transition:opacity .4s"/>
     </svg>
 
     <!-- Card 1: 호갱노노 · top-center -->
@@ -163,7 +164,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
       <div style="background:#F8F8F8;border-radius:10px;padding:12px;margin-bottom:8px;">
         <div style="font-size:14px;font-weight:700;">힐스테이트 동탄</div>
         <div style="font-size:11px;color:#aaa;margin-top:2px;">경기 화성시 · 84㎡</div>
-        <div style="font-size:16px;font-weight:700;color:#CC2222;margin-top:5px;">9.2억</div>
+        <div style="font-size:16px;font-weight:700;background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;margin-top:5px;">9.2억</div>
       </div>
       <div style="font-size:12px;color:#22C55E;font-weight:600;">✓ 마음에 드는 집 발견!</div>
     </div>
@@ -174,7 +175,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
       <div style="background:#F8F8F8;border-radius:10px;padding:10px;margin-bottom:8px;">
         <div style="font-size:11px;color:#333;line-height:1.5;">경기 화성시 동탄대로시범길 23, 힐스테이트 동탄 101동</div>
       </div>
-      <div style="background:#CC2222;color:#fff;border-radius:7px;padding:6px;text-align:center;font-size:13px;font-weight:700;">복사</div>
+      <div style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);color:#fff;border-radius:7px;padding:6px;text-align:center;font-size:13px;font-weight:700;">복사</div>
     </div>
 
     <!-- Card 3: 네이버지도 · bottom-left -->
@@ -184,7 +185,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
         <svg width="190" height="50" viewBox="0 0 190 50">
           <path d="M8,25 Q47,12 95,25 Q143,38 182,25" stroke="#ddd" stroke-width="5" fill="none"/>
           <circle cx="8" cy="25" r="8" fill="#22C55E"/>
-          <circle cx="182" cy="25" r="8" fill="#CC2222"/>
+          <circle cx="182" cy="25" r="8" fill="#C45ED6"/>
           <rect x="60" y="6" width="70" height="20" rx="4" fill="#333"/>
           <text x="95" y="20" text-anchor="middle" font-size="11" fill="#fff" font-weight="700" font-family="SUIT,sans-serif">47분 소요</text>
         </svg>
@@ -193,7 +194,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
     </div>
   </div>
 
-  <div id="s4repeat" style="margin-top:28px;font-size:22px;color:#888;opacity:0;transition:opacity .6s;">이 과정을 <span style="color:#CC2222;font-size:44px;font-weight:900;vertical-align:middle;">수십 번</span> 반복</div>
+  <div id="s4repeat" style="margin-top:28px;font-size:22px;color:#888;opacity:0;transition:opacity .6s;">이 과정을 <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;font-size:44px;font-weight:900;vertical-align:middle;">수십 번</span> 반복</div>
 </section>
 
 <!-- ════ PAGE 5 ════ -->
@@ -208,10 +209,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
       <rect x="850" y="50" width="230" height="140" rx="18" fill="#FAF8F3" stroke="#D4C9B0" stroke-width="2"/>
       <text x="965" y="96" text-anchor="middle" font-size="12" fill="#7A6E5A" font-weight="700" letter-spacing="2" font-family="SUIT,sans-serif">배우자 회사</text>
       <text x="965" y="132" text-anchor="middle" font-size="28" fill="#1A1A1A" font-weight="900" font-family="SUIT,sans-serif">여의도</text>
-      <line id="s5ll" x1="250" y1="120" x2="430" y2="120" stroke="#CC2222" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
-      <line id="s5lr" x1="670" y1="120" x2="850" y2="120" stroke="#CC2222" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
+      <line id="s5ll" x1="250" y1="120" x2="430" y2="120" stroke="#C45ED6" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
+      <line id="s5lr" x1="670" y1="120" x2="850" y2="120" stroke="#C45ED6" stroke-width="2" stroke-dasharray="8 5" opacity=".5" style="animation:dash 1.2s linear infinite"/>
       <g id="s5house">
-        <rect x="430" y="30" width="240" height="180" rx="18" fill="#fff" stroke="#CC2222" stroke-width="3"/>
+        <rect x="430" y="30" width="240" height="180" rx="18" fill="#fff" stroke="#C45ED6" stroke-width="3"/>
         <text x="550" y="96" text-anchor="middle" font-size="48" font-family="SUIT,sans-serif">🏠</text>
         <text x="550" y="146" text-anchor="middle" font-size="26" fill="#0A0A0E" font-weight="900" font-family="SUIT,sans-serif">우리 집</text>
         <text x="550" y="178" text-anchor="middle" font-size="15" fill="#aaa" font-family="SUIT,sans-serif">어디에?</text>
@@ -219,15 +220,15 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
     </svg>
   </div>
   <div class="ai d5" style="margin-top:44px;text-align:center;">
-    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">서로의 직장 중간 지점을 찾기 위해 <span style="color:#CC2222;font-weight:700;">신경전</span></p>
-    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">결국 한 사람은 직주근접을 처음부터 <span style="color:#CC2222;font-weight:700;">포기</span></p>
+    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">서로의 직장 중간 지점을 찾기 위해 <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;font-weight:700;">신경전</span></p>
+    <p style="font-size:24px;font-weight:500;color:#0A0A0E;line-height:1.9;">결국 한 사람은 직주근접을 처음부터 <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;font-weight:700;">포기</span></p>
   </div>
 </section>
 
 <!-- ════ PAGE 6 ════ -->
 <section class="sec" id="s6">
   <h2 class="ai" style="font-size:64px;font-weight:900;letter-spacing:-3px;line-height:1.1;text-align:center;margin-bottom:56px;">
-    집 구매 Journey 맨 앞에<br><span style="color:#CC2222;">BADUGI</span>를 배치
+    집 구매 Journey 맨 앞에<br><span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">BADUGI</span>를 배치
   </h2>
   <div id="s6wrap" style="display:flex;align-items:center;width:100%;max-width:1300px;transition:max-width .8s ease;" class="ai d2">
     <div class="jb ai d2" id="jb1"><div class="jb-name">막막한 상태</div><div class="jb-sub">어떤 동네에 살아야<br>할지조차 모름</div></div>
@@ -268,11 +269,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'SUIT',-apple-syste
   </div>
 
   <div id="s7sub" style="font-size:28px;font-weight:700;color:#0A0A0E;text-align:center;opacity:0;transition:opacity .6s;line-height:1.6;max-width:800px;">
-    직주근접은 매우 중요하지만, <span style="color:#CC2222;">유일한 기준이 아님.</span>
+    직주근접은 매우 중요하지만, <span style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;;">유일한 기준이 아님.</span>
   </div>
 
   <div id="s7ctawrap" style="margin-top:36px;opacity:0;transition:opacity .6s;">
-    <button style="background:#CC2222;color:#fff;border:none;border-radius:14px;padding:20px 56px;font-size:22px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#B01A1A'" onmouseout="this.style.background='#CC2222'" onclick="window.open('/search.html','_blank')">
+    <button style="background:linear-gradient(135deg,#FF6FB5,#7C3FE6);color:#fff;border:none;border-radius:14px;padding:20px 56px;font-size:22px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='linear-gradient(135deg,#e85fa3,#6a32cc)'" onmouseout="this.style.background='linear-gradient(135deg,#FF6FB5,#7C3FE6)'" onclick="window.open('/search.html','_blank')">
       ▶ BADUGI 서비스 시작하기
     </button>
   </div>
@@ -460,7 +461,7 @@ async function playS7() {
   titleEl.style.opacity = '0';
   await T(500);
   titleEl.textContent = 'BADUGI = 출퇴근 소요 시간을 아끼는 확실한 부동산 솔루션';
-  titleEl.style.color = '#CC2222';
+  titleEl.style.background = 'linear-gradient(135deg,#FF6FB5,#7C3FE6)'; titleEl.style.webkitBackgroundClip = 'text'; titleEl.style.webkitTextFillColor = 'transparent'; titleEl.style.backgroundClip = 'text';
   titleEl.style.opacity = '1';
   await T(800);
   show('s7sub'); await T(700);
