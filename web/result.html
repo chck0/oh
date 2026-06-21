@@ -3244,9 +3244,11 @@ async function runSearch(){
       _scheduleTransitRefresh(4000);  // 콜드는 더 빨리 첫 폴링
     } else {
       onSearchDone();
-      // LLM 폴링 즉시 시작 — 백엔드 BackgroundTask가 응답 직후부터 LLM 돌리고 있음
+      // 친구 한마디 LLM 생성 트리거 + 폴링 시작
+      // (검색 응답은 생성을 시작하지 않음 → 프론트가 /api/comments/generate를 호출해야 함)
       if(resultData.llm_pending){
-        setTimeout(pollComments, 500);  // 첫 폴링까지 0.5초
+        startCommentGeneration();        // ← 생성 트리거 (이게 빠져서 영원히 "생성 중"이던 버그 수정)
+        setTimeout(pollComments, 500);   // 첫 폴링까지 0.5초
       }
       // ODsay 백그라운드 처리 중이면 8초 후 silent 재검색으로 경로 데이터 반영
       if(resultData.meta?.transit_pending){
@@ -3283,6 +3285,8 @@ function startCommentGeneration(){
 // LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
 // 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
 let _pollCount = 0;
+let _lastCommentCount = -1;  // 직전 폴링 시점의 코멘트 보유 카드 수 (진행 정체 감지용)
+let _noProgressPolls = 0;    // 코멘트가 더 안 늘어난 연속 폴링 횟수
 const MAX_POLL = 72; // 최대 ~6분 후 자동 종료
 async function pollComments(){
   if(!resultData || _pollCount >= MAX_POLL) return;
@@ -3315,6 +3319,18 @@ async function pollComments(){
 
     // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
     const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
+    // 진행 정체 감지 → 다음 배치 재호출.
+    // 백엔드는 1회당 16개(추천8+일반8)만 생성하므로, 코멘트 수가 더 안 늘면
+    // 직전 배치가 끝난 것 → startCommentGeneration()을 다시 불러 다음 16개를 생성시킴.
+    // 캐시된 건 백엔드가 알아서 제외하므로 중복 호출도 안전함.
+    const haveCount = resultData.cards.length - remaining;
+    if(haveCount > _lastCommentCount){ _noProgressPolls = 0; }
+    else { _noProgressPolls++; }
+    _lastCommentCount = haveCount;
+    if(remaining && _noProgressPolls >= 2){
+      _noProgressPolls = 0;
+      startCommentGeneration();  // 다음 미생성 16개 배치 트리거
+    }
     if(remaining) setTimeout(pollComments, _pollCount <= 5 ? 2000 : 5000);
   } catch(e){
     console.warn('댓글 폴링 실패', e);
@@ -3352,7 +3368,7 @@ function _scheduleTransitRefresh(delayMs) {
           _coldStartPending = false;
           resultData = fresh;
           onSearchDone();
-          if(fresh.llm_pending) setTimeout(pollComments, 500);
+          if(fresh.llm_pending){ startCommentGeneration(); setTimeout(pollComments, 500); }
           if(fresh.meta?.transit_pending) _scheduleTransitRefresh(8000);
         } else if(fresh.meta?.transit_pending && Date.now() < _coldStartDeadline){
           // 아직 계산 중 → 계속 대기 (콜드는 4초 간격)
@@ -3373,7 +3389,7 @@ function _scheduleTransitRefresh(delayMs) {
         renderSummary(resultData);
         renderCards(resultData);
         initMap(resultData);
-        if(fresh.llm_pending) setTimeout(pollComments, 500);
+        if(fresh.llm_pending){ startCommentGeneration(); setTimeout(pollComments, 500); }
       }
       // 아직 pending이면 다시 스케줄 (점진적 증가: 8→15→30s)
       if(fresh.meta?.transit_pending) _scheduleTransitRefresh(15000);
