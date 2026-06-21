@@ -6013,6 +6013,13 @@ async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
   _currentAptSeq = aptSeq;
+  // 해당 카드 코멘트 미생성 + 폴링 만료 시 재시작
+  const _detailCard = resultData?.cards?.find(c=>c.apt_seq===aptSeq);
+  if(_detailCard && !_detailCard.friend_comment && _pollCount >= MAX_POLL){
+    _pollCount = 0;
+    startCommentGeneration();
+    setTimeout(pollComments, 500);
+  }
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
   switchLeftTab('detail');  // 아파트 클릭(목록·지도 핀) 시 좌측 상세 탭 자동 전환
