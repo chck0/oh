@@ -3316,6 +3316,11 @@ async function pollComments(){
       }
     });
     if(updated && panelMode==='list') renderCards(resultData);
+    // 상세패널이 열려있을 때 해당 카드 코멘트가 도착하면 DOM 패치
+    if(updated && panelMode==='detail' && _currentAptSeq){
+      const _oc = resultData.cards.find(c=>c.apt_seq===_currentAptSeq);
+      if(_oc?.friend_comment) _patchDetailFriendComment(_oc.friend_comment, _oc);
+    }
 
     // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
     const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
@@ -3335,6 +3340,27 @@ async function pollComments(){
   } catch(e){
     console.warn('댓글 폴링 실패', e);
     setTimeout(pollComments, 10000);
+  }
+}
+
+// 상세패널 친구 한마디 섹션만 교체 (전체 재렌더 없이 DOM 패치)
+function _patchDetailFriendComment(comment, card){
+  const el = document.querySelector('#detail-body .dp__friend');
+  if(!el) return;
+  el.outerHTML = `<div class="dp__friend"
+      data-apt-seq="${card.apt_seq}" data-apt-nm="${escHtml(card.apt_nm||'')}" data-pyeong-type="${escHtml(card.pyeong_type||'')}"
+      data-lat="${card.lat||''}" data-lng="${card.lng||''}"
+      onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
+    <div class="dp__friend-head">
+      <div class="dp__friend-avatar">💬</div>
+      <div class="dp__friend-label">친구 한마디</div>
+      <div class="dp__friend-cta">더 물어보기 →</div>
+    </div>
+    <div class="dp__friend-text">${escHtml(comment)}</div>
+  </div>`;
+  if(resultData){
+    const ck = `${card.apt_seq}:${resultData.wp_id}`;
+    if(_showDetailCache[ck]) _showDetailCache[ck].detail.friend_comment = comment;
   }
 }
 
