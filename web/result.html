@@ -3309,7 +3309,11 @@ async function startCommentGeneration(){
       });
       if(updated){
         if(panelMode==='list') renderCards(resultData);
-        _patchOpenDetailComment();        // 열려 있는 상세 패널도 갱신
+        // 상세패널이 열려 있고 그 단지 코멘트가 도착했으면 DOM 패치
+        if(panelMode==='detail' && _currentAptSeq){
+          const oc = resultData.cards.find(c=>c.apt_seq===_currentAptSeq && c.friend_comment);
+          if(oc) _patchDetailFriendComment(oc.friend_comment, oc);
+        }
       }
 
       // 이번 호출이 아무것도 못 만들었으면(전부 실패/일시 오류) 잠깐 쉬고 한 번 더,
@@ -3326,36 +3330,27 @@ async function startCommentGeneration(){
   }
 }
 
-// 열려 있는 상세 패널의 '친구 한마디 (생성 중)'을 새로 생성된 코멘트로 교체.
-// openDetail 은 _detailCache 로 한 번만 렌더하므로, 생성 완료 후 이 함수가
-// DOM 을 직접 패치하지 않으면 영원히 '생성 중'으로 남는다(두 번째 근본 원인).
-function _patchOpenDetailComment(){
-  if(_leftTab !== 'detail' || !_currentAptSeq || !resultData) return;
-  const body = document.getElementById('detail-body');
-  if(!body) return;
-  const el = body.querySelector('.dp__friend.empty');
+// 상세패널 친구 한마디 섹션만 교체 (전체 재렌더 없이 DOM 패치).
+// 실제 상세 패널은 showDetail→renderDetailPanel→_showDetailCache 경로이므로
+// 그 캐시를 갱신해야 재오픈 시에도 코멘트가 유지된다.
+function _patchDetailFriendComment(comment, card){
+  const el = document.querySelector('#detail-body .dp__friend');
   if(!el) return;
-  const cs = resultData.cards.filter(c=>c.apt_seq===_currentAptSeq && c.friend_comment);
-  if(!cs.length) return;
-  // 상세는 단지 기준(평형 무관) — 가장 긴 코멘트를 대표로
-  const best = cs.reduce((a,b)=> (String(b.friend_comment).length > String(a.friend_comment).length ? b : a));
-  const txt = String(best.friend_comment);
-  const dc = _detailCache[_currentAptSeq];
-  if(dc) dc.friend_comment = txt;        // 캐시도 갱신 → 재오픈 시 유지
-  el.classList.remove('empty');
-  el.setAttribute('onclick', 'event.stopPropagation();_openChatFromEl(this)');
-  el.setAttribute('title', '친구에게 더 물어보기');
-  el.dataset.aptSeq = _currentAptSeq;
-  el.dataset.aptNm = (dc && dc.apt_nm) || '';
-  el.dataset.pyeongType = best.pyeong_type || '';
-  if(dc){ el.dataset.lat = dc.lat || ''; el.dataset.lng = dc.lng || ''; }
-  el.innerHTML =
-    '<div class="dp__friend-head">'
-    + '<div class="dp__friend-avatar">💬</div>'
-    + '<div class="dp__friend-label">친구 한마디</div>'
-    + '<div class="dp__friend-cta">더 물어보기 →</div>'
-    + '</div>'
-    + '<div class="dp__friend-text">' + escHtml(txt) + '</div>';
+  el.outerHTML = `<div class="dp__friend"
+      data-apt-seq="${card.apt_seq}" data-apt-nm="${escHtml(card.apt_nm||'')}" data-pyeong-type="${escHtml(card.pyeong_type||'')}"
+      data-lat="${card.lat||''}" data-lng="${card.lng||''}"
+      onclick="event.stopPropagation();_openChatFromEl(this)" title="친구에게 더 물어보기">
+    <div class="dp__friend-head">
+      <div class="dp__friend-avatar">💬</div>
+      <div class="dp__friend-label">친구 한마디</div>
+      <div class="dp__friend-cta">더 물어보기 →</div>
+    </div>
+    <div class="dp__friend-text">${escHtml(comment)}</div>
+  </div>`;
+  if(resultData){
+    const ck = `${card.apt_seq}:${resultData.wp_id}`;
+    if(_showDetailCache[ck]) _showDetailCache[ck].detail.friend_comment = comment;
+  }
 }
 
 // 하위 호환: 기존 트리거 지점들이 setTimeout(pollComments, …)로 호출 → 생성 구동으로 위임.
@@ -6010,6 +6005,12 @@ async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
   _currentAptSeq = aptSeq;
+  // 해당 카드 코멘트가 아직 없으면(실패/미도달) 상세 열 때 생성 재시작.
+  // startCommentGeneration은 _genRunning 가드로 중복 구동을 막는다.
+  const _detailCard = resultData?.cards?.find(c=>c.apt_seq===aptSeq);
+  if(_detailCard && !_detailCard.friend_comment && !_genRunning){
+    startCommentGeneration();
+  }
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
   switchLeftTab('detail');  // 아파트 클릭(목록·지도 핀) 시 좌측 상세 탭 자동 전환
