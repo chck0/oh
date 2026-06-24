@@ -120,9 +120,12 @@ class _Config:
     APT_CACHE_TTL_S:  int = _optional_int('APT_CACHE_TTL_S',  300)
     CHAT_CACHE_TTL_S: int = _optional_int('CHAT_CACHE_TTL_S', 3600)
 
-    # bg_comments: 검색 1회당 LLM 호출 상한 (추천 우선 배정, 나머지 다음 검색 때)
+    # comments: /api/comments/generate 1회 요청에서 동기로 처리하는 청크 크기
+    # (추천 Sonnet + 일반 Haiku). 청크 단위로 생성·commit 하며 시간 예산까지 반복.
     BG_COMMENTS_MAX_REC: int = _optional_int('BG_COMMENTS_MAX_REC', 8)
-    BG_COMMENTS_MAX_REG: int = _optional_int('BG_COMMENTS_MAX_REG', 8)
+    BG_COMMENTS_MAX_REG: int = _optional_int('BG_COMMENTS_MAX_REG', 16)
+    # 1회 요청의 동기 생성 시간 예산(초). Vercel maxDuration(60s)보다 충분히 작게.
+    COMMENTS_TIME_BUDGET_S: int = _optional_int('COMMENTS_TIME_BUDGET_S', 35)
 
     @property
     def USE_PG(self) -> bool:

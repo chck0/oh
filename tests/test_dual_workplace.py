@@ -9,7 +9,7 @@ tests/test_dual_workplace.py — spec-13 Dual Workplace 테스트
 """
 import sqlite3
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 from tests.test_search_pipeline import _FULL_SCHEMA, _seed_db
 
@@ -131,9 +131,7 @@ class TestDualValidation:
     def test_wp2_same_wp_id_returns_422(self, dual_client):
         """W1·W2가 주소 다르지만 같은 wp_id 반환 → 422."""
         with (
-            patch('app.search.get_or_create', return_value=_FAKE_WP_1),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
-        ):
+            patch('app.search.get_or_create', return_value=_FAKE_WP_1),        ):
             resp = dual_client.post('/api/search', json={
                 'workplace_address': '강남역',
                 'workplace_address_2': '다른주소지만같은ID',
@@ -166,9 +164,7 @@ class TestDualPipeline:
         # 테스트는 in-memory SQLite 사용이므로 USE_PG=False 강제
         with (
             patch('app.portable.USE_PG', False),
-            patch('app.search.get_or_create', side_effect=side),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
-        ):
+            patch('app.search.get_or_create', side_effect=side),        ):
             return client.post('/api/search', json=payload)
 
     def test_returns_200(self, dual_client):
@@ -236,9 +232,7 @@ class TestDualNoIntersection:
             return _FAKE_WP_1 if call_count['n'] == 1 else _FAKE_WP_2_FAR
 
         with (
-            patch('app.search.get_or_create', side_effect=side),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
-        ):
+            patch('app.search.get_or_create', side_effect=side),        ):
             resp = dual_client.post('/api/search', json={
                 'workplace_address': '강남역',
                 'workplace_address_2': '부산역',
@@ -257,9 +251,7 @@ class TestDualNoIntersection:
             return _FAKE_WP_1 if call_count['n'] == 1 else _FAKE_WP_2_FAR
 
         with (
-            patch('app.search.get_or_create', side_effect=side),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
-        ):
+            patch('app.search.get_or_create', side_effect=side),        ):
             data = dual_client.post('/api/search', json={
                 'workplace_address': '강남역',
                 'workplace_address_2': '부산역',
@@ -275,9 +267,7 @@ class TestSingleModeBackcompat:
 
     def _post(self, client):
         with (
-            patch('app.search.get_or_create', return_value=_FAKE_WP_1),
-            patch('app.search._generate_comments_bg', new=AsyncMock()),
-        ):
+            patch('app.search.get_or_create', return_value=_FAKE_WP_1),        ):
             return client.post('/api/search', json={
                 'workplace_address': '강남역',
                 'max_minutes': 60,

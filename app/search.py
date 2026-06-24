@@ -634,78 +634,66 @@ async def search(req: SearchRequest, background_tasks: BackgroundTasks, conn=Dep
     }
 
 
-def _start_comment_generation(background_tasks: BackgroundTasks, miss_cards: list, all_cards: list, wp_id: int, wp_label: str):
-    if cfg.IS_SERVERLESS:
-        background_tasks.add_task(_generate_comments_bg, miss_cards, all_cards, wp_id, wp_label)
-        return 'background_tasks'
+# ── 동기 LLM 코멘트 생성 + DB 캐싱 (요청 내 실행) ─────────────
+async def _run_comment_batches(conn, miss_cards: list, all_cards: list,
+                               wp_id: int, wp_label: str) -> dict:
+    """요청 처리 중 '동기로' 코멘트를 생성하고 DB에 캐싱한다.
 
-    task = asyncio.create_task(_generate_comments_bg(miss_cards, all_cards, wp_id, wp_label))
-    _bg_tasks.add(task)
-    task.add_done_callback(_bg_tasks.discard)
-    return 'asyncio_task'
+    서버리스(Vercel)에서는 '응답을 보낸 뒤' 실행되는 BackgroundTask가 함수
+    동결로 인해 끝까지 도는 보장이 없다(이게 일부만 생성되던 근본 원인).
+    그래서 응답 전에 직접 생성·저장한다. maxDuration(60s)을 넘기지 않도록
+    시간 예산(COMMENTS_TIME_BUDGET_S) 안에서 청크 단위로 처리하고, 각 청크는
+    즉시 commit 해 부분 진행도 보존한다. 남은 카드는 프론트가 다시 호출해
+    이어서 처리하므로 결과 수가 많아도 결국 전부 채워진다.
 
-
-# ── 백그라운드: LLM 코멘트 생성 + DB 캐싱 ───────────────────
-async def _generate_comments_bg(miss_cards: list, all_cards: list, wp_id: int, wp_label: str):
-    """BackgroundTask — 응답 후 실행. 별도 DB 커넥션 사용.
-
-    miss_cards: 코멘트 생성 대상 (추천 카드 중 캐시 미스)
-    all_cards : 전체 카드 (평형별 평균가 등 컨텍스트 계산용)
+    반환: {"apt_seq:pyeong_type": comment, ...}  (이번 요청에서 새로 생성된 것)
     """
     import time
-    import traceback
     t0 = time.time()
+    deadline = t0 + cfg.COMMENTS_TIME_BUDGET_S
 
-    # Vercel 타임아웃 방지: 추천 우선으로 상한만큼만 처리, 나머지는 다음 검색 때 캐시
-    rec_cards = [c for c in miss_cards if c.get('is_recommended')]
-    reg_cards = [c for c in miss_cards if not c.get('is_recommended')]
-    rec_cards = rec_cards[:cfg.BG_COMMENTS_MAX_REC]
-    reg_cards = reg_cards[:cfg.BG_COMMENTS_MAX_REG]
-    miss_cards = rec_cards + reg_cards
+    # 추천(Sonnet) 우선 → 일반(Haiku) 순으로 작업 리스트 구성
+    worklist = ([c for c in miss_cards if c.get('is_recommended')] +
+                [c for c in miss_cards if not c.get('is_recommended')])
+    chunk_size = max(cfg.BG_COMMENTS_MAX_REC + cfg.BG_COMMENTS_MAX_REG, 1)
 
-    rec_n = len(rec_cards)
-    reg_n = len(reg_cards)
-    print(f'[bg_comments] 시작 — 추천 {rec_n}개, 일반 {reg_n}개 (상한 {cfg.BG_COMMENTS_MAX_REC}/{cfg.BG_COMMENTS_MAX_REG})')
-    try:
-        new_comments = await build_comments(miss_cards, all_cards, wp_label)
-        ok_n = sum(1 for v in new_comments.values()
-                   if v.get('comment') and not v['comment'].startswith('('))
-        print(f'[bg_comments] LLM 완료 ({time.time()-t0:.1f}s): {ok_n}/{len(new_comments)} 성공')
-    except Exception as e:
-        print(f'[bg_comments] LLM 호출 자체 실패: {type(e).__name__}: {e}')
-        print(traceback.format_exc())
-        return
+    upsert = upsert_sql(
+        'apt_pt_friend_comment',
+        ['apt_seq', 'pyeong_type', 'wp_id', 'comment', 'model'],
+        pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
+    )
 
-    # DB 저장 (실패 코멘트도 저장하면 다음에 또 시도 안 함 → 성공한 것만 저장)
-    try:
-        conn = db_connect()
+    out: dict = {}
+    i = 0
+    while i < len(worklist) and time.time() < deadline:
+        batch = worklist[i:i + chunk_size]
+        i += len(batch)
         try:
-            rows = []
-            for c in miss_cards:
-                ck = card_key(c)
-                entry = new_comments.get(ck, {})
-                comment = entry.get('comment', '')
-                # '(생성 실패)' 같은 에러 메시지는 캐시하지 않음 → 다음 검색 때 재시도
-                if comment and not comment.startswith('('):
-                    kind = entry.get('kind', 'regular')
-                    model = cfg.SONNET_MODEL if kind == 'recommend' else cfg.HAIKU_MODEL
-                    rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment, model))
-            if rows:
-                conn.executemany(
-                    upsert_sql(
-                        'apt_pt_friend_comment',
-                        ['apt_seq', 'pyeong_type', 'wp_id', 'comment', 'model'],
-                        pk_cols=['apt_seq', 'pyeong_type', 'wp_id'],
-                    ),
-                    rows,
-                )
-                conn.commit()
-                print(f'[bg_comments] DB 저장 완료 — {len(rows)}건')
-        finally:
-            conn.close()
-    except Exception as e:
-        print(f'[bg_comments] DB 저장 실패: {type(e).__name__}: {e}')
-        print(traceback.format_exc())
+            new_comments = await build_comments(batch, all_cards, wp_label)
+        except Exception as e:
+            print(f'[comments] LLM 호출 실패: {type(e).__name__}: {e}')
+            break
+
+        # DB 저장: '(생성 실패)'는 캐시하지 않음 → 다음 호출 때 재시도
+        rows = []
+        for c in batch:
+            ck = card_key(c)
+            entry = new_comments.get(ck, {})
+            comment = entry.get('comment', '')
+            if comment and not comment.startswith('('):
+                kind = entry.get('kind', 'regular')
+                model = cfg.SONNET_MODEL if kind == 'recommend' else cfg.HAIKU_MODEL
+                rows.append((c['apt_seq'], c['pyeong_type'], wp_id, comment, model))
+                out[ck] = comment
+        if rows:
+            try:
+                conn.executemany(upsert, rows)
+                conn.commit()  # 청크마다 즉시 커밋 → 부분 진행 보존
+            except Exception as e:
+                print(f'[comments] DB 저장 실패: {type(e).__name__}: {e}')
+
+    print(f'[comments] {len(out)}건 생성 ({time.time()-t0:.1f}s), 시도 {i}/{len(worklist)}')
+    return out
 
 
 # ── 백그라운드: ODsay 통근 경로 계산 (응답 블로킹 없음) ─────────
@@ -728,11 +716,16 @@ async def _fetch_transit_bg(wp, cells_1: list, wp_2=None, cells_2: list = []):
 
 
 @router.post("/comments/generate")
-async def generate_comments(req: CommentGenerateRequest, background_tasks: BackgroundTasks, conn=Depends(get_db)):
-    """검색 결과 렌더 후 프론트가 호출하는 LLM 코멘트 생성 트리거."""
+async def generate_comments(req: CommentGenerateRequest, conn=Depends(get_db)):
+    """검색 결과 렌더 후 프론트가 호출하는 LLM 코멘트 생성 엔드포인트.
+
+    서버리스에서 신뢰할 수 있도록 '응답 전에' 동기로 생성·저장하고, 새로 생성된
+    코멘트를 그대로 반환한다. 프론트는 받은 코멘트를 즉시 반영하고, 아직 빈
+    카드가 남아 있으면 다시 호출해 전부 채울 때까지 반복한다(시간 예산 단위).
+    """
     cards = [c for c in req.cards if c.get('apt_seq') and c.get('pyeong_type')]
     if not cards:
-        return {'started': 0, 'cached': 0, 'mode': 'none'}
+        return {'generated': 0, 'remaining': 0, 'cached': 0, 'comments': {}}
 
     pairs = [(str(c['apt_seq']), str(c['pyeong_type'])) for c in cards]
     conds = ' OR '.join(['(apt_seq=? AND pyeong_type=?)'] * len(pairs))
@@ -747,11 +740,17 @@ async def generate_comments(req: CommentGenerateRequest, background_tasks: Backg
     cached = {f"{r['apt_seq']}:{r['pyeong_type']}" for r in rows}
     miss_cards = [c for c in cards if card_key(c) not in cached]
     if not miss_cards:
-        return {'started': 0, 'cached': len(cached), 'mode': 'none'}
+        return {'generated': 0, 'remaining': 0, 'cached': len(cached), 'comments': {}}
 
     wp_label = req.wp_label or ''
-    mode = _start_comment_generation(background_tasks, miss_cards, cards, req.wp_id, wp_label)
-    return {'started': len(miss_cards), 'cached': len(cached), 'mode': mode}
+    comments = await _run_comment_batches(conn, miss_cards, cards, req.wp_id, wp_label)
+    remaining = max(len(miss_cards) - len(comments), 0)
+    return {
+        'generated': len(comments),
+        'remaining': remaining,
+        'cached': len(cached),
+        'comments': comments,
+    }
 
 
 # ── GET /api/comments — 생성된 댓글 폴링용 ──────────────────

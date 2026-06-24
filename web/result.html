@@ -3267,83 +3267,72 @@ async function runSearch(){
   }
 }
 
-function startCommentGeneration(){
+// ── 친구 한마디 생성 드라이버 ─────────────────────────────────
+// /api/comments/generate 는 '동기'로 한 묶음(시간 예산 내)을 생성해 그 결과를
+// 응답 본문으로 돌려준다. 받은 코멘트를 즉시 반영하고, 아직 빈 카드가 남아
+// 있으면 같은 호출을 반복해 전부 채운다. 백엔드가 캐시된 카드는 제외하므로
+// 매 호출은 '남은 것'만 처리한다. 이전의 백그라운드+폴링 방식은 서버리스에서
+// 응답 후 실행이 동결돼 일부만 생성되던 근본 원인이라 동기 방식으로 교체했다.
+let _genRunning = false;
+async function startCommentGeneration(){
+  if(_genRunning) return;                 // 중복 구동 방지
   if(!resultData || !resultData.cards || !resultData.cards.length) return;
-  const pendingCards = resultData.cards.filter(c=>c.friend_comment == null || c.friend_comment === '');
-  if(!pendingCards.length) return;
-  fetch('/api/comments/generate', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
-    body: JSON.stringify({
-      wp_id: resultData.wp_id,
-      wp_label: (resultData.workplace && (resultData.workplace.address_norm || resultData.workplace.address_input)) || '',
-      cards: pendingCards,
-    }),
-  }).catch(e => console.warn('댓글 생성 시작 실패', e));
-}
-
-// LLM 댓글 폴링 — 백그라운드 완료 후 전체 카드 업데이트
-// 추천(Sonnet)과 일반(Haiku) 둘 다 받음. 완료될 때까지 반복 폴링.
-let _pollCount = 0;
-let _lastCommentCount = -1;  // 직전 폴링 시점의 코멘트 보유 카드 수 (진행 정체 감지용)
-let _noProgressPolls = 0;    // 코멘트가 더 안 늘어난 연속 폴링 횟수
-const MAX_POLL = 72; // 최대 ~6분 후 자동 종료
-async function pollComments(){
-  if(!resultData || _pollCount >= MAX_POLL) return;
-  // 백그라운드 탭에서는 카운트 증가 없이 간격만 늘림
-  if(document.hidden){ setTimeout(pollComments, 15000); return; }
-  _pollCount++;
+  _genRunning = true;
   try{
-    const pendingCards = resultData.cards.filter(c=>c.friend_comment == null || c.friend_comment === '');
-    if(!pendingCards.length) return;
-    // URL 길이 한계 대비: 최대 80개씩 끊어서 보냄
-    const CHUNK = 80;
-    let allComments = {};
-    for(let i=0; i<pendingCards.length; i+=CHUNK){
-      const slice = pendingCards.slice(i, i+CHUNK);
-      const keys = slice.map(c=>`${c.apt_seq}:${c.pyeong_type||''}`).join(',');
-      const res = await fetch(`/api/comments?wp_id=${resultData.wp_id}&keys=${encodeURIComponent(keys)}`,
-        {headers:{'ngrok-skip-browser-warning':'1'}});
-      if(res.ok) Object.assign(allComments, await res.json());
-    }
+    let zeroStreak = 0;
+    for(let iter=0; iter<30; iter++){
+      const pendingCards = resultData.cards.filter(c=>c.friend_comment == null || c.friend_comment === '');
+      if(!pendingCards.length) break;
+      let data;
+      try{
+        const res = await fetch('/api/comments/generate', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
+          body: JSON.stringify({
+            wp_id: resultData.wp_id,
+            wp_label: (resultData.workplace && (resultData.workplace.address_norm || resultData.workplace.address_input)) || '',
+            cards: pendingCards,
+          }),
+        });
+        if(!res.ok) break;
+        data = await res.json();
+      }catch(e){ console.warn('댓글 생성 호출 실패', e); break; }
 
-    let updated = false;
-    resultData.cards.forEach(c=>{
-      const ck = `${c.apt_seq}:${c.pyeong_type||''}`;
-      if(allComments[ck] && (c.friend_comment == null || c.friend_comment === '')){
-        c.friend_comment = allComments[ck].comment;
-        updated = true;
+      const comments = (data && data.comments) || {};
+      let updated = false;
+      resultData.cards.forEach(c=>{
+        const ck = `${c.apt_seq}:${c.pyeong_type||''}`;
+        if(comments[ck] && (c.friend_comment == null || c.friend_comment === '')){
+          c.friend_comment = comments[ck];
+          updated = true;
+        }
+      });
+      if(updated){
+        if(panelMode==='list') renderCards(resultData);
+        // 상세패널이 열려 있고 그 단지 코멘트가 도착했으면 DOM 패치
+        if(panelMode==='detail' && _currentAptSeq){
+          const oc = resultData.cards.find(c=>c.apt_seq===_currentAptSeq && c.friend_comment);
+          if(oc) _patchDetailFriendComment(oc.friend_comment, oc);
+        }
       }
-    });
-    if(updated && panelMode==='list') renderCards(resultData);
-    // 상세패널이 열려있을 때 해당 카드 코멘트가 도착하면 DOM 패치
-    if(updated && panelMode==='detail' && _currentAptSeq){
-      const _oc = resultData.cards.find(c=>c.apt_seq===_currentAptSeq);
-      if(_oc?.friend_comment) _patchDetailFriendComment(_oc.friend_comment, _oc);
-    }
 
-    // 남은 게 있으면 또 폴링 (처음 5번은 2초, 이후 5초)
-    const remaining = resultData.cards.filter(c=>!c.friend_comment).length;
-    // 진행 정체 감지 → 다음 배치 재호출.
-    // 백엔드는 1회당 16개(추천8+일반8)만 생성하므로, 코멘트 수가 더 안 늘면
-    // 직전 배치가 끝난 것 → startCommentGeneration()을 다시 불러 다음 16개를 생성시킴.
-    // 캐시된 건 백엔드가 알아서 제외하므로 중복 호출도 안전함.
-    const haveCount = resultData.cards.length - remaining;
-    if(haveCount > _lastCommentCount){ _noProgressPolls = 0; }
-    else { _noProgressPolls++; }
-    _lastCommentCount = haveCount;
-    if(remaining && _noProgressPolls >= 2){
-      _noProgressPolls = 0;
-      startCommentGeneration();  // 다음 미생성 16개 배치 트리거
+      // 이번 호출이 아무것도 못 만들었으면(전부 실패/일시 오류) 잠깐 쉬고 한 번 더,
+      // 두 번 연속 0이면 중단(무한 루프 방지). 만들었으면 곧바로 다음 묶음.
+      if((data.generated||0) === 0){
+        if(++zeroStreak >= 2) break;
+        await new Promise(r=>setTimeout(r, 2500));
+      } else {
+        zeroStreak = 0;
+      }
     }
-    if(remaining) setTimeout(pollComments, _pollCount <= 5 ? 2000 : 5000);
-  } catch(e){
-    console.warn('댓글 폴링 실패', e);
-    setTimeout(pollComments, 10000);
+  } finally {
+    _genRunning = false;
   }
 }
 
-// 상세패널 친구 한마디 섹션만 교체 (전체 재렌더 없이 DOM 패치)
+// 상세패널 친구 한마디 섹션만 교체 (전체 재렌더 없이 DOM 패치).
+// 실제 상세 패널은 showDetail→renderDetailPanel→_showDetailCache 경로이므로
+// 그 캐시를 갱신해야 재오픈 시에도 코멘트가 유지된다.
 function _patchDetailFriendComment(comment, card){
   const el = document.querySelector('#detail-body .dp__friend');
   if(!el) return;
@@ -3363,6 +3352,9 @@ function _patchDetailFriendComment(comment, card){
     if(_showDetailCache[ck]) _showDetailCache[ck].detail.friend_comment = comment;
   }
 }
+
+// 하위 호환: 기존 트리거 지점들이 setTimeout(pollComments, …)로 호출 → 생성 구동으로 위임.
+function pollComments(){ startCommentGeneration(); }
 
 // ODsay 백그라운드 완료 후 silent 재검색 — 로딩 오버레이 없이 경로 데이터만 갱신
 let _transitRefreshTimer = null;
@@ -6013,12 +6005,11 @@ async function showDetail(aptSeq, wpId){
   panelMode='detail';
   hideTooltip();
   _currentAptSeq = aptSeq;
-  // 해당 카드 코멘트 미생성 + 폴링 만료 시 재시작
+  // 해당 카드 코멘트가 아직 없으면(실패/미도달) 상세 열 때 생성 재시작.
+  // startCommentGeneration은 _genRunning 가드로 중복 구동을 막는다.
   const _detailCard = resultData?.cards?.find(c=>c.apt_seq===aptSeq);
-  if(_detailCard && !_detailCard.friend_comment && _pollCount >= MAX_POLL){
-    _pollCount = 0;
+  if(_detailCard && !_detailCard.friend_comment && !_genRunning){
     startCommentGeneration();
-    setTimeout(pollComments, 500);
   }
   clearPoiMarker();
   setActiveAptPin(aptSeq);  // spec-38: 선택 단지 핀 강조
