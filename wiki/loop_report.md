@@ -1,5 +1,5 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-06-27 00:06 UTC
+> 실행 시각: 2026-06-28 UTC
 
 ## ODsay 키 감시
 - 종료 코드: 1
@@ -8,8 +8,6 @@
 Traceback (most recent call last):
   File "/home/user/oh/scripts/monitor_odsay.py", line 29, in <module>
     from config import cfg
-  File "/home/user/oh/config.py", line 69, in <module>
-    class _Config:
   File "/home/user/oh/config.py", line 73, in _Config
     KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
 OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
@@ -24,8 +22,6 @@ Traceback (most recent call last):
     from app.db import db_session
   File "/home/user/oh/app/db.py", line 21, in <module>
     from config import cfg
-  File "/home/user/oh/config.py", line 69, in <module>
-    class _Config:
   File "/home/user/oh/config.py", line 73, in _Config
     KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
 OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
