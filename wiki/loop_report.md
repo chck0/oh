@@ -1,5 +1,5 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-06-29T00:00:00 UTC
+> 실행 시각: 2026-06-30T00:00:00 UTC
 
 ## ODsay 키 감시
 - 종료 코드: 1
@@ -24,10 +24,14 @@ Traceback (most recent call last):
     from app.db import db_session
   File "/home/user/oh/app/db.py", line 21, in <module>
     from config import cfg
+  File "/home/user/oh/config.py", line 69, in <module>
+    class _Config:
   File "/home/user/oh/config.py", line 73, in _Config
     KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
 OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
 ```
 
 ## 종합 상태
-- 조치 필요 항목: 두 스크립트 모두 환경변수(KAKAO_REST_API_KEY 등) 미설정으로 실행 불가. 원격 실행 환경에 .env 또는 시크릿을 주입해야 함.
+- 조치 필요 항목: 환경변수 미설정으로 두 스크립트 모두 실행 실패
+  - `KAKAO_REST_API_KEY` 누락으로 config.py 로드 자체가 실패
+  - 리포 환경(CI/클라우드)에 `.env` 또는 Secrets 설정 필요: `KAKAO_REST_API_KEY`, `ODSAY_KEY_*`, `DATABASE_URL`
