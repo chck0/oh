@@ -1,5 +1,5 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-06-30T00:00:00 UTC
+> 실행 시각: 2026-07-01 UTC
 
 ## ODsay 키 감시
 - 종료 코드: 1
@@ -8,11 +8,9 @@
 Traceback (most recent call last):
   File "/home/user/oh/scripts/monitor_odsay.py", line 29, in <module>
     from config import cfg
-  File "/home/user/oh/config.py", line 69, in <module>
-    class _Config:
-  File "/home/user/oh/config.py", line 73, in _Config
-    KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
+  File "/home/user/oh/config.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
 ```
 
 ## Claude API 비용 감시
@@ -24,14 +22,10 @@ Traceback (most recent call last):
     from app.db import db_session
   File "/home/user/oh/app/db.py", line 21, in <module>
     from config import cfg
-  File "/home/user/oh/config.py", line 69, in <module>
-    class _Config:
-  File "/home/user/oh/config.py", line 73, in _Config
-    KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
+  File "/home/user/oh/config.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
 ```
 
 ## 종합 상태
-- 조치 필요 항목: 환경변수 미설정으로 두 스크립트 모두 실행 실패
-  - `KAKAO_REST_API_KEY` 누락으로 config.py 로드 자체가 실패
-  - 리포 환경(CI/클라우드)에 `.env` 또는 Secrets 설정 필요: `KAKAO_REST_API_KEY`, `ODSAY_KEY_*`, `DATABASE_URL`
+- 조치 필요 항목: `python-dotenv` 패키지가 실행 환경에 설치되어 있지 않아 두 스크립트 모두 실행 실패. `pip install python-dotenv` 또는 `requirements.txt` 기반 환경 세팅 필요.
