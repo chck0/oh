@@ -1,8 +1,8 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-07-12 UTC
+> 실행 시각: 2026-07-13 UTC
 
 ## ODsay 키 감시
-- 종료 코드: 1
+- 종료 코드: 1 (오류)
 - 출력:
 ```
 Traceback (most recent call last):
@@ -12,11 +12,11 @@ Traceback (most recent call last):
     class _Config:
   File "config.py", line 73, in _Config
     KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-EnvironmentError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
+OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
 ```
 
 ## Claude API 비용 감시
-- 종료 코드: 1
+- 종료 코드: 1 (오류)
 - 출력:
 ```
 Traceback (most recent call last):
@@ -28,7 +28,7 @@ Traceback (most recent call last):
     class _Config:
   File "config.py", line 73, in _Config
     KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-EnvironmentError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
+OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
 ```
 
 ## 종합 상태
