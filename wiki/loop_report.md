@@ -1,43 +1,16 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-08-05T00:00:00Z
+> 실행 시각: 2026-08-06 UTC
 
 ## ODsay 키 감시
 - 종료 코드: 1
-- 출력:
-```
-Traceback (most recent call last):
-  File "scripts/monitor_odsay.py", line 29, in <module>
-    from config import cfg
-  File "config.py", line 69, in <module>
-    class _Config:
-  File "config.py", line 73, in _Config
-    KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "config.py", line 27, in _require
-    raise EnvironmentError(f"[config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요")
-OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
-```
+- 출력: `OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY → .env 파일을 확인하세요`
 
 ## Claude API 비용 감시
 - 종료 코드: 1
-- 출력:
-```
-Traceback (most recent call last):
-  File "scripts/monitor_costs.py", line 35, in <module>
-    from app.db import db_session
-  File "app/db.py", line 21, in <module>
-    from config import cfg
-  File "config.py", line 69, in <module>
-    class _Config:
-  File "config.py", line 73, in _Config
-    KAKAO_REST_API_KEY: str = _require('KAKAO_REST_API_KEY')
-                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "config.py", line 27, in _require
-    raise EnvironmentError(f"[config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요")
-OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY  →  .env 파일을 확인하세요
-```
+- 출력: `OSError: [config] 필수 환경변수 누락: KAKAO_REST_API_KEY → .env 파일을 확인하세요`
 
 ## 종합 상태
-- 조치 필요 항목: 두 스크립트 모두 환경변수 미설정으로 실행 실패
-  - 원인: KAKAO_REST_API_KEY (및 의존 환경변수들) 미설정 — config.py 로딩 단계에서 중단
-  - 조치: 실행 환경에 `.env` 파일 또는 환경변수(KAKAO_REST_API_KEY, ODSAY_KEY_*, DATABASE_URL 등) 설정 필요
+- 조치 필요 항목: 환경변수 미설정으로 두 스크립트 모두 실행 불가
+  - `KAKAO_REST_API_KEY` (및 기타 필수 환경변수) 가 원격 실행 환경에 설정되어 있지 않습니다.
+  - `.env` 파일이 없거나 Secrets/환경변수 설정이 필요합니다.
+  - 스크립트 자체의 이상은 확인 불가 — 환경 설정 후 재실행 필요.
