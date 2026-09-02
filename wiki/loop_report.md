@@ -1,5 +1,5 @@
 # BADUGI 자동 모니터링 루프 리포트
-> 실행 시각: 2026-08-31T00:00:00Z
+> 실행 시각: 2026-09-02 UTC
 
 ## ODsay 키 감시
 - 종료 코드: 1
@@ -28,4 +28,4 @@ ModuleNotFoundError: No module named 'dotenv'
 ```
 
 ## 종합 상태
-- 조치 필요 항목: 두 스크립트 모두 `python-dotenv` 패키지 미설치로 실행 실패. 실행 환경에 `pip install python-dotenv` 또는 requirements.txt 의존성 설치가 필요합니다.
+- 조치 필요 항목: `python-dotenv` 패키지 미설치로 두 스크립트 모두 실행 실패. `pip install python-dotenv` 또는 의존성 설치(예: `pip install -r requirements.txt`) 필요.
